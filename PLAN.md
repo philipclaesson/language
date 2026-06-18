@@ -1,0 +1,349 @@
+# Language Learning App — Implementation Plan
+
+> A spaced-repetition German vocabulary trainer for two users, designed so AI
+> modules (chat, voice, AI-authored decks, news) can bolt on later without a
+> rewrite.
+
+## Guiding principles
+
+- **Tight infra.** One deployable service, one database, scales to (near) zero
+  when nobody is using it. No Kubernetes, no microservices.
+- **Easy to maintain.** One language end-to-end (TypeScript), shared types
+  between client and server, minimal dependencies, boring well-trodden tools.
+- **2 users, ever.** No signup flow, no password reset, no rate limiting, no
+  multi-tenant complexity. Auth is an email allowlist of two Google accounts.
+- **AI-ready data model.** Every card knows where it came from. Adding a module
+  that *creates* cards is just another writer against the same tables.
+
+---
+
+## 1. Architecture at a glance
+
+```
+                 language.levanto.dev
+                         │
+                         ▼
+        ┌────────────────────────────────────┐
+        │         Cloud Run (one service)     │
+        │  ┌──────────────────────────────┐   │
+        │  │  Node app (Hono)             │   │
+        │  │  - serves built Preact SPA   │   │
+        │  │  - /api/* JSON endpoints     │   │
+        │  │  - Google OAuth + session    │   │
+        │  │  - SRS engine                │   │
+        │  │  - (later) /api/ai/* routes  │   │
+        │  └──────────────────────────────┘   │
+        └───────────────┬────────────────────┘
+                        │  SQL over TLS
+                        ▼
+              ┌──────────────────────┐
+              │  Serverless Postgres  │
+              │  (Neon free tier)     │
+              └──────────────────────┘
+```
+
+**Key decision: one Cloud Run service serves both the API and the static
+frontend.** GitHub Pages is viable for the SPA, but splitting hosting forces you
+to deal with CORS, cookie `SameSite` rules across domains, and a second deploy
+pipeline. Serving the SPA from the same origin as the API makes auth cookies and
+local dev trivial. We keep GitHub Pages in our back pocket but don't start there.
+
+---
+
+## 2. Tech stack
+
+| Concern        | Choice                          | Why / alternative |
+|----------------|---------------------------------|-------------------|
+| Language       | TypeScript everywhere           | Shared types, one toolchain |
+| Frontend       | **Preact** + Vite + Tailwind    | React's component/hooks model at ~3KB; keeps deps minimal but survives into the chat/news AI modules. Zero SSR needed |
+| Server         | **Hono** on Node                | Tiny, fast cold starts, serves static + API in one app. (Fastify is the heavier-but-fine alternative.) |
+| DB             | **Postgres via Neon**           | Serverless, scales to zero, generous free tier, real SQL for relational SRS data |
+| ORM/migrations | **Drizzle ORM**                 | Lightweight, great TS types, SQL-first, fast cold start (vs Prisma's engine) |
+| Auth           | Google OAuth 2.0 + signed cookie session | `arctic` + `oslo` libs, or Auth.js. Allowlist of 2 emails |
+| Hosting        | Cloud Run (single container)    | Scale-to-zero, cheap, custom domain mapping |
+| SRS            | **FSRS** via `ts-fsrs`          | Modern, better retention than SM-2, handles binary pass/fail cleanly |
+
+**Why not Firestore / Cloud SQL?** Firestore is all-GCP and scales to zero, but
+relational SRS + future module relationships are more natural and queryable in
+SQL. Cloud SQL is Postgres but is *always-on* (min ~$10–25/mo) — wasteful for two
+people. Neon gives us real Postgres that sleeps when idle, on the free tier. If
+you'd rather stay 100% inside GCP, the drop-in swap is Cloud SQL (Postgres) and
+the rest of the plan is unchanged — see §11.
+
+---
+
+## 3. Authentication
+
+- Standard Google OAuth 2.0 "Sign in with Google" (authorization code flow).
+- On callback, check the verified email against a hardcoded/env allowlist:
+  `ALLOWED_EMAILS=you@gmail.com,gf@gmail.com`. Anyone else → 403.
+- Create a session: signed, httpOnly, `Secure`, `SameSite=Lax` cookie holding a
+  session id; session row in Postgres (or a signed JWT to skip a table — fine at
+  this scale). Lax + same-origin means the cookie just works.
+- No refresh tokens or offline access needed now — we only use Google to verify
+  *who* you are, not to call Google APIs on your behalf.
+
+Setup: create an OAuth consent screen (External, but in "testing" mode with the
+two emails as test users — no Google verification review needed) + OAuth client
+ID in the GCP project, redirect URI `https://language.levanto.dev/api/auth/callback`.
+
+---
+
+## 4. Data model
+
+Designed now so AI modules are just additional rows.
+
+```
+users
+  id              uuid pk
+  email           text unique
+  display_name    text
+  created_at      timestamptz
+
+decks                      -- "modules": a named group of cards
+  id              uuid pk
+  owner_id        uuid fk -> users          -- every deck (and its cards) belongs to one user — personal libraries
+  name            text                      -- "Top 1000", "Sie vs sie", "News 2026-06-18"
+  source          text                      -- 'manual' | 'seed' | 'ai_chat' | 'ai_module' | 'news'
+  description     text null                 -- AI explanation lives here (e.g. the Sie/sie writeup)
+  created_at      timestamptz
+
+cards
+  id              uuid pk
+  deck_id         uuid fk -> decks
+  prompt          text                      -- shown to user (English), e.g. "the dog"
+  answer          text                      -- canonical German, e.g. "der Hund"
+  answer_alts     text[]                    -- accepted alternatives, e.g. {"Hund"}
+  part_of_speech  text null                 -- 'noun' | 'verb' | ... (drives answer-checking rules)
+  article         text null                 -- der/die/das for nouns
+  notes           text null                 -- example sentence, mnemonic (AI can fill this)
+  source          text                      -- where this card came from (mirrors deck.source)
+  created_at      timestamptz
+
+review_state               -- one row per (user, card): the SRS scheduler state
+  id              uuid pk
+  user_id         uuid fk -> users
+  card_id         uuid fk -> cards
+  due            timestamptz                -- when it should next appear
+  stability       double precision          -- FSRS fields
+  difficulty      double precision
+  reps            int
+  lapses          int
+  last_review     timestamptz null
+  state           text                      -- 'new' | 'learning' | 'review' | 'relearning'
+  unique(user_id, card_id)
+
+reviews                    -- append-only log of every answer (analytics + FSRS optimization later)
+  id              uuid pk
+  user_id         uuid fk
+  card_id         uuid fk
+  rating          int                        -- 1 = fail, 3 = pass (binary mapped to FSRS grades)
+  typed_answer    text                       -- what they actually typed
+  reviewed_at     timestamptz
+  elapsed_ms      int null
+```
+
+Notes:
+- **Personal libraries.** Each user owns their own decks/cards; you and your
+  girlfriend have completely separate vocabularies. `review_state` keeping the
+  scheduling separate from card content is deliberate — it means that *if* we
+  later want to share/copy a deck between the two of you, the card rows can be
+  referenced or cloned without touching anyone's schedule. (For now `user_id` in
+  `review_state` always equals the owning deck's `owner_id`.)
+- The `reviews` log is cheap to keep and lets us later run FSRS's optimizer to
+  tune parameters to *your* memory, and powers a future stats page.
+- AI modules write `decks` + `cards` rows (owned by the requesting user) with
+  `source='ai_*'`. The learning loop doesn't care who authored a card.
+
+---
+
+## 5. SRS engine
+
+- Use **FSRS** (`ts-fsrs`). It models each card's memory with stability +
+  difficulty and predicts the optimal next review for a target retention (e.g.
+  90%).
+- **Binary grading.** Our UI is pass/fail only, so we map:
+  - Correct → FSRS `Good` (3)
+  - Incorrect → FSRS `Again` (1)
+  - (We never expose Hard/Easy.)
+- A **review session** = fetch all cards where `due <= now()` for the user
+  (capped at e.g. 30–50/session, plus a few `new` cards), shuffle, present one at
+  a time. After each answer, call FSRS to compute the new state, persist
+  `review_state`, append to `reviews`.
+- New cards get an initial state on first review; daily new-card intake is capped
+  (configurable, default ~10) so the deck doesn't avalanche.
+
+---
+
+## 6. Answer checking (the part that needs care for German)
+
+Typing German has gotchas. The matcher:
+
+1. **Normalize** both expected and typed: trim, collapse internal whitespace,
+   case-fold.
+2. **Umlaut/ß tolerance (configurable):** treat `ä≈ae`, `ö≈oe`, `ü≈ue`, `ß≈ss`
+   so a keyboard without umlauts still works. (Toggle per user; strict mode
+   requires exact umlauts.)
+3. **Multiple acceptable answers** via `answer_alts` (synonyms, with/without
+   article).
+4. **Articles for nouns.** Decide policy and make it explicit:
+   - Default: require the correct article for nouns (gender matters in German),
+     i.e. "der Hund" not "Hund". But accept the bare noun as a *partial* — show
+     "almost — don't forget the article" but still count per your all-or-nothing
+     rule (recommend: counts as fail, but message teaches). Configurable.
+5. On mismatch, show the correct answer clearly and a diff highlight.
+
+This logic is a single pure function (`checkAnswer(expected, typed, opts)`),
+unit-tested — it's the highest-bug-risk piece, so it's the one thing we test hard.
+
+---
+
+## 7. API surface (v1)
+
+```
+GET  /api/auth/login            -> redirect to Google
+GET  /api/auth/callback         -> verify, allowlist check, set session, redirect /
+POST /api/auth/logout
+
+GET  /api/me                    -> current user
+
+GET  /api/session/next          -> next batch of due+new cards for review
+POST /api/reviews               -> { cardId, typedAnswer } => { correct, expected, newDue }
+
+GET  /api/decks                 -> list decks with due/new counts
+POST /api/decks                 -> create deck (manual)
+POST /api/decks/:id/cards       -> add card(s) manually
+GET  /api/decks/:id             -> deck detail + cards
+
+# Reserved for later (designed-in, not built yet):
+POST /api/ai/chat               -> German chat; returns reply + extracted weak words
+POST /api/ai/module             -> "explain Sie vs sie" -> deck + cards + explanation
+POST /api/ai/news               -> news clip + comprehension quiz
+```
+
+---
+
+## 8. Frontend (friendly + minimal)
+
+- **Preact** single-page app, mobile-first (you'll drill on your phone).
+  Components + hooks (`@preact/signals` optional for state), JSX via Vite's
+  preact preset. Same mental model carries into the AI module UIs later.
+- Screens:
+  - **Login** — one big "Sign in with Google" button.
+  - **Home / Today** — "X cards due", big **Start review** button, deck list with
+    progress.
+  - **Review** — the core loop: English prompt, a text input, Enter to submit.
+    Instant green/red feedback, correct answer shown, Enter again for next.
+    Keyboard-first, satisfying, fast. Umlaut helper buttons (ä ö ü ß) for mobile.
+  - **Decks** — browse/add cards manually; (later) "Ask AI to make a module".
+  - **Stats** (nice-to-have) — streak, reviews/day, retention.
+- State/data fetching: a tiny `fetch` wrapper + hooks is enough at this size.
+  (TanStack Query works with Preact via `preact/compat` if we want caching/retry
+  niceties — add it only if the hand-rolled version starts to hurt.)
+
+---
+
+## 9. Seeding initial vocabulary
+
+Don't start from an empty app. Ship a seed deck:
+- A curated German A1/A2 frequency list (top ~500–1000 words) as a checked-in
+  JSON/CSV, loaded by a `db:seed` script that creates a `source='seed'` deck
+  **per user** (each library starts with its own copy of the starter words).
+- This gives you something to do on day one and exercises the whole loop.
+
+---
+
+## 10. Infra & deployment
+
+- **Container:** one Dockerfile. Multi-stage: build the Vite SPA → copy into the
+  Node server's static dir → run Hono. Single image.
+- **Deploy:** `gcloud run deploy` from a GitHub Action on push to `main`.
+  Cloud Run configured `min-instances=0` (scale to zero), `max-instances=1–2`.
+- **Domain:** Cloud Run **domain mapping** for `language.levanto.dev`; add the
+  CNAME/records at your DNS for levanto.dev. (Or a serverless NEG + HTTPS LB if
+  you outgrow domain mapping — not needed now.)
+- **Secrets:** Google OAuth client id/secret, DB URL, session signing key in
+  **Secret Manager**, injected as env vars into Cloud Run.
+- **DB:** Neon project, one Postgres database, connection string in Secret
+  Manager. Drizzle migrations run as a step in the deploy action (or manually).
+- **Local dev:** `vite dev` for the SPA proxying `/api` to a local
+  `node server`, pointed at a Neon dev branch (or local Postgres in Docker).
+
+Estimated cost: effectively **$0/mo** at this usage — Cloud Run free tier covers
+two users easily, Neon free tier covers the DB. Only real cost later is AI API
+calls (pay per use).
+
+---
+
+## 11. How the AI modules slot in later (designed-in now)
+
+The data model already supports all four. Each is a new `/api/ai/*` route plus a
+frontend surface; none require schema changes beyond minor additions.
+
+- **Chat in German.** Call an LLM with a "correct me + tutor" system prompt.
+  After each exchange, a second extraction step pulls words/phrases you stumbled
+  on and writes them as `cards` into an `source='ai_chat'` deck. They enter your
+  normal SRS queue automatically.
+- **Voice chat.** Same as chat with speech-to-text in / text-to-speech out
+  layered on. Same card-extraction backend. Pick STT/TTS later (browser
+  SpeechRecognition is free; cloud STT is better).
+- **AI-authored modules.** "Explain Sie vs sie" → LLM returns an explanation
+  (stored in `decks.description`) + a set of cards/exercises (`source='ai_module'`).
+- **News.** Fetch/transcribe a German news clip → comprehension quiz → words you
+  mark as "didn't understand" become cards (`source='news'`).
+
+Because everything funnels into the same `decks`/`cards`/`review_state` tables,
+the core review loop never changes — it just sees more cards.
+
+> For LLM calls, default to the latest Claude models (e.g. Claude Opus / Sonnet
+> 4.x) via the Anthropic API. Confirm exact model ids when we build that phase.
+
+**All-GCP variant:** if you decide against Neon, swap the DB for Cloud SQL
+(Postgres) with the Cloud Run ↔ Cloud SQL connector. Everything else — Drizzle,
+schema, code — is identical. Tradeoff: Cloud SQL is always-on (~$10–25/mo) vs
+Neon's free scale-to-zero.
+
+---
+
+## 12. Build phases / milestones
+
+**Phase 0 — Skeleton (½ day)**
+- Repo layout (monorepo: `/web` SPA, `/server`, shared `/packages/types`).
+- Hono server serving a "hello" SPA. Dockerfile. Deploy to Cloud Run. Domain
+  mapping working at language.levanto.dev. Neon DB connected, Drizzle set up.
+
+**Phase 1 — Auth (½ day)**
+- Google OAuth, allowlist, session cookie, `/api/me`, login screen. Lock the
+  whole app behind login.
+
+**Phase 2 — Core SRS (1–2 days)** ← the real product
+- Schema + migrations. Seed deck loaded.
+- `checkAnswer` function + unit tests.
+- FSRS integration, `/api/session/next` + `/api/reviews`.
+- Review UI: prompt → type → grade → next. Today/Home screen with due counts.
+
+**Phase 3 — Deck management (½ day)**
+- List decks, add cards manually, deck detail.
+
+**Phase 4 — Polish**
+- Umlaut helper, stats page, streaks, mobile niceties, PWA install.
+
+**Phase 5+ — AI modules** (separate efforts, in priority order you choose):
+chat → AI modules → news → voice.
+
+---
+
+## 13. Decisions (resolved)
+
+1. **DB → Neon.** Serverless Postgres, free tier, scales to zero. (Cloud SQL
+   remains the drop-in all-GCP swap if we ever want it.)
+2. **Article policy → required.** Nouns must be typed with the correct article
+   ("der Hund", not "Hund") — learning genders is a goal. Bare-noun answers count
+   as a miss but show a teaching nudge.
+3. **Umlaut strictness → tolerant by default.** Accept `ä≈ae / ö≈oe / ü≈ue /
+   ß≈ss`, with a per-user toggle to demand exact umlauts later.
+4. **Libraries → personal.** Each user has their own decks/cards and schedule;
+   no sharing for now. Schema keeps card content separate from `review_state` so
+   deck sharing/cloning between the two of you is a clean addition later.
+5. **Frontend → Preact** (see §2/§8).
+```

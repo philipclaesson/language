@@ -8,7 +8,7 @@ on:
 # Fill these in (or set as repo variables/secrets) before the first deploy.
 env:
   PROJECT_ID: language-499814
-  REGION: europe-west3
+  REGION: europe-west1
   SERVICE: language
 
 jobs:

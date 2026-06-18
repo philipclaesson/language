@@ -10,10 +10,10 @@ Last updated: 2026-06-18.
 | Thing | Value |
 |---|---|
 | GCP project | `language-499814` (project number `639264903663`) |
-| Region | `europe-west3` (Frankfurt — close to the Neon DB) |
+| Region | `europe-west1` (Belgium — near the Frankfurt Neon DB) |
 | Cloud Run service | `language` |
-| Live URL (Cloud Run) | https://language-639264903663.europe-west3.run.app |
-| Custom domain (intended) | https://language.levanto.dev *(pending domain verification)* |
+| Live URL (Cloud Run) | https://language-639264903663.europe-west1.run.app |
+| Custom domain | https://language.levanto.dev *(mapping created — awaiting DNS CNAME + cert)* |
 | Database | Neon Postgres (`neondb`, region eu-central-1 / Frankfurt) |
 | Auth | Google OAuth (client in project `language-499814`) |
 
@@ -24,7 +24,9 @@ Last updated: 2026-06-18.
 `artifactregistry.googleapis.com`, `secretmanager.googleapis.com`.
 
 ### Cloud Run service `language`
-- Region `europe-west3`, **scales to zero** (`min-instances=0`, `max-instances=2`), `512Mi`.
+- Region `europe-west1` (chosen because Cloud Run **domain mappings are not
+  supported in europe-west3**; west1 is the nearest region that supports them).
+- **scales to zero** (`min-instances=0`, `max-instances=2`), `512Mi`.
 - `--allow-unauthenticated`: the service is public at the network level; the app
   gates everything itself via Google login + the email allowlist.
 - Runtime service account: the default compute SA
@@ -41,7 +43,7 @@ The runtime SA has `roles/secretmanager.secretAccessor` (granted project-wide).
 
 ### Artifact Registry
 Repo `cloud-run-source-deploy` (auto-created by `gcloud run deploy --source`) in
-`europe-west3` holds the built container images.
+`europe-west1` holds the built container images.
 
 ### Build
 `gcloud run deploy --source .` uses **Cloud Build** to build the `Dockerfile`,
@@ -71,11 +73,17 @@ push the image to Artifact Registry, and deploy a new revision.
 
 ## Domain — levanto.dev
 
-- `language.levanto.dev` is the intended public URL.
-- **Pending:** Cloud Run domain mapping requires the domain to be *verified* for
-  the Google account first (Search Console TXT record), then a DNS record
-  pointing `language.levanto.dev` at Google's frontend. See README for the steps.
-- Until then the app is reachable at the run.app URL above.
+- `language.levanto.dev` is the public URL.
+- `levanto.dev` is **verified** for the Google account (Search Console TXT record).
+- Cloud Run **domain mapping created** in europe-west1 for `language.levanto.dev`.
+- **Required DNS record** at the `levanto.dev` zone:
+
+  | Host | Type | Value |
+  |---|---|---|
+  | `language` | `CNAME` | `ghs.googlehosted.com.` |
+
+- After the CNAME resolves, Google auto-provisions the TLS cert (minutes to ~1h).
+  Until then the app is reachable at the run.app URL above.
 
 ## CI/CD
 
@@ -88,7 +96,7 @@ push the image to Artifact Registry, and deploy a new revision.
 
 ```sh
 # Manual deploy (from repo root, authenticated as an owner of the project)
-gcloud run deploy language --project=language-499814 --region=europe-west3 \
+gcloud run deploy language --project=language-499814 --region=europe-west1 \
   --source=. --allow-unauthenticated --min-instances=0 --max-instances=2 \
   --memory=512Mi --set-env-vars=BASE_URL=https://language.levanto.dev \
   --set-secrets=DATABASE_URL=DATABASE_URL:latest,GOOGLE_CLIENT_ID=GOOGLE_CLIENT_ID:latest,GOOGLE_CLIENT_SECRET=GOOGLE_CLIENT_SECRET:latest,SESSION_SECRET=SESSION_SECRET:latest,ALLOWED_EMAILS=ALLOWED_EMAILS:latest
@@ -98,10 +106,10 @@ printf '%s' "NEW_VALUE" | gcloud secrets versions add SESSION_SECRET --data-file
 
 # Add an allowed user: update ALLOWED_EMAILS secret, then redeploy
 # Roll back to a previous revision
-gcloud run services update-traffic language --region=europe-west3 --to-revisions=REVISION=100
+gcloud run services update-traffic language --region=europe-west1 --to-revisions=REVISION=100
 
 # Tail logs
-gcloud run services logs read language --region=europe-west3 --project=language-499814
+gcloud run services logs read language --region=europe-west1 --project=language-499814
 ```
 
 ## Cost

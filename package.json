@@ -12,8 +12,10 @@
     "build": "vite build",
     "start": "tsx server/index.ts",
     "typecheck": "tsc --noEmit",
+    "test": "tsx --test \"server/**/*.test.ts\"",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
+    "db:seed": "tsx server/db/seed-all.ts",
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
@@ -24,6 +26,7 @@
     "hono": "^4.12.26",
     "pg": "^8.21.0",
     "preact": "^10.29.2",
+    "ts-fsrs": "^5.4.1",
     "tsx": "^4.22.4"
   },
   "devDependencies": {

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "preact/hooks";
 import type { SessionUser } from "../../shared/types";
-import { getMe, logout } from "./api";
+import { getMe, getSession, logout } from "./api";
+import { Review } from "./review";
 
 type AuthState =
   | { status: "loading" }
@@ -16,14 +17,8 @@ export function App() {
       .catch(() => setAuth({ status: "anon" }));
   }, []);
 
-  if (auth.status === "loading") {
-    return <Centered>…</Centered>;
-  }
-
-  if (auth.status === "anon") {
-    return <Login />;
-  }
-
+  if (auth.status === "loading") return <Centered>…</Centered>;
+  if (auth.status === "anon") return <Login />;
   return <Home user={auth.user} />;
 }
 
@@ -45,6 +40,22 @@ function Login() {
 }
 
 function Home({ user }: { user: SessionUser }) {
+  const [view, setView] = useState<"home" | "review">("home");
+  if (view === "review") return <Review onDone={() => setView("home")} />;
+  return <Dashboard user={user} onStart={() => setView("review")} />;
+}
+
+function Dashboard({ user, onStart }: { user: SessionUser; onStart: () => void }) {
+  const [counts, setCounts] = useState<{ due: number; new: number } | null>(null);
+
+  useEffect(() => {
+    getSession()
+      .then((s) => setCounts({ due: s.dueCount, new: s.newCount }))
+      .catch(() => setCounts({ due: 0, new: 0 }));
+  }, []);
+
+  const total = counts ? counts.due + counts.new : 0;
+
   async function onLogout() {
     await logout();
     window.location.reload();
@@ -62,13 +73,36 @@ function Home({ user }: { user: SessionUser }) {
         </button>
       </header>
 
-      <main class="mt-12 flex flex-1 flex-col items-center justify-center text-center">
+      <main class="mt-16 flex flex-1 flex-col items-center text-center">
         <p class="text-slate-500">
-          Signed in as <span class="font-medium text-slate-900">{user.name || user.email}</span>
+          Hallo, <span class="font-medium text-slate-900">{user.name || user.email}</span>
         </p>
-        <p class="mt-6 rounded-xl bg-slate-100 px-4 py-3 text-sm text-slate-600">
-          Auth works. The review loop lands in Phase 2.
-        </p>
+
+        <div class="mt-8 text-slate-900">
+          {counts === null ? (
+            <p class="text-slate-400">…</p>
+          ) : total === 0 ? (
+            <p class="text-slate-600">Nothing due right now. 🎉</p>
+          ) : (
+            <p class="text-lg">
+              <span class="font-semibold">{counts.due}</span> due
+              {counts.new > 0 && (
+                <>
+                  {" · "}
+                  <span class="font-semibold">{counts.new}</span> new
+                </>
+              )}
+            </p>
+          )}
+        </div>
+
+        <button
+          onClick={onStart}
+          disabled={total === 0}
+          class="mt-8 w-full rounded-xl bg-slate-900 px-5 py-3 font-medium text-white transition hover:bg-slate-700 disabled:opacity-40"
+        >
+          Start review
+        </button>
       </main>
     </div>
   );

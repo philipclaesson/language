@@ -4,6 +4,7 @@ import { Hono } from "hono";
 import { existsSync } from "node:fs";
 import { env } from "./env";
 import { authRoutes, requireAuth, type AppEnv } from "./auth";
+import { reviewRoutes } from "./review-routes";
 
 const app = new Hono<AppEnv>();
 
@@ -11,10 +12,7 @@ const app = new Hono<AppEnv>();
 const api = new Hono<AppEnv>();
 api.route("/auth", authRoutes);
 api.get("/me", requireAuth, (c) => c.json({ user: c.get("user") }));
-
-// Phase 2+ protected routes mount here, e.g.:
-// api.get("/session/next", requireAuth, ...)
-// api.post("/reviews", requireAuth, ...)
+api.route("/", reviewRoutes); // /session/next, /reviews
 
 app.route("/api", api);
 

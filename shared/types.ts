@@ -10,14 +10,20 @@ export type MeResponse = {
   user: SessionUser;
 };
 
-// ---- Phase 2 (designed-in, not served yet) ----
+// ---- Phase 2 ----
 
+// What the client sees before answering. Deliberately omits the German answer
+// AND the article (the article reveals a noun's gender, which is the point).
 export type SessionCard = {
   id: string;
   prompt: string;
-  article: string | null;
   partOfSpeech: string | null;
-  notes: string | null;
+};
+
+export type SessionResponse = {
+  cards: SessionCard[];
+  dueCount: number;
+  newCount: number;
 };
 
 export type ReviewRequest = {
@@ -28,7 +34,8 @@ export type ReviewRequest = {
 
 export type ReviewResult = {
   correct: boolean;
-  expected: string;
+  expected: string; // full canonical answer, e.g. "der Hund"
+  reason?: "missing_article" | "wrong";
   nextDue: string; // ISO timestamp
 };
 

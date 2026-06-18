@@ -6,6 +6,7 @@ import { Google, generateState, generateCodeVerifier } from "arctic";
 import { env } from "./env";
 import { db } from "./db/client";
 import { users } from "./db/schema";
+import { seedUser } from "./db/seed";
 import type { SessionUser } from "../shared/types";
 
 export type AppEnv = { Variables: { user: SessionUser } };
@@ -81,6 +82,13 @@ authRoutes.get("/callback", async (c) => {
     .values({ email, displayName })
     .onConflictDoUpdate({ target: users.email, set: { displayName } })
     .returning();
+
+  // Give new users their starter deck (idempotent — no-op for returning users).
+  try {
+    await seedUser(user.id);
+  } catch (e) {
+    console.error("seedUser failed", e);
+  }
 
   const token = await sign(
     {

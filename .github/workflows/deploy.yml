@@ -5,7 +5,8 @@ on:
     branches: [main]
   workflow_dispatch:
 
-# Fill these in (or set as repo variables/secrets) before the first deploy.
+# Deploys via Workload Identity Federation (see INFRA.md > CI/CD).
+# Requires repo secrets GCP_WIF_PROVIDER and GCP_DEPLOY_SA (already configured).
 env:
   PROJECT_ID: language-499814
   REGION: europe-west1

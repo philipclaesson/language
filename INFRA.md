@@ -87,10 +87,24 @@ push the image to Artifact Registry, and deploy a new revision.
 
 ## CI/CD
 
-- `.github/workflows/deploy.yml`: deploys on push to `main` via
-  `gcloud run deploy --source .`. **Not active yet** — needs Workload Identity
-  Federation set up and repo secrets `GCP_WIF_PROVIDER` + `GCP_DEPLOY_SA`.
-- Until CI is wired up, deploys are done manually from the CLI (see below).
+**Active.** `.github/workflows/deploy.yml` deploys on every push to `main` (and
+via manual `workflow_dispatch`) using `gcloud run deploy --source .`. Auth is via
+**Workload Identity Federation** — no service-account keys.
+
+WIF setup (project `language-499814`):
+- Deploy service account: `github-deployer@language-499814.iam.gserviceaccount.com`,
+  with roles: `run.admin`, `cloudbuild.builds.editor`, `artifactregistry.admin`,
+  `storage.admin`, `iam.serviceAccountUser`, `secretmanager.viewer`.
+- Workload Identity Pool `github`, OIDC provider `github-provider`
+  (issuer `https://token.actions.githubusercontent.com`), restricted by
+  attribute condition `assertion.repository=='philipclaesson/language'`.
+- The repo is allowed to impersonate the deploy SA via `roles/iam.workloadIdentityUser`
+  on member
+  `principalSet://iam.googleapis.com/projects/639264903663/locations/global/workloadIdentityPools/github/attribute.repository/philipclaesson/language`.
+- GitHub repo secrets: `GCP_WIF_PROVIDER` (the provider resource name) and
+  `GCP_DEPLOY_SA` (the deploy SA email).
+
+Manual CLI deploys still work too (see below) — useful for hotfixes.
 
 ## Common operations
 

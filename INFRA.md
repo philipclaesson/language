@@ -34,11 +34,14 @@ Last updated: 2026-06-18.
 - **Env var:** `BASE_URL=https://language.levanto.dev`
   (also `NODE_ENV=production`, `PORT=8080` baked into the Docker image).
 - **Secrets** (mounted as env vars, all `:latest`): `DATABASE_URL`,
-  `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `SESSION_SECRET`, `ALLOWED_EMAILS`.
+  `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `SESSION_SECRET`, `ALLOWED_EMAILS`,
+  `ANTHROPIC_API_KEY`.
 
 ### Secret Manager
 Secrets (values not shown): `DATABASE_URL`, `GOOGLE_CLIENT_ID`,
-`GOOGLE_CLIENT_SECRET`, `SESSION_SECRET`, `ALLOWED_EMAILS`.
+`GOOGLE_CLIENT_SECRET`, `SESSION_SECRET`, `ALLOWED_EMAILS`, `ANTHROPIC_API_KEY`
+(the AI chat tutor; create with
+`printf '%s' "sk-ant-…" | gcloud secrets create ANTHROPIC_API_KEY --data-file=- --project=language-499814`).
 The runtime SA has `roles/secretmanager.secretAccessor` (granted project-wide).
 
 ### Artifact Registry
@@ -113,7 +116,7 @@ Manual CLI deploys still work too (see below) — useful for hotfixes.
 gcloud run deploy language --project=language-499814 --region=europe-west1 \
   --source=. --allow-unauthenticated --min-instances=0 --max-instances=2 \
   --memory=512Mi --set-env-vars=BASE_URL=https://language.levanto.dev \
-  --set-secrets=DATABASE_URL=DATABASE_URL:latest,GOOGLE_CLIENT_ID=GOOGLE_CLIENT_ID:latest,GOOGLE_CLIENT_SECRET=GOOGLE_CLIENT_SECRET:latest,SESSION_SECRET=SESSION_SECRET:latest,ALLOWED_EMAILS=ALLOWED_EMAILS:latest
+  --set-secrets=DATABASE_URL=DATABASE_URL:latest,GOOGLE_CLIENT_ID=GOOGLE_CLIENT_ID:latest,GOOGLE_CLIENT_SECRET=GOOGLE_CLIENT_SECRET:latest,SESSION_SECRET=SESSION_SECRET:latest,ALLOWED_EMAILS=ALLOWED_EMAILS:latest,ANTHROPIC_API_KEY=ANTHROPIC_API_KEY:latest
 
 # Update a secret (adds a new version; redeploy or it picks up :latest on next revision)
 printf '%s' "NEW_VALUE" | gcloud secrets versions add SESSION_SECRET --data-file=- --project=language-499814
@@ -130,4 +133,5 @@ gcloud run services logs read language --region=europe-west1 --project=language-
 
 Effectively **$0/month** at two-user scale: Cloud Run and Neon both scale to zero,
 Secret Manager and Artifact Registry storage are negligible. The only usage-based
-cost later will be LLM API calls when the AI modules land.
+cost is LLM API calls from the AI chat tutor (Anthropic, Sonnet 4.6) — a few cents
+for occasional deck-building chats at two-user volume.

@@ -1,4 +1,7 @@
 import type {
+  ChatMessage,
+  ChatRequest,
+  ChatResponse,
   DeckDetail,
   DeckSummary,
   MeResponse,
@@ -40,4 +43,9 @@ export function getDecks() {
 
 export function getDeck(id: string) {
   return api<DeckDetail>(`/decks/${id}`);
+}
+
+export function postChat(messages: ChatMessage[]) {
+  const req: ChatRequest = { messages };
+  return api<ChatResponse>("/chat", { method: "POST", body: JSON.stringify(req) });
 }

@@ -13,10 +13,11 @@ later without touching the core loop.
 ## Status
 
 - **Done:** Phase 0 (skeleton), Phase 1 (Google auth), Phase 2 (SRS core:
-  answer-checking, FSRS, review API + UI, starter deck).
+  answer-checking, FSRS, review API + UI, starter deck). First AI module: the
+  **chat tutor** (chat to build/maintain decks; Claude tool-use, `source='ai_chat'`).
 - **Live:** https://language.levanto.dev — Cloud Run, **auto-deploys on push to main**.
-- **Next:** Phase 3 (deck management UI), Phase 4 (polish), Phase 5+ (AI modules).
-  See PLAN.md §12.
+- **Next:** Phase 3 (deck management UI), Phase 4 (polish), more AI modules
+  (news, voice). See PLAN.md §12.
 
 ## Stack & layout
 
@@ -24,16 +25,18 @@ TypeScript everywhere. One Cloud Run service serves the SPA and the API.
 
 - `web/` — Preact + Vite + Tailwind SPA.
   - `app.tsx` auth gating + routing · `review.tsx` the review loop ·
-    `decks.tsx` deck list + detail · `api.ts` typed fetch client ·
-    `router.ts` tiny History-API router (no dep).
-  - Routes: `/` dashboard, `/review`, `/decks/:id`. The server serves
+    `decks.tsx` deck list + detail · `chat.tsx` the AI tutor chat ·
+    `api.ts` typed fetch client · `router.ts` tiny History-API router (no dep).
+  - Routes: `/` dashboard, `/review`, `/chat`, `/decks/:id`. The server serves
     `index.html` for any non-API path, so deep links / refresh / back all work.
 - `server/` — Hono on Node.
   - `index.ts` wiring + static serving · `auth.ts` Google OAuth + JWT session +
     `requireAuth` · `review-routes.ts` `/session/next` + `/reviews` ·
-    `srs/check.ts` pure answer matcher (+ `check.test.ts`) · `srs/scheduler.ts`
-    FSRS wrapper · `db/schema.ts` Drizzle schema · `db/seed.ts` starter deck ·
-    `env.ts` env validation.
+    `deck-routes.ts` `/decks` + `/decks/:id` · `chat-routes.ts` `/chat` (AI tutor:
+    Claude tool-use loop + deck/card tools) · `chat/cards.ts` pure card-input
+    normalizer (+ `cards.test.ts`) · `srs/check.ts` pure answer matcher
+    (+ `check.test.ts`) · `srs/scheduler.ts` FSRS wrapper · `db/schema.ts` Drizzle
+    schema · `db/seed.ts` starter deck · `env.ts` env validation.
 - `shared/types.ts` — the client/server contract. **Change types here first.**
 - `drizzle/` — committed SQL migrations.
 
@@ -77,6 +80,11 @@ module is additive:
 
 Keep LLM calls server-side. Use the latest Claude models — consult the
 `claude-api` skill for current model IDs and SDK usage.
+**`chat-routes.ts` is the worked example:** a stateless `/chat` running a Claude
+tool-use loop whose tools write `decks`/`cards` (`source='ai_chat'`). The model is
+pinned in one constant (`MODEL = "claude-sonnet-4-6"`) — bump it there if needed.
+Rules-y logic (the card-input normalizer) lives in `chat/cards.ts`, unit-tested;
+the route/tool glue isn't.
 
 ## Gotchas
 

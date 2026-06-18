@@ -6,3 +6,89 @@
 html {
   scrollbar-gutter: stable;
 }
+
+/* Markdown rendered inside an assistant chat bubble (see chat.tsx). Kept compact
+   so multi-paragraph replies, lists, and tables read well in a phone-width bubble. */
+.chat-md > :first-child {
+  margin-top: 0;
+}
+.chat-md > :last-child {
+  margin-bottom: 0;
+}
+.chat-md p {
+  margin: 0.5rem 0;
+}
+.chat-md strong {
+  font-weight: 600;
+}
+.chat-md em {
+  font-style: italic;
+}
+.chat-md h1,
+.chat-md h2,
+.chat-md h3 {
+  font-weight: 600;
+  margin: 0.75rem 0 0.25rem;
+}
+.chat-md ul,
+.chat-md ol {
+  margin: 0.5rem 0;
+  padding-left: 1.25rem;
+}
+.chat-md ul {
+  list-style: disc;
+}
+.chat-md ol {
+  list-style: decimal;
+}
+.chat-md li {
+  margin: 0.125rem 0;
+}
+.chat-md a {
+  text-decoration: underline;
+}
+.chat-md code {
+  background: rgb(226 232 240);
+  border-radius: 0.25rem;
+  padding: 0.05rem 0.3rem;
+  font-size: 0.85em;
+}
+.chat-md pre {
+  background: rgb(226 232 240);
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  margin: 0.5rem 0;
+  overflow-x: auto;
+}
+.chat-md pre code {
+  background: none;
+  padding: 0;
+}
+.chat-md blockquote {
+  border-left: 3px solid rgb(203 213 225);
+  padding-left: 0.75rem;
+  margin: 0.5rem 0;
+  color: rgb(71 85 105);
+}
+.chat-md hr {
+  border: 0;
+  border-top: 1px solid rgb(203 213 225);
+  margin: 0.75rem 0;
+}
+.chat-md table {
+  display: block;
+  border-collapse: collapse;
+  margin: 0.5rem 0;
+  font-size: 0.9em;
+  overflow-x: auto;
+}
+.chat-md th,
+.chat-md td {
+  border: 1px solid rgb(203 213 225);
+  padding: 0.25rem 0.5rem;
+  text-align: left;
+}
+.chat-md th {
+  background: rgb(226 232 240);
+  font-weight: 600;
+}

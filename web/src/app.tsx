@@ -3,6 +3,7 @@ import type { SessionUser } from "../../shared/types";
 import { getMe, getSession, logout } from "./api";
 import { Review } from "./review";
 import { DeckDetailView, DeckList } from "./decks";
+import { ChatTutor } from "./chat";
 import { navigate, usePath } from "./router";
 
 type AuthState =
@@ -46,12 +47,14 @@ function Home({ user }: { user: SessionUser }) {
   const deckMatch = path.match(/^\/decks\/(.+)$/);
 
   if (path === "/review") return <Review onDone={() => navigate("/")} />;
+  if (path === "/chat") return <ChatTutor onBack={() => navigate("/")} />;
   if (deckMatch) return <DeckDetailView deckId={deckMatch[1]} onBack={() => navigate("/")} />;
   return (
     <Dashboard
       user={user}
       onStart={() => navigate("/review")}
       onOpenDeck={(id) => navigate(`/decks/${id}`)}
+      onOpenChat={() => navigate("/chat")}
     />
   );
 }
@@ -60,10 +63,12 @@ function Dashboard({
   user,
   onStart,
   onOpenDeck,
+  onOpenChat,
 }: {
   user: SessionUser;
   onStart: () => void;
   onOpenDeck: (id: string) => void;
+  onOpenChat: () => void;
 }) {
   const [counts, setCounts] = useState<{ due: number; new: number } | null>(null);
 
@@ -123,6 +128,17 @@ function Dashboard({
             Start review
           </button>
         </div>
+
+        <button
+          onClick={onOpenChat}
+          class="mt-4 flex w-full items-center gap-3 rounded-2xl border border-slate-200 px-5 py-4 text-left transition-colors hover:border-slate-300 hover:bg-slate-50"
+        >
+          <span class="text-xl">💬</span>
+          <span>
+            <span class="block font-medium text-slate-900">Build with the tutor</span>
+            <span class="block text-sm text-slate-500">Chat about German and create decks to drill.</span>
+          </span>
+        </button>
 
         <h2 class="mt-10 mb-3 text-sm font-medium uppercase tracking-wide text-slate-400">
           Your decks

@@ -68,3 +68,29 @@ export type DeckDetail = {
   description: string | null;
   cards: DeckCard[];
 };
+
+// ---- Phase 5: AI chat tutor ----
+
+// One turn of the tutor conversation. The client holds the whole history (chats
+// aren't persisted) and replays it on each request; the server is stateless.
+export type ChatRole = "user" | "assistant";
+export type ChatMessage = {
+  role: ChatRole;
+  content: string;
+};
+
+// A deck/card mutation the agent performed this turn, for the UI to surface
+// (and to know it should refresh the deck list).
+export type ChatAction = {
+  kind: "deck_created" | "deck_renamed" | "deck_deleted" | "cards_added" | "card_edited" | "card_deleted";
+  summary: string; // human-readable, e.g. "Created deck “Irregular verbs” (10 cards)"
+};
+
+export type ChatRequest = {
+  messages: ChatMessage[];
+};
+
+export type ChatResponse = {
+  reply: string;
+  actions: ChatAction[];
+};

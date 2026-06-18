@@ -10,7 +10,10 @@
 - ✅ **Phase 2:** SRS core — answer-checking, FSRS, review API + UI, starter deck.
 - ✅ **Infra/CI:** Neon DB, custom domain (https://language.levanto.dev),
   auto-deploy on push to main (gated on `npm run check`). See INFRA.md.
-- ⏭️ **Next:** Phase 3 (deck management UI) → Phase 4 (polish) → Phase 5+ (AI modules).
+- ✅ **Phase 5 (first AI module):** chat tutor — chat about German and build/edit
+  decks via a server-side Claude tool-use loop (`server/chat-routes.ts`,
+  `source='ai_chat'`). Model pinned to `claude-sonnet-4-6`.
+- ⏭️ **Next:** Phase 3 (deck management UI) → Phase 4 (polish) → more AI modules.
 
 (Build phases detailed in §12. Operating guide in CLAUDE.md.)
 

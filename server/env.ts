@@ -14,6 +14,7 @@ export const env = {
   googleClientId: required("GOOGLE_CLIENT_ID"),
   googleClientSecret: required("GOOGLE_CLIENT_SECRET"),
   sessionSecret: required("SESSION_SECRET"),
+  anthropicApiKey: required("ANTHROPIC_API_KEY"),
   baseUrl: process.env.BASE_URL || "http://localhost:5173",
   allowedEmails: required("ALLOWED_EMAILS")
     .split(",")

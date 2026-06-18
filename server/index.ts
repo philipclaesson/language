@@ -6,6 +6,7 @@ import { env } from "./env";
 import { authRoutes, requireAuth, type AppEnv } from "./auth";
 import { reviewRoutes } from "./review-routes";
 import { deckRoutes } from "./deck-routes";
+import { chatRoutes } from "./chat-routes";
 
 const app = new Hono<AppEnv>();
 
@@ -15,6 +16,7 @@ api.route("/auth", authRoutes);
 api.get("/me", requireAuth, (c) => c.json({ user: c.get("user") }));
 api.route("/", reviewRoutes); // /session/next, /reviews
 api.route("/", deckRoutes); // /decks, /decks/:id
+api.route("/", chatRoutes); // /chat
 
 app.route("/api", api);
 

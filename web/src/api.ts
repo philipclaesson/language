@@ -1,4 +1,6 @@
 import type {
+  DeckDetail,
+  DeckSummary,
   MeResponse,
   ReviewRequest,
   ReviewResult,
@@ -30,4 +32,12 @@ export function getSession() {
 
 export function postReview(req: ReviewRequest) {
   return api<ReviewResult>("/reviews", { method: "POST", body: JSON.stringify(req) });
+}
+
+export function getDecks() {
+  return api<DeckSummary[]>("/decks");
+}
+
+export function getDeck(id: string) {
+  return api<DeckDetail>(`/decks/${id}`);
 }

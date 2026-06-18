@@ -23,8 +23,11 @@ later without touching the core loop.
 TypeScript everywhere. One Cloud Run service serves the SPA and the API.
 
 - `web/` — Preact + Vite + Tailwind SPA.
-  - `app.tsx` auth gating + view switching · `review.tsx` the review loop ·
-    `api.ts` typed fetch client.
+  - `app.tsx` auth gating + routing · `review.tsx` the review loop ·
+    `decks.tsx` deck list + detail · `api.ts` typed fetch client ·
+    `router.ts` tiny History-API router (no dep).
+  - Routes: `/` dashboard, `/review`, `/decks/:id`. The server serves
+    `index.html` for any non-API path, so deep links / refresh / back all work.
 - `server/` — Hono on Node.
   - `index.ts` wiring + static serving · `auth.ts` Google OAuth + JWT session +
     `requireAuth` · `review-routes.ts` `/session/next` + `/reviews` ·

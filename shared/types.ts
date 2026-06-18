@@ -39,11 +39,32 @@ export type ReviewResult = {
   nextDue: string; // ISO timestamp
 };
 
+export type DeckCardState = "new" | "learning" | "review" | "relearning";
+
 export type DeckSummary = {
   id: string;
   name: string;
   source: string;
-  dueCount: number;
-  newCount: number;
-  totalCount: number;
+  total: number;
+  due: number; // cards currently due for review
+  newCount: number; // not yet studied
+  learning: number; // in learning/relearning
+  known: number; // graduated to 'review' state — "mastered"
+};
+
+export type DeckCard = {
+  id: string;
+  prompt: string; // English
+  answer: string; // bare German (compose with article for nouns)
+  article: string | null;
+  partOfSpeech: string | null;
+  state: DeckCardState;
+};
+
+export type DeckDetail = {
+  id: string;
+  name: string;
+  source: string;
+  description: string | null;
+  cards: DeckCard[];
 };

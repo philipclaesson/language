@@ -2,6 +2,8 @@ import { useEffect, useState } from "preact/hooks";
 import type { SessionUser } from "../../shared/types";
 import { getMe, getSession, logout } from "./api";
 import { Review } from "./review";
+import { DeckDetailView, DeckList } from "./decks";
+import { navigate, usePath } from "./router";
 
 type AuthState =
   | { status: "loading" }
@@ -40,12 +42,29 @@ function Login() {
 }
 
 function Home({ user }: { user: SessionUser }) {
-  const [view, setView] = useState<"home" | "review">("home");
-  if (view === "review") return <Review onDone={() => setView("home")} />;
-  return <Dashboard user={user} onStart={() => setView("review")} />;
+  const path = usePath();
+  const deckMatch = path.match(/^\/decks\/(.+)$/);
+
+  if (path === "/review") return <Review onDone={() => navigate("/")} />;
+  if (deckMatch) return <DeckDetailView deckId={deckMatch[1]} onBack={() => navigate("/")} />;
+  return (
+    <Dashboard
+      user={user}
+      onStart={() => navigate("/review")}
+      onOpenDeck={(id) => navigate(`/decks/${id}`)}
+    />
+  );
 }
 
-function Dashboard({ user, onStart }: { user: SessionUser; onStart: () => void }) {
+function Dashboard({
+  user,
+  onStart,
+  onOpenDeck,
+}: {
+  user: SessionUser;
+  onStart: () => void;
+  onOpenDeck: (id: string) => void;
+}) {
   const [counts, setCounts] = useState<{ due: number; new: number } | null>(null);
 
   useEffect(() => {
@@ -73,36 +92,42 @@ function Dashboard({ user, onStart }: { user: SessionUser; onStart: () => void }
         </button>
       </header>
 
-      <main class="mt-16 flex flex-1 flex-col items-center text-center">
+      <main class="mt-10">
         <p class="text-slate-500">
           Hallo, <span class="font-medium text-slate-900">{user.name || user.email}</span>
         </p>
 
-        <div class="mt-8 text-slate-900">
-          {counts === null ? (
-            <p class="text-slate-400">…</p>
-          ) : total === 0 ? (
-            <p class="text-slate-600">Nothing due right now. 🎉</p>
-          ) : (
-            <p class="text-lg">
-              <span class="font-semibold">{counts.due}</span> due
-              {counts.new > 0 && (
-                <>
-                  {" · "}
-                  <span class="font-semibold">{counts.new}</span> new
-                </>
-              )}
-            </p>
-          )}
+        <div class="mt-6 rounded-2xl bg-slate-50 p-5 text-center">
+          <div class="text-slate-900">
+            {counts === null ? (
+              <p class="text-slate-400">…</p>
+            ) : total === 0 ? (
+              <p class="text-slate-600">Nothing due right now. 🎉</p>
+            ) : (
+              <p class="text-lg">
+                <span class="font-semibold">{counts.due}</span> due
+                {counts.new > 0 && (
+                  <>
+                    {" · "}
+                    <span class="font-semibold">{counts.new}</span> new
+                  </>
+                )}
+              </p>
+            )}
+          </div>
+          <button
+            onClick={onStart}
+            disabled={total === 0}
+            class="mt-4 w-full rounded-xl bg-slate-900 px-5 py-3 font-medium text-white transition hover:bg-slate-700 disabled:opacity-40"
+          >
+            Start review
+          </button>
         </div>
 
-        <button
-          onClick={onStart}
-          disabled={total === 0}
-          class="mt-8 w-full rounded-xl bg-slate-900 px-5 py-3 font-medium text-white transition hover:bg-slate-700 disabled:opacity-40"
-        >
-          Start review
-        </button>
+        <h2 class="mt-10 mb-3 text-sm font-medium uppercase tracking-wide text-slate-400">
+          Your decks
+        </h2>
+        <DeckList onOpen={onOpenDeck} />
       </main>
     </div>
   );

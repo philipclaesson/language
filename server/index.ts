@@ -5,6 +5,7 @@ import { existsSync } from "node:fs";
 import { env } from "./env";
 import { authRoutes, requireAuth, type AppEnv } from "./auth";
 import { reviewRoutes } from "./review-routes";
+import { deckRoutes } from "./deck-routes";
 
 const app = new Hono<AppEnv>();
 
@@ -13,6 +14,7 @@ const api = new Hono<AppEnv>();
 api.route("/auth", authRoutes);
 api.get("/me", requireAuth, (c) => c.json({ user: c.get("user") }));
 api.route("/", reviewRoutes); // /session/next, /reviews
+api.route("/", deckRoutes); // /decks, /decks/:id
 
 app.route("/api", api);
 

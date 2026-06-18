@@ -1,8 +1,9 @@
-name: Deploy to Cloud Run
+name: CI / Deploy
 
 on:
   push:
     branches: [main]
+  pull_request:
   workflow_dispatch:
 
 # Deploys via Workload Identity Federation (see INFRA.md > CI/CD).
@@ -13,7 +14,21 @@ env:
   SERVICE: language
 
 jobs:
+  # Runs on every push and PR. Keeps main green and gates the deploy below.
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run check # typecheck + test + build
+
   deploy:
+    needs: check # never deploy unless check passed
+    if: github.event_name != 'pull_request' # deploy on push to main / manual only
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -24,7 +39,6 @@ jobs:
       - id: auth
         uses: google-github-actions/auth@v2
         with:
-          # Workload Identity Federation (no long-lived key). Set these secrets:
           workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
           service_account: ${{ secrets.GCP_DEPLOY_SA }}
 

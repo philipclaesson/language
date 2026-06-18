@@ -4,6 +4,16 @@
 > modules (chat, voice, AI-authored decks, news) can bolt on later without a
 > rewrite.
 
+## Status (2026-06-18)
+
+- ✅ **Phase 0–1:** skeleton + Google auth, deployed to Cloud Run.
+- ✅ **Phase 2:** SRS core — answer-checking, FSRS, review API + UI, starter deck.
+- ✅ **Infra/CI:** Neon DB, custom domain (https://language.levanto.dev),
+  auto-deploy on push to main (gated on `npm run check`). See INFRA.md.
+- ⏭️ **Next:** Phase 3 (deck management UI) → Phase 4 (polish) → Phase 5+ (AI modules).
+
+(Build phases detailed in §12. Operating guide in CLAUDE.md.)
+
 ## Guiding principles
 
 - **Tight infra.** One deployable service, one database, scales to (near) zero

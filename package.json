@@ -13,6 +13,7 @@
     "start": "tsx server/index.ts",
     "typecheck": "tsc --noEmit",
     "test": "tsx --test \"server/**/*.test.ts\"",
+    "check": "npm run typecheck && npm test && npm run build",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:seed": "tsx server/db/seed-all.ts",

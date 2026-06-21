@@ -3,7 +3,12 @@ import { and, eq } from "drizzle-orm";
 import { db } from "./db/client";
 import { cards, decks, reviewState } from "./db/schema";
 import { requireAuth, type AppEnv } from "./auth";
-import type { DeckCard, DeckCardState, DeckDetail, DeckSummary } from "../shared/types";
+import { tierFor } from "./srs/tiers";
+import type { DeckCard, DeckDetail, DeckSummary, MasteryTier } from "../shared/types";
+
+function emptyTiers(): Record<MasteryTier, number> {
+  return { new: 0, learning: 0, familiar: 0, mastered: 0 };
+}
 
 export const deckRoutes = new Hono<AppEnv>();
 deckRoutes.use("*", requireAuth);
@@ -20,7 +25,8 @@ deckRoutes.get("/decks", async (c) => {
       name: decks.name,
       source: decks.source,
       cardId: cards.id,
-      state: reviewState.state,
+      stateId: reviewState.id,
+      stability: reviewState.stability,
       due: reviewState.due,
     })
     .from(decks)
@@ -36,15 +42,12 @@ deckRoutes.get("/decks", async (c) => {
   for (const r of rows) {
     let d = byDeck.get(r.deckId);
     if (!d) {
-      d = { id: r.deckId, name: r.name, source: r.source, total: 0, due: 0, newCount: 0, learning: 0, known: 0 };
+      d = { id: r.deckId, name: r.name, source: r.source, total: 0, due: 0, tiers: emptyTiers() };
       byDeck.set(r.deckId, d); // insertion order = createdAt order
     }
     if (!r.cardId) continue; // deck with no cards
     d.total++;
-    const state = (r.state ?? "new") as DeckCardState;
-    if (state === "review") d.known++;
-    else if (state === "learning" || state === "relearning") d.learning++;
-    else d.newCount++;
+    d.tiers[tierFor(r.stateId === null ? null : r.stability)]++;
     if (r.due && r.due.getTime() <= now) d.due++;
   }
 
@@ -70,7 +73,8 @@ deckRoutes.get("/decks/:id", async (c) => {
       answer: cards.answer,
       article: cards.article,
       partOfSpeech: cards.partOfSpeech,
-      state: reviewState.state,
+      stateId: reviewState.id,
+      stability: reviewState.stability,
     })
     .from(cards)
     .leftJoin(
@@ -86,7 +90,7 @@ deckRoutes.get("/decks/:id", async (c) => {
     answer: r.answer,
     article: r.article,
     partOfSpeech: r.partOfSpeech,
-    state: (r.state ?? "new") as DeckCardState,
+    tier: tierFor(r.stateId === null ? null : r.stability),
   }));
 
   const body: DeckDetail = {

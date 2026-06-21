@@ -1,6 +1,7 @@
 import { useEffect, useState } from "preact/hooks";
-import type { DeckCardState, DeckDetail, DeckSummary } from "../../shared/types";
+import type { DeckDetail, DeckSummary } from "../../shared/types";
 import { getDeck, getDecks } from "./api";
+import { TIERS, TIER_BY_KEY } from "./tiers";
 
 function masteryEmoji(pct: number): string {
   if (pct >= 100) return "🏆";
@@ -22,7 +23,7 @@ export function DeckList({ onOpen }: { onOpen: (id: string) => void }) {
   return (
     <div class="space-y-3">
       {decks.map((d) => {
-        const pct = d.total ? Math.round((d.known / d.total) * 100) : 0;
+        const pct = d.total ? Math.round((d.tiers.mastered / d.total) * 100) : 0;
         return (
           <button
             key={d.id}
@@ -39,14 +40,25 @@ export function DeckList({ onOpen }: { onOpen: (id: string) => void }) {
                 </span>
               )}
             </div>
-            <div class="mt-2 h-2 w-full overflow-hidden rounded-full bg-slate-100">
-              <div class="h-full rounded-full bg-green-500 transition-[width] duration-500" style={{ width: `${pct}%` }} />
+            <div class="mt-2 flex h-2 w-full overflow-hidden rounded-full bg-slate-100">
+              {d.total > 0 &&
+                TIERS.map((t) =>
+                  d.tiers[t.key] > 0 ? (
+                    <div
+                      key={t.key}
+                      class={`${t.bar} transition-[width] duration-500`}
+                      style={{ width: `${(d.tiers[t.key] / d.total) * 100}%` }}
+                      title={`${t.label}: ${d.tiers[t.key]}`}
+                    />
+                  ) : null,
+                )}
             </div>
-            <div class="mt-1.5 flex justify-between text-xs text-slate-400">
-              <span>
-                {d.known} / {d.total} mastered
-              </span>
-              <span>{pct}%</span>
+            <div class="mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-slate-400">
+              {TIERS.map((t) => (
+                <span key={t.key}>
+                  {d.tiers[t.key]} {t.label.toLowerCase()}
+                </span>
+              ))}
             </div>
           </button>
         );
@@ -54,19 +66,6 @@ export function DeckList({ onOpen }: { onOpen: (id: string) => void }) {
     </div>
   );
 }
-
-const STATE_LABEL: Record<DeckCardState, string> = {
-  new: "New",
-  learning: "Learning",
-  relearning: "Learning",
-  review: "Mastered",
-};
-const STATE_DOT: Record<DeckCardState, string> = {
-  new: "bg-slate-300",
-  learning: "bg-amber-400",
-  relearning: "bg-amber-400",
-  review: "bg-green-500",
-};
 
 /** A single deck and all its words (read-only reference view). */
 export function DeckDetailView({ deckId, onBack }: { deckId: string; onBack: () => void }) {
@@ -92,25 +91,21 @@ export function DeckDetailView({ deckId, onBack }: { deckId: string; onBack: () 
           <h1 class="mt-4 text-2xl font-semibold tracking-tight text-slate-900">{deck.name}</h1>
           {deck.description && <p class="mt-1 text-sm text-slate-500">{deck.description}</p>}
 
-          <div class="mt-3 flex gap-4 text-xs text-slate-400">
+          <div class="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-400">
             <span>{deck.cards.length} words</span>
-            <span class="flex items-center gap-1">
-              <span class="h-2 w-2 rounded-full bg-green-500" /> mastered
-            </span>
-            <span class="flex items-center gap-1">
-              <span class="h-2 w-2 rounded-full bg-amber-400" /> learning
-            </span>
-            <span class="flex items-center gap-1">
-              <span class="h-2 w-2 rounded-full bg-slate-300" /> new
-            </span>
+            {TIERS.map((t) => (
+              <span key={t.key} class="flex items-center gap-1">
+                <span class={`h-2 w-2 rounded-full ${t.dot}`} /> {t.label.toLowerCase()}
+              </span>
+            ))}
           </div>
 
           <ul class="mt-6 divide-y divide-slate-100">
             {deck.cards.map((card) => (
               <li key={card.id} class="flex items-center gap-3 py-3">
                 <span
-                  class={`h-2 w-2 shrink-0 rounded-full ${STATE_DOT[card.state]}`}
-                  title={STATE_LABEL[card.state]}
+                  class={`h-2 w-2 shrink-0 rounded-full ${TIER_BY_KEY[card.tier].dot}`}
+                  title={TIER_BY_KEY[card.tier].label}
                 />
                 <p class="min-w-0 flex-1 truncate text-slate-900">{card.prompt}</p>
                 <div class="text-right">

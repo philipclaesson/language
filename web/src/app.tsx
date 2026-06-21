@@ -1,10 +1,11 @@
 import { useEffect, useState } from "preact/hooks";
-import type { MasteryTier, ProgressResponse, SessionUser, TodayResponse } from "../../shared/types";
+import type { ProgressResponse, SessionUser, TodayResponse } from "../../shared/types";
 import { getMe, getToday, getProgress, logout } from "./api";
 import { Review } from "./review";
 import { DeckDetailView, DeckList } from "./decks";
 import { ChatTutor } from "./chat";
 import { navigate, usePath } from "./router";
+import { TIERS } from "./tiers";
 
 type AuthState =
   | { status: "loading" }
@@ -153,14 +154,6 @@ function Dashboard({
     </div>
   );
 }
-
-// Tier display order (strongest first) + colours, shared by the bar and legend.
-const TIERS: { key: MasteryTier; label: string; bar: string; dot: string }[] = [
-  { key: "mastered", label: "Mastered", bar: "bg-emerald-500", dot: "bg-emerald-500" },
-  { key: "familiar", label: "Familiar", bar: "bg-sky-400", dot: "bg-sky-400" },
-  { key: "learning", label: "Learning", bar: "bg-amber-400", dot: "bg-amber-400" },
-  { key: "new", label: "New", bar: "bg-slate-200", dot: "bg-slate-200" },
-];
 
 function MasteryCard({ progress }: { progress: ProgressResponse | null }) {
   if (!progress) return null;

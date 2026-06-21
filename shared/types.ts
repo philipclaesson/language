@@ -78,9 +78,7 @@ export type DeckSummary = {
   source: string;
   total: number;
   due: number; // cards currently due for review
-  newCount: number; // not yet studied
-  learning: number; // in learning/relearning
-  known: number; // graduated to 'review' state — "mastered"
+  tiers: Record<MasteryTier, number>; // count of this deck's cards in each mastery tier
 };
 
 export type DeckCard = {
@@ -89,7 +87,7 @@ export type DeckCard = {
   answer: string; // bare German (compose with article for nouns)
   article: string | null;
   partOfSpeech: string | null;
-  state: DeckCardState;
+  tier: MasteryTier; // stability-derived mastery tier (see PLAN.md §5a)
 };
 
 export type DeckDetail = {

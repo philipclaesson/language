@@ -1,6 +1,6 @@
 import { useEffect, useState } from "preact/hooks";
-import type { SessionUser } from "../../shared/types";
-import { getMe, getSession, logout } from "./api";
+import type { MasteryTier, ProgressResponse, SessionUser, TodayResponse } from "../../shared/types";
+import { getMe, getToday, getProgress, logout } from "./api";
 import { Review } from "./review";
 import { DeckDetailView, DeckList } from "./decks";
 import { ChatTutor } from "./chat";
@@ -70,15 +70,17 @@ function Dashboard({
   onOpenDeck: (id: string) => void;
   onOpenChat: () => void;
 }) {
-  const [counts, setCounts] = useState<{ due: number; new: number } | null>(null);
+  const [today, setToday] = useState<TodayResponse | null>(null);
+  const [progress, setProgress] = useState<ProgressResponse | null>(null);
 
   useEffect(() => {
-    getSession()
-      .then((s) => setCounts({ due: s.dueCount, new: s.newCount }))
-      .catch(() => setCounts({ due: 0, new: 0 }));
+    getToday().then(setToday).catch(() => setToday(null));
+    getProgress().then(setProgress).catch(() => setProgress(null));
   }, []);
 
-  const total = counts ? counts.due + counts.new : 0;
+  const requiredTotal = today ? today.dueTotal + today.newTotal : 0;
+  const pending = today?.pending ?? 0;
+  const started = (today?.done ?? 0) > 0;
 
   async function onLogout() {
     await logout();
@@ -104,30 +106,33 @@ function Dashboard({
 
         <div class="mt-6 rounded-2xl bg-slate-50 p-5 text-center">
           <div class="text-slate-900">
-            {counts === null ? (
+            {today === null ? (
               <p class="text-slate-400">…</p>
-            ) : total === 0 ? (
-              <p class="text-slate-600">Nothing due right now. 🎉</p>
+            ) : requiredTotal === 0 ? (
+              <p class="text-slate-600">Nothing due right now. 🌙</p>
+            ) : pending === 0 ? (
+              <p class="text-lg text-slate-600">
+                Done for today 🎉 <span class="text-slate-400">({requiredTotal})</span>
+              </p>
             ) : (
               <p class="text-lg">
-                <span class="font-semibold">{counts.due}</span> due
-                {counts.new > 0 && (
-                  <>
-                    {" · "}
-                    <span class="font-semibold">{counts.new}</span> new
-                  </>
-                )}
+                <span class="font-semibold">{pending}</span> to review today
+                <span class="block text-sm text-slate-400">
+                  {today.done} / {requiredTotal} done
+                </span>
               </p>
             )}
           </div>
           <button
             onClick={onStart}
-            disabled={total === 0}
+            disabled={pending === 0}
             class="mt-4 w-full rounded-xl bg-slate-900 px-5 py-3 font-medium text-white transition hover:bg-slate-700 disabled:opacity-40"
           >
-            Start review
+            {started && pending > 0 ? "Continue" : "Start review"}
           </button>
         </div>
+
+        <MasteryCard progress={progress} />
 
         <button
           onClick={onOpenChat}
@@ -145,6 +150,56 @@ function Dashboard({
         </h2>
         <DeckList onOpen={onOpenDeck} />
       </main>
+    </div>
+  );
+}
+
+// Tier display order (strongest first) + colours, shared by the bar and legend.
+const TIERS: { key: MasteryTier; label: string; bar: string; dot: string }[] = [
+  { key: "mastered", label: "Mastered", bar: "bg-emerald-500", dot: "bg-emerald-500" },
+  { key: "familiar", label: "Familiar", bar: "bg-sky-400", dot: "bg-sky-400" },
+  { key: "learning", label: "Learning", bar: "bg-amber-400", dot: "bg-amber-400" },
+  { key: "new", label: "New", bar: "bg-slate-200", dot: "bg-slate-200" },
+];
+
+function MasteryCard({ progress }: { progress: ProgressResponse | null }) {
+  if (!progress) return null;
+  const { tiers, mastered, total } = progress;
+
+  return (
+    <div class="mt-4 rounded-2xl border border-slate-200 p-5">
+      <div class="flex items-baseline justify-between">
+        <div>
+          <span class="text-3xl font-semibold tracking-tight text-slate-900">{mastered}</span>
+          <span class="ml-2 text-slate-500">words mastered</span>
+        </div>
+        <span class="text-sm text-slate-400">{total} total</span>
+      </div>
+
+      {total > 0 && (
+        <>
+          <div class="mt-4 flex h-2.5 w-full overflow-hidden rounded-full bg-slate-100">
+            {TIERS.map((t) =>
+              tiers[t.key] > 0 ? (
+                <div
+                  key={t.key}
+                  class={t.bar}
+                  style={{ width: `${(tiers[t.key] / total) * 100}%` }}
+                  title={`${t.label}: ${tiers[t.key]}`}
+                />
+              ) : null,
+            )}
+          </div>
+          <div class="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
+            {TIERS.map((t) => (
+              <span key={t.key} class="inline-flex items-center gap-1.5">
+                <span class={`h-2 w-2 rounded-full ${t.dot}`} />
+                {t.label} <span class="font-medium text-slate-700">{tiers[t.key]}</span>
+              </span>
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 }

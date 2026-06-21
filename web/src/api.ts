@@ -5,9 +5,10 @@ import type {
   DeckDetail,
   DeckSummary,
   MeResponse,
+  ProgressResponse,
   ReviewRequest,
   ReviewResult,
-  SessionResponse,
+  TodayResponse,
 } from "../../shared/types";
 
 // Same-origin in prod; in dev Vite proxies /api to the Hono server.
@@ -29,8 +30,12 @@ export function logout() {
   return api<{ ok: boolean }>("/auth/logout", { method: "POST" });
 }
 
-export function getSession() {
-  return api<SessionResponse>("/session/next");
+export function getToday() {
+  return api<TodayResponse>("/session/today");
+}
+
+export function getProgress() {
+  return api<ProgressResponse>("/progress");
 }
 
 export function postReview(req: ReviewRequest) {

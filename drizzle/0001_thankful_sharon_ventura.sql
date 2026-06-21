@@ -1,0 +1,1 @@
+ALTER TABLE "reviews" ADD COLUMN "graded" boolean DEFAULT true NOT NULL;

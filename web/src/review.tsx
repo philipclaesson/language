@@ -1,27 +1,35 @@
 import { useEffect, useRef, useState } from "preact/hooks";
 import type { ReviewResult, SessionCard } from "../../shared/types";
-import { getSession, postReview } from "./api";
+import { getToday, postReview } from "./api";
 
 type Phase = "loading" | "input" | "feedback" | "empty" | "done";
 
 export function Review({ onDone }: { onDone: () => void }) {
+  // `queue` holds the cards still needing a correct typing today. We always show
+  // queue[0]; a correct answer drops it, a wrong one rotates it to the back so it
+  // comes round again — "hammer until correct" (PLAN.md §5a).
   const [queue, setQueue] = useState<SessionCard[]>([]);
-  const [index, setIndex] = useState(0);
   const [phase, setPhase] = useState<Phase>("loading");
   const [typed, setTyped] = useState("");
   const [result, setResult] = useState<ReviewResult | null>(null);
-  const [stats, setStats] = useState({ correct: 0, total: 0 });
   const [submitting, setSubmitting] = useState(false);
+  // Today's required total and how many were already done before this session.
+  const [requiredTotal, setRequiredTotal] = useState(0);
+  const [baseDone, setBaseDone] = useState(0);
+  const [completed, setCompleted] = useState(0); // unique cards finished this session
   const startedAt = useRef(0);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    getSession()
-      .then((s) => {
-        if (s.cards.length === 0) {
-          setPhase("empty");
+    getToday()
+      .then((t) => {
+        setRequiredTotal(t.dueTotal + t.newTotal);
+        setBaseDone(t.done);
+        if (t.cards.length === 0) {
+          // No pending cards: either today's work is finished, or there was none.
+          setPhase(t.dueTotal + t.newTotal > 0 ? "done" : "empty");
         } else {
-          setQueue(s.cards);
+          setQueue(t.cards);
           setPhase("input");
           startedAt.current = Date.now();
         }
@@ -29,11 +37,12 @@ export function Review({ onDone }: { onDone: () => void }) {
       .catch(() => setPhase("empty"));
   }, []);
 
-  const current = queue[index];
+  const current = queue[0];
+  const doneCount = baseDone + completed;
 
   useEffect(() => {
     if (phase === "input" || phase === "feedback") inputRef.current?.focus();
-  }, [phase, index]);
+  }, [phase, queue]);
 
   async function grade() {
     if (!current || phase !== "input" || submitting) return;
@@ -45,7 +54,6 @@ export function Review({ onDone }: { onDone: () => void }) {
         elapsedMs: Date.now() - startedAt.current,
       });
       setResult(r);
-      setStats((s) => ({ correct: s.correct + (r.correct ? 1 : 0), total: s.total + 1 }));
       setPhase("feedback");
     } catch {
       // leave in input phase so they can retry
@@ -55,13 +63,20 @@ export function Review({ onDone }: { onDone: () => void }) {
   }
 
   function advance() {
+    const wasCorrect = result?.correct ?? false;
+    const [head, ...rest] = queue;
+    // Correct → drop it (one more done). Wrong → send it to the back to re-drill.
+    const next = wasCorrect ? rest : [...rest, head];
+    if (wasCorrect) setCompleted((c) => c + 1);
+
     setResult(null);
     setTyped("");
-    if (index + 1 >= queue.length) {
+    if (next.length === 0) {
+      setQueue(next);
       setPhase("done");
       return;
     }
-    setIndex(index + 1);
+    setQueue(next);
     setPhase("input");
     startedAt.current = Date.now();
   }
@@ -78,8 +93,8 @@ export function Review({ onDone }: { onDone: () => void }) {
     return (
       <Shell>
         <div class="text-center">
-          <p class="text-2xl">🎉</p>
-          <p class="mt-2 text-slate-600">Nothing due right now. Well done!</p>
+          <p class="text-2xl">🌙</p>
+          <p class="mt-2 text-slate-600">Nothing to do right now. Come back later!</p>
           <BackButton onDone={onDone} label="Back" />
         </div>
       </Shell>
@@ -90,9 +105,10 @@ export function Review({ onDone }: { onDone: () => void }) {
     return (
       <Shell>
         <div class="text-center">
-          <p class="text-2xl font-semibold text-slate-900">Session complete</p>
+          <p class="text-3xl">🎉</p>
+          <p class="mt-3 text-2xl font-semibold text-slate-900">Done for today</p>
           <p class="mt-2 text-slate-600">
-            {stats.correct} / {stats.total} correct
+            {requiredTotal} {requiredTotal === 1 ? "word" : "words"} reviewed. See you tomorrow.
           </p>
           <BackButton onDone={onDone} label="Back to home" />
         </div>
@@ -111,13 +127,19 @@ export function Review({ onDone }: { onDone: () => void }) {
   return (
     <Shell>
       <div class="w-full max-w-md">
-        <div class="mb-6 flex items-center justify-between text-sm text-slate-400">
+        <div class="mb-2 flex items-center justify-between text-sm text-slate-400">
           <span>
-            {index + 1} / {queue.length}
+            {doneCount} / {requiredTotal} today
           </span>
           <button onClick={onDone} class="hover:text-slate-700 hover:underline">
             End session
           </button>
+        </div>
+        <div class="mb-6 h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
+          <div
+            class="h-full rounded-full bg-slate-900 transition-all"
+            style={{ width: `${requiredTotal ? (doneCount / requiredTotal) * 100 : 0}%` }}
+          />
         </div>
 
         <p class="text-center text-sm uppercase tracking-wide text-slate-400">
@@ -150,7 +172,10 @@ export function Review({ onDone }: { onDone: () => void }) {
                     : "Not quite"}
               </p>
               {!result.correct && (
-                <p class="mt-1 text-lg font-semibold">{result.expected}</p>
+                <>
+                  <p class="mt-1 text-lg font-semibold">{result.expected}</p>
+                  <p class="mt-1 text-xs opacity-70">You'll see this again before you're done.</p>
+                </>
               )}
             </div>
           )}

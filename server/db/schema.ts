@@ -5,6 +5,7 @@ import {
   timestamp,
   doublePrecision,
   integer,
+  boolean,
   unique,
 } from "drizzle-orm/pg-core";
 
@@ -77,6 +78,10 @@ export const reviews = pgTable("reviews", {
     .notNull()
     .references(() => cards.id, { onDelete: "cascade" }),
   rating: integer("rating").notNull(), // 1 = fail, 3 = pass
+  // Whether this attempt drove the FSRS schedule. The first attempt of the day on
+  // a card is graded; later same-day attempts are training-only re-drills logged
+  // with graded=false, so they don't pollute the optimizer's view. See PLAN.md §5a.
+  graded: boolean("graded").notNull().default(true),
   typedAnswer: text("typed_answer"),
   reviewedAt: timestamp("reviewed_at", { withTimezone: true }).notNull().defaultNow(),
   elapsedMs: integer("elapsed_ms"),

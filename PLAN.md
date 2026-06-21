@@ -13,13 +13,14 @@
 - ✅ **Phase 5 (first AI module):** chat tutor — chat about German and build/edit
   decks via a server-side Claude tool-use loop (`server/chat-routes.ts`,
   `source='ai_chat'`). Model pinned to `claude-sonnet-4-6`.
-- 🐛 **Known bug (fix first):** the scheduler used FSRS's default learning steps
-  but never persisted `learning_steps`, so cards got stuck in `learning` and never
-  graduated to real intervals — spacing was effectively off. Fix =
-  `enable_short_term: false` (see §5a / §13.6); ships independently of the rest.
-- ⏭️ **Next:** lock the **daily loop** (§5a) — finishable day, re-drill-until-
-  correct, tiers/mastery, streaks — *before* more features. Then Phase 3 (deck UI)
-  → Phase 4 (polish) → more AI modules.
+- ✅ **Daily loop (§5a) — built (first cut):** `enable_short_term: false` fix +
+  pure `tiers`/`day` logic (unit-tested) + `/session/today`, reworked `/reviews`
+  (first-attempt-of-day grading, training-only re-drills), `/progress`, and the
+  client (re-drill loop, finishable "done for today", mastery tiers bar). Retired
+  `/session/next`. **Pending:** apply the `reviews.graded` migration to the DB,
+  deploy, and verify against a live session.
+- ⏭️ **Next:** verify the loop in prod/dev → bonus work (`/session/extra`) →
+  streaks → Phase 3 (deck UI) → Phase 4 (polish) → more AI modules.
 
 (Build phases detailed in §12. Operating guide in CLAUDE.md.)
 
@@ -252,7 +253,7 @@ Beyond the required set (never required; its absence never breaks a streak):
   FSRS dampens the gain by *how early* you reviewed, so eager practice reinforces
   honestly and can't meaningfully game the schedule.
 
-### Progress, mastery & streaks (the motivation layer)
+### Progress & mastery (the motivation layer)
 
 Driven entirely off FSRS `stability` (days until recall would fall to ~90%) and
 the `reviews` log — **no new tables needed**.
@@ -271,25 +272,36 @@ the `reviews` log — **no new tables needed**.
   you lapse a mastered word (which visibly drops a tier in the bar). This is
   deliberate — the number reflects what you actually know *now*, and re-earning it
   is part of the loop. A goal framing like "1000 words" is UI on top of this count.
-- **Streak:** a day counts when its required set is completed. A day with nothing
-  due and no new cards doesn't break the streak (it's maintained); any day that
-  *has* required work must be finished to keep it.
 
 ### What this needs (all small, additive)
 
-- **Code:** `fsrs({ enable_short_term: false })`; first-attempt-of-day grades,
-  re-drills are practice; due query uses end-of-today in the user's timezone.
-- **Schema:** `users.timezone` (text, default `'Europe/Berlin'`),
-  `users.daily_new_limit` (int, default 10). Optionally a boolean on `reviews`
-  (e.g. `graded`) to separate schedule-driving attempts from re-drills in stats.
-  Mastery and streaks are **derived**, not stored.
+- **Code:** `fsrs({ enable_short_term: false })` *(done)*; first-attempt-of-day
+  grades, re-drills are practice; due query uses end-of-today.
+- **Constants for now** (not per-user columns — there's no settings UI yet):
+  `NEW_PER_DAY = 10` and a single day-boundary timezone (`'Europe/Berlin'`). These
+  become `users.daily_new_limit` / `users.timezone` columns *if/when* we add a
+  settings screen — not before.
+- **Schema (one change):** `reviews.graded` (boolean, default `true`). Re-drill
+  attempts are logged with `graded=false` so they don't pollute the `reviews` log
+  that the future FSRS optimizer reads (§4); the first graded attempt of the day
+  is `graded=true`. Mastery is **derived** from `review_state.stability`.
 - **API:**
   - `GET /api/session/today` → required set (still never leaks answer/article) +
     `{ dueCount, newCount, pending, complete }`.
   - `POST /api/reviews` → grades only the first attempt of the day; tells the
     client whether the card still needs re-drilling.
-  - `GET /api/progress` → `{ tiers, mastered, streak, reviewsToday }`.
+  - `GET /api/progress` → `{ tiers, mastered, reviewsToday }`.
   - `GET /api/session/extra?type=new|practice` → bonus cards.
+
+### First-cut scope
+
+**In:** finishable "today's set" (due + up to 10 new), the type-it-correctly-once
+completion gate with training-only re-drills, stability tiers + a live Mastered
+count. **Deferred:** **bonus work** (`/session/extra`) — since bonus practice
+grades via FSRS, a *missed* bonus card would otherwise leak into the required set
+and un-complete the day; cleanly separating required-vs-bonus needs a deliberate
+marker, so it's a follow-up rather than part of the core loop. Also deferred:
+streaks; per-user `daily_new_limit`/`timezone` settings; any settings UI.
 
 ---
 

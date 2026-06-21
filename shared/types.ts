@@ -20,12 +20,6 @@ export type SessionCard = {
   partOfSpeech: string | null;
 };
 
-export type SessionResponse = {
-  cards: SessionCard[];
-  dueCount: number;
-  newCount: number;
-};
-
 export type ReviewRequest = {
   cardId: string;
   typedAnswer: string;
@@ -37,6 +31,43 @@ export type ReviewResult = {
   expected: string; // full canonical answer, e.g. "der Hund"
   reason?: "missing_article" | "wrong";
   nextDue: string; // ISO timestamp
+  // Whether this attempt drove the FSRS schedule. The first attempt of the day
+  // on a card is graded; all later same-day attempts are training-only re-drills
+  // (graded=false) and leave the schedule untouched. See PLAN.md §5a.
+  graded: boolean;
+  // True when the card still needs a correct typing today to be "done" (i.e. this
+  // answer was wrong). The client keeps re-showing it until this is false.
+  needsRedrill: boolean;
+};
+
+// ---- Daily loop (PLAN.md §5a) ----
+
+// The day's required work. `cards` is what's still PENDING — cards not yet typed
+// correctly today — so on refresh the client rebuilds its queue from here.
+// Answer/article are omitted, same as SessionCard.
+export type TodayResponse = {
+  cards: SessionCard[];
+  dueTotal: number; // due reviews required today
+  newTotal: number; // new cards required today (<= NEW_PER_DAY)
+  done: number; // required cards already typed correctly today
+  pending: number; // required cards still needing a correct typing (= cards.length)
+  complete: boolean; // pending === 0 — "done for today"
+};
+
+// Mastery tiers by FSRS stability. See PLAN.md §5a.
+export type MasteryTier = "new" | "learning" | "familiar" | "mastered";
+
+export type ProgressResponse = {
+  tiers: Record<MasteryTier, number>; // count of the user's cards in each tier
+  mastered: number; // = tiers.mastered, the headline number
+  total: number; // total cards in the user's library
+  reviewsToday: number; // graded reviews completed today
+};
+
+// Bonus work beyond the required set: more new cards, or practice of known cards.
+export type ExtraType = "new" | "practice";
+export type ExtraResponse = {
+  cards: SessionCard[];
 };
 
 export type DeckCardState = "new" | "learning" | "review" | "relearning";

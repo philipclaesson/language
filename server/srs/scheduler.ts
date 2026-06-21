@@ -1,8 +1,12 @@
 import { fsrs, createEmptyCard, Rating, State, type Card as FsrsCard } from "ts-fsrs";
 
-// Default FSRS parameters. Later we can run the optimizer on the `reviews` log
-// to tune these to our own memory.
-const scheduler = fsrs();
+// Day-grained FSRS: no intra-day learning steps. The "drill until correct"
+// behaviour is a session-completion gate (see PLAN.md §5a), not FSRS steps.
+// `enable_short_term: false` means we never schedule sub-day intervals, so the
+// `learning_steps` field (which we don't persist) is irrelevant — without this,
+// cards get stuck in `learning` forever and never graduate to real intervals.
+// Later we can run the optimizer on the `reviews` log to tune parameters.
+const scheduler = fsrs({ enable_short_term: false });
 
 // The subset of FSRS state we persist (the rest is recomputed each review).
 export type StoredSrs = {

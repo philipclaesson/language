@@ -13,7 +13,13 @@
 - ✅ **Phase 5 (first AI module):** chat tutor — chat about German and build/edit
   decks via a server-side Claude tool-use loop (`server/chat-routes.ts`,
   `source='ai_chat'`). Model pinned to `claude-sonnet-4-6`.
-- ⏭️ **Next:** Phase 3 (deck management UI) → Phase 4 (polish) → more AI modules.
+- 🐛 **Known bug (fix first):** the scheduler used FSRS's default learning steps
+  but never persisted `learning_steps`, so cards got stuck in `learning` and never
+  graduated to real intervals — spacing was effectively off. Fix =
+  `enable_short_term: false` (see §5a / §13.6); ships independently of the rest.
+- ⏭️ **Next:** lock the **daily loop** (§5a) — finishable day, re-drill-until-
+  correct, tiers/mastery, streaks — *before* more features. Then Phase 3 (deck UI)
+  → Phase 4 (polish) → more AI modules.
 
 (Build phases detailed in §12. Operating guide in CLAUDE.md.)
 
@@ -172,19 +178,118 @@ Notes:
 
 ## 5. SRS engine
 
-- Use **FSRS** (`ts-fsrs`). It models each card's memory with stability +
-  difficulty and predicts the optimal next review for a target retention (e.g.
-  90%).
+- Use **FSRS** (`ts-fsrs`) with **`enable_short_term: false`**. It models each
+  card's memory with stability + difficulty and predicts the optimal next review
+  for a target retention (~90%). We run it on a **daily grain** — no intra-day
+  learning steps. (Why: the "drill until correct" behaviour you want lives in the
+  session loop, not in FSRS — see §5a. Short-term steps would also leak
+  minute-scale due times into a daily product and force a card to be answered
+  twice to graduate.)
 - **Binary grading.** Our UI is pass/fail only, so we map:
   - Correct → FSRS `Good` (3)
   - Incorrect → FSRS `Again` (1)
   - (We never expose Hard/Easy.)
-- A **review session** = fetch all cards where `due <= now()` for the user
-  (capped at e.g. 30–50/session, plus a few `new` cards), shuffle, present one at
-  a time. After each answer, call FSRS to compute the new state, persist
-  `review_state`, append to `reviews`.
+- **One graded review per card per day.** The *first* attempt of the day on a
+  card is the one that drives FSRS; same-day re-drills are training only (§5a).
+  After a graded answer, persist `review_state`, append to `reviews`.
 - New cards get an initial state on first review; daily new-card intake is capped
-  (configurable, default ~10) so the deck doesn't avalanche.
+  per user (`daily_new_limit`, default 10) so the deck doesn't avalanche.
+- The full session shape — completion gate, progress, mastery, streaks — is
+  specified in **§5a**. That's the heart of the product; this section is just the
+  engine it runs on.
+
+---
+
+## 5a. The daily loop, progress & mastery (the heart of the product)
+
+Everything here sits **on top of** plain FSRS. The guiding split:
+
+- **The schedule** — *when a card is next due*, in days. Owned by FSRS.
+- **The daily session** — *what you do today and when you're done*. Owned by us.
+
+Keeping these separate is what lets us run plain, day-grained FSRS while still
+giving a satisfying "hammer it until I get it right" session.
+
+### Today's set — finite and finishable
+
+When you open the app, "today" is a known, bounded list:
+
+- **Due reviews:** cards with `due <= end of today` in the user's timezone.
+  (End-of-today, *not* `now` — so a card due later today is part of this sitting
+  and the day can be finished in one go.)
+- **New cards:** up to `daily_new_limit` (default 10, per user).
+
+`required = dueReviews + newCards`. The Today screen shows a progress bar
+(e.g. **23 / 31**) and one clear call to action. There is always a well-defined
+"done for today" — this is the backbone of motivation and streaks.
+
+### The completion gate — type every card correctly once
+
+The rule that makes a day *finishable* and *worth a streak*:
+
+- On a card's **first attempt today**:
+  - **Correct** → FSRS `Good`; the card is satisfied for the day and scheduled out.
+  - **Wrong** → FSRS `Again` (the card lapses; its real due moves to soon); the
+    card is **not** satisfied and stays in the session.
+- A card you got wrong is **re-shown until you type it correctly**. Those re-drill
+  attempts are *training only* — logged to `reviews` but they do **not** re-grade
+  the card (the first-attempt lapse already counted). Getting it right on the 4th
+  try doesn't launder an `Again` into a `Good`.
+- **The day is complete when every card in the required set has ≥1 correct typing
+  today** — including hammering your last card until it's right.
+
+Refresh-safe: "still pending today" is server-derivable — a required card is
+pending until it has a correct review dated today. Note a lapsed-but-not-yet-
+correct card stays in today's set even though FSRS has moved its due to tomorrow.
+
+### Bonus work — for the motivated day
+
+Beyond the required set (never required; its absence never breaks a streak):
+
+- **More new words** — pull new cards past `daily_new_limit`. Real first reviews.
+- **Practice words you know** — drill not-yet-due cards. **These feed FSRS**
+  (early review): a correct drill nudges stability up and pushes the due date out.
+  FSRS dampens the gain by *how early* you reviewed, so eager practice reinforces
+  honestly and can't meaningfully game the schedule.
+
+### Progress, mastery & streaks (the motivation layer)
+
+Driven entirely off FSRS `stability` (days until recall would fall to ~90%) and
+the `reviews` log — **no new tables needed**.
+
+- **Tiers**, by stability, shown as a stacked bar of your whole collection
+  climbing:
+
+  | Tier      | Definition             |
+  |-----------|------------------------|
+  | New       | no review state yet    |
+  | Learning  | stability < 7d         |
+  | Familiar  | 7d ≤ stability < 21d   |
+  | Mastered  | stability ≥ 21d        |
+
+- **Headline number = current Mastered count.** Honest and live: it can dip when
+  you lapse a mastered word (which visibly drops a tier in the bar). This is
+  deliberate — the number reflects what you actually know *now*, and re-earning it
+  is part of the loop. A goal framing like "1000 words" is UI on top of this count.
+- **Streak:** a day counts when its required set is completed. A day with nothing
+  due and no new cards doesn't break the streak (it's maintained); any day that
+  *has* required work must be finished to keep it.
+
+### What this needs (all small, additive)
+
+- **Code:** `fsrs({ enable_short_term: false })`; first-attempt-of-day grades,
+  re-drills are practice; due query uses end-of-today in the user's timezone.
+- **Schema:** `users.timezone` (text, default `'Europe/Berlin'`),
+  `users.daily_new_limit` (int, default 10). Optionally a boolean on `reviews`
+  (e.g. `graded`) to separate schedule-driving attempts from re-drills in stats.
+  Mastery and streaks are **derived**, not stored.
+- **API:**
+  - `GET /api/session/today` → required set (still never leaks answer/article) +
+    `{ dueCount, newCount, pending, complete }`.
+  - `POST /api/reviews` → grades only the first attempt of the day; tells the
+    client whether the card still needs re-drilling.
+  - `GET /api/progress` → `{ tiers, mastered, streak, reviewsToday }`.
+  - `GET /api/session/extra?type=new|practice` → bonus cards.
 
 ---
 
@@ -359,4 +464,14 @@ chat → AI modules → news → voice.
    no sharing for now. Schema keeps card content separate from `review_state` so
    deck sharing/cloning between the two of you is a clean addition later.
 5. **Frontend → Preact** (see §2/§8).
+6. **FSRS grain → daily, `enable_short_term: false`.** Plain day-grained FSRS;
+   one graded review per card per day. "Drill until correct" is a session
+   completion gate (§5a), not FSRS learning steps. *(Also fixes a bug where cards
+   never graduated out of `learning` because `learning_steps` wasn't persisted.)*
+7. **Mastery → tiered by stability.** New / Learning (<7d) / Familiar (7–21d) /
+   Mastered (≥21d). Headline = current Mastered count.
+8. **Headline number → honest & live.** It drops when you lapse a mastered word,
+   rather than being a lifetime high-water mark — reflects what you know *now*.
+9. **Bonus practice → feeds FSRS.** Early reviews of known cards reschedule via
+   FSRS (which dampens early-review gains), rather than being practice-only.
 ```

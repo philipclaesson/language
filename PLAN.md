@@ -19,8 +19,9 @@
   client (re-drill loop, finishable "done for today", mastery tiers bar). Retired
   `/session/next`. **Pending:** apply the `reviews.graded` migration to the DB,
   deploy, and verify against a live session.
-- ⏭️ **Next:** verify the loop in prod/dev → bonus work (`/session/extra`) →
-  streaks → Phase 3 (deck UI) → Phase 4 (polish) → more AI modules.
+- ⏭️ **Next:** *use the live daily loop for a few days*, then bonus work
+  (designed — see **EXTRA_WORK.md**) → streaks → Phase 3 (deck UI) → Phase 4
+  (polish) → more AI modules.
 
 (Build phases detailed in §12. Operating guide in CLAUDE.md.)
 
@@ -245,13 +246,30 @@ correct card stays in today's set even though FSRS has moved its due to tomorrow
 
 ### Bonus work — for the motivated day
 
-Beyond the required set (never required; its absence never breaks a streak):
+Extra work is **pure bonus on a fixed daily goal**: the required set (due + 10
+new) never changes, and bonus never blocks "done for today" or (later) threatens a
+streak. Bonus is surfaced separately (`+N bonus today`). Two on-ramps:
 
-- **More new words** — pull new cards past `daily_new_limit`. Real first reviews.
-- **Practice words you know** — drill not-yet-due cards. **These feed FSRS**
-  (early review): a correct drill nudges stability up and pushes the due date out.
-  FSRS dampens the gain by *how early* you reviewed, so eager practice reinforces
-  honestly and can't meaningfully game the schedule.
+- **Learn more words** — pull another batch (~10) of fresh cards past
+  `daily_new_limit`. Real first reviews (graded via FSRS), re-drilled until correct
+  (you're learning them).
+- **Practice words you know** — drill studied, **not-yet-due** cards,
+  **weakest-first** (lowest stability). Feeds FSRS as early reviews (the gain is
+  damped by how early you reviewed, so it reinforces without gaming). One-and-done
+  (a miss just reschedules sooner — no completion gate). Pool excludes new cards
+  (use "learn more"), cards due today (those are required), and cards already
+  reviewed today.
+
+Both grade via FSRS and grow mastery. The **first-attempt-of-day rule already caps
+grading to one graded review per card per day**, so repeat practice can't inflate
+stability. Entry points: the "Done for today" screen, plus a small **Practice**
+link on the dashboard (drill even with nothing due).
+
+The one mechanism this needs: a **`reviews.bonus` flag** (the client sets it on the
+extra-work flows). `planToday` computes today's *required* membership from
+**non-bonus** reviews only — that's what stops a *missed* bonus card from leaking
+into the required set and un-completing the day. Mastery/progress count every
+graded review regardless.
 
 ### Progress & mastery (the motivation layer)
 
@@ -291,17 +309,18 @@ the `reviews` log — **no new tables needed**.
   - `POST /api/reviews` → grades only the first attempt of the day; tells the
     client whether the card still needs re-drilling.
   - `GET /api/progress` → `{ tiers, mastered, reviewsToday }`.
-  - `GET /api/session/extra?type=new|practice` → bonus cards.
+  - `GET /api/session/extra?type=new|practice` → bonus cards (answer/article
+    omitted, as everywhere); `POST /api/reviews` gains an optional `bonus` flag.
 
 ### First-cut scope
 
-**In:** finishable "today's set" (due + up to 10 new), the type-it-correctly-once
-completion gate with training-only re-drills, stability tiers + a live Mastered
-count. **Deferred:** **bonus work** (`/session/extra`) — since bonus practice
-grades via FSRS, a *missed* bonus card would otherwise leak into the required set
-and un-complete the day; cleanly separating required-vs-bonus needs a deliberate
-marker, so it's a follow-up rather than part of the core loop. Also deferred:
-streaks; per-user `daily_new_limit`/`timezone` settings; any settings UI.
+**Shipped:** finishable "today's set" (due + up to 10 new), the
+type-it-correctly-once completion gate with training-only re-drills, stability
+tiers + a live Mastered count. **Designed, not yet built:** bonus work (above) —
+needs the `reviews.bonus` flag + `/session/extra` + the two UI on-ramps. Full
+self-contained spec in **EXTRA_WORK.md** (deferred ~late June 2026).
+**Deferred:** streaks; per-user `daily_new_limit`/`timezone` settings; any settings
+UI.
 
 ---
 
@@ -486,4 +505,10 @@ chat → AI modules → news → voice.
    rather than being a lifetime high-water mark — reflects what you know *now*.
 9. **Bonus practice → feeds FSRS.** Early reviews of known cards reschedule via
    FSRS (which dampens early-review gains), rather than being practice-only.
+10. **Extra work → pure bonus on a fixed goal.** "Learn more" and "practice" grow
+    mastery but never change the day's goal/completion. A `reviews.bonus` flag
+    keeps bonus reviews out of `planToday`'s required set (so a missed bonus card
+    can't un-complete the day).
+11. **Practice ordering → weakest-first.** Practice serves studied, not-yet-due
+    cards by lowest stability first; one-and-done (no re-drill gate).
 ```

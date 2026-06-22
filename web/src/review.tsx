@@ -2,7 +2,9 @@ import { useEffect, useRef, useState } from "preact/hooks";
 import type { ReviewResult, SessionCard } from "../../shared/types";
 import { getToday, postReview } from "./api";
 
-type Phase = "loading" | "input" | "feedback" | "empty" | "done";
+// `input` = typing the answer from recall (graded on the server).
+// `drill`  = got it wrong, now copying the revealed answer to continue.
+type Phase = "loading" | "input" | "drill" | "empty" | "done";
 
 export function Review({ onDone }: { onDone: () => void }) {
   // `queue` holds the cards still needing a correct typing today. We always show
@@ -13,6 +15,9 @@ export function Review({ onDone }: { onDone: () => void }) {
   const [typed, setTyped] = useState("");
   const [result, setResult] = useState<ReviewResult | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  // Transient border flash that gives correct/wrong feedback without a screen
+  // change, so the keyboard never has to close. Cleared by a timer.
+  const [flash, setFlash] = useState<"green" | "red" | null>(null);
   // Today's required total and how many were already done before this session.
   const [requiredTotal, setRequiredTotal] = useState(0);
   const [baseDone, setBaseDone] = useState(0);
@@ -40,37 +45,24 @@ export function Review({ onDone }: { onDone: () => void }) {
   const current = queue[0];
   const doneCount = baseDone + completed;
 
+  // Keep the one input focused so the mobile keyboard never closes. iOS won't
+  // *reopen* a keyboard programmatically, so the whole loop is built to never
+  // blur: a single persistent input, submit via the return key, auto-advance.
   useEffect(() => {
-    if (phase === "input" || phase === "feedback") inputRef.current?.focus();
+    if (phase === "input" || phase === "drill") inputRef.current?.focus();
   }, [phase, queue]);
 
-  async function grade() {
-    if (!current || phase !== "input" || submitting) return;
-    setSubmitting(true);
-    try {
-      const r = await postReview({
-        cardId: current.id,
-        typedAnswer: typed,
-        elapsedMs: Date.now() - startedAt.current,
-      });
-      setResult(r);
-      setPhase("feedback");
-    } catch {
-      // leave in input phase so they can retry
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  function advance() {
-    const wasCorrect = result?.correct ?? false;
+  // Move past the current card. Correct → drop it (one more done). Wrong → send
+  // it to the back so it comes round again for a real recall test (PLAN.md §5a).
+  function advance(wasCorrect: boolean) {
     const [head, ...rest] = queue;
-    // Correct → drop it (one more done). Wrong → send it to the back to re-drill.
     const next = wasCorrect ? rest : [...rest, head];
     if (wasCorrect) setCompleted((c) => c + 1);
 
     setResult(null);
     setTyped("");
+    setFlash(null);
+    setSubmitting(false);
     if (next.length === 0) {
       setQueue(next);
       setPhase("done");
@@ -81,10 +73,49 @@ export function Review({ onDone }: { onDone: () => void }) {
     startedAt.current = Date.now();
   }
 
+  async function grade() {
+    if (!current || phase !== "input" || submitting) return;
+    setSubmitting(true);
+    try {
+      const r = await postReview({
+        cardId: current.id,
+        typedAnswer: typed,
+        elapsedMs: Date.now() - startedAt.current,
+      });
+      if (r.correct) {
+        // Flash green, then move on — no separate "success" screen or tap.
+        setFlash("green");
+        setTimeout(() => advance(true), 160);
+      } else {
+        // Reveal the answer and make them type it to continue (the drill).
+        setResult(r);
+        setFlash("red");
+        setTyped("");
+        setPhase("drill");
+        setSubmitting(false);
+        setTimeout(() => setFlash(null), 450);
+      }
+    } catch {
+      // leave in input phase so they can retry
+      setSubmitting(false);
+    }
+  }
+
+  // In the drill, the answer is on screen — they just have to reproduce it.
+  // Matching it (on any keystroke or return) is the only way forward.
+  function matchesExpected(value: string) {
+    return !!result && value.trim() === result.expected.trim();
+  }
+
+  function onDrillInput(value: string) {
+    setTyped(value);
+    if (matchesExpected(value)) advance(false);
+  }
+
   function onSubmit(e: Event) {
     e.preventDefault();
     if (phase === "input") void grade();
-    else if (phase === "feedback") advance();
+    else if (phase === "drill" && matchesExpected(typed)) advance(false);
   }
 
   if (phase === "loading") return <Shell>…</Shell>;
@@ -116,13 +147,12 @@ export function Review({ onDone }: { onDone: () => void }) {
     );
   }
 
-  const banner =
-    result &&
-    (result.correct
-      ? "bg-green-50 text-green-800 ring-green-200"
-      : result.reason === "missing_article"
-        ? "bg-amber-50 text-amber-900 ring-amber-200"
-        : "bg-red-50 text-red-800 ring-red-200");
+  const inputBorder =
+    flash === "green"
+      ? "border-green-500 ring-2 ring-green-200"
+      : flash === "red"
+        ? "border-red-400 ring-2 ring-red-200"
+        : "border-slate-300 focus:border-slate-900";
 
   return (
     <Shell>
@@ -153,40 +183,41 @@ export function Review({ onDone }: { onDone: () => void }) {
           <input
             ref={inputRef}
             value={typed}
-            readOnly={phase === "feedback"}
-            onInput={(e) => setTyped((e.target as HTMLInputElement).value)}
-            placeholder="Type the German…"
+            onInput={(e) =>
+              phase === "drill"
+                ? onDrillInput((e.target as HTMLInputElement).value)
+                : setTyped((e.target as HTMLInputElement).value)
+            }
+            placeholder={phase === "drill" ? "Type it to continue…" : "Type the German…"}
             autocomplete="off"
             autocapitalize="off"
+            autocorrect="off"
             spellcheck={false}
-            class="w-full rounded-xl border border-slate-300 px-4 py-3 text-lg outline-none focus:border-slate-900"
+            enterkeyhint={phase === "drill" ? "next" : "go"}
+            class={`w-full rounded-xl border px-4 py-3 text-lg outline-none transition-colors ${inputBorder}`}
           />
 
-          {phase === "feedback" && result && (
-            <div class={`mt-4 rounded-xl px-4 py-3 text-center ring-1 ${banner}`}>
+          {phase === "drill" && result && (
+            <div class="mt-4 rounded-xl bg-amber-50 px-4 py-3 text-center text-amber-900 ring-1 ring-amber-200">
               <p class="font-medium">
-                {result.correct
-                  ? "Correct"
-                  : result.reason === "missing_article"
-                    ? "Almost — don't forget the article"
-                    : "Not quite"}
+                {result.reason === "missing_article"
+                  ? "Almost — don't forget the article"
+                  : "Not quite"}
               </p>
-              {!result.correct && (
-                <>
-                  <p class="mt-1 text-lg font-semibold">{result.expected}</p>
-                  <p class="mt-1 text-xs opacity-70">You'll see this again before you're done.</p>
-                </>
-              )}
+              <p class="mt-1 text-lg font-semibold">{result.expected}</p>
+              <p class="mt-1 text-xs opacity-70">Type it to continue — you'll see it again later.</p>
             </div>
           )}
 
-          <button
-            type="submit"
-            disabled={submitting}
-            class="mt-6 w-full rounded-xl bg-slate-900 px-5 py-3 font-medium text-white transition hover:bg-slate-700 disabled:opacity-50"
-          >
-            {phase === "feedback" ? "Continue" : "Check"}
-          </button>
+          {phase === "input" && (
+            <button
+              type="submit"
+              disabled={submitting}
+              class="mt-6 w-full rounded-xl bg-slate-900 px-5 py-3 font-medium text-white transition hover:bg-slate-700 disabled:opacity-50"
+            >
+              Check
+            </button>
+          )}
         </form>
       </div>
     </Shell>

@@ -381,9 +381,13 @@ POST /api/ai/news               -> news clip + comprehension quiz
   - **Login** — one big "Sign in with Google" button.
   - **Home / Today** — "X cards due", big **Start review** button, deck list with
     progress.
-  - **Review** — the core loop: English prompt, a text input, Enter to submit.
-    Instant green/red feedback, correct answer shown, Enter again for next.
-    Keyboard-first, satisfying, fast. Umlaut helper buttons (ä ö ü ß) for mobile.
+  - **Review** — the core loop: English prompt, one always-focused text input,
+    Enter to submit. **Correct** flashes the border green and auto-advances (no
+    success screen, no extra tap). **Wrong** flashes red, reveals the answer, and
+    you must *type it to continue* — the only way forward, so there's no Continue
+    button. The input never blurs, so the mobile keyboard stays open the whole
+    session (iOS won't reopen it programmatically). Wrong cards still rotate to
+    the back to re-drill (§5a). Umlaut helper buttons (ä ö ü ß) for mobile (todo).
   - **Decks** — browse/add cards manually; (later) "Ask AI to make a module".
   - **Stats** (nice-to-have) — streak, reviews/day, retention.
 - State/data fetching: a tiny `fetch` wrapper + hooks is enough at this size.

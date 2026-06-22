@@ -101,21 +101,23 @@ export function Review({ onDone }: { onDone: () => void }) {
     }
   }
 
-  // In the drill, the answer is on screen — they just have to reproduce it.
-  // Matching it (on any keystroke or return) is the only way forward.
+  // In the drill, the answer is on screen — they just have to reproduce it and
+  // press enter (same gesture as the recall input). Typing the right answer but
+  // not matching on enter just leaves them in the drill.
   function matchesExpected(value: string) {
     return !!result && value.trim() === result.expected.trim();
-  }
-
-  function onDrillInput(value: string) {
-    setTyped(value);
-    if (matchesExpected(value)) advance(false);
   }
 
   function onSubmit(e: Event) {
     e.preventDefault();
     if (phase === "input") void grade();
-    else if (phase === "drill" && matchesExpected(typed)) advance(false);
+    else if (phase === "drill") {
+      if (matchesExpected(typed)) advance(false);
+      else {
+        setFlash("red");
+        setTimeout(() => setFlash(null), 450);
+      }
+    }
   }
 
   if (phase === "loading") return <Shell>…</Shell>;
@@ -183,11 +185,7 @@ export function Review({ onDone }: { onDone: () => void }) {
           <input
             ref={inputRef}
             value={typed}
-            onInput={(e) =>
-              phase === "drill"
-                ? onDrillInput((e.target as HTMLInputElement).value)
-                : setTyped((e.target as HTMLInputElement).value)
-            }
+            onInput={(e) => setTyped((e.target as HTMLInputElement).value)}
             placeholder={phase === "drill" ? "Type it to continue…" : "Type the German…"}
             autocomplete="off"
             autocapitalize="off"

@@ -4,6 +4,8 @@ import { getMe, getToday, getProgress, logout } from "./api";
 import { Review } from "./review";
 import { DeckDetailView, DeckList } from "./decks";
 import { ChatTutor } from "./chat";
+import { VerbsHome, VerbReview, VerbAllView } from "./verbs";
+import { TabBar } from "./footer";
 import { navigate, usePath } from "./router";
 import { TIERS } from "./tiers";
 
@@ -47,16 +49,38 @@ function Home({ user }: { user: SessionUser }) {
   const path = usePath();
   const deckMatch = path.match(/^\/decks\/(.+)$/);
 
+  // Full-screen review loops render without the tab bar — their single persistent
+  // input keeps the mobile keyboard open, and a nav bar there is a focus hazard.
   if (path === "/review") return <Review onDone={() => navigate("/")} />;
-  if (path === "/chat") return <ChatTutor onBack={() => navigate("/")} />;
+  if (path === "/verbs/review") return <VerbReview onDone={() => navigate("/verbs")} />;
+
+  // Drill-downs (a deck detail, the browse-all verbs list): own back button, no tab bar.
   if (deckMatch) return <DeckDetailView deckId={deckMatch[1]} onBack={() => navigate("/")} />;
+  if (path === "/verbs/list") return <VerbAllView onBack={() => navigate("/verbs")} />;
+
+  // Tab-root screens carry the bottom tab bar (Tutor · Words · Verbs).
+  const content =
+    path === "/chat" ? (
+      <ChatTutor />
+    ) : path === "/verbs" ? (
+      <VerbsHome
+        onStart={() => navigate("/verbs/review")}
+        onOpenList={() => navigate("/verbs/list")}
+      />
+    ) : (
+      <Dashboard
+        user={user}
+        onStart={() => navigate("/review")}
+        onOpenDeck={(id) => navigate(`/decks/${id}`)}
+        onOpenChat={() => navigate("/chat")}
+      />
+    );
+
   return (
-    <Dashboard
-      user={user}
-      onStart={() => navigate("/review")}
-      onOpenDeck={(id) => navigate(`/decks/${id}`)}
-      onOpenChat={() => navigate("/chat")}
-    />
+    <>
+      {content}
+      <TabBar />
+    </>
   );
 }
 
@@ -89,7 +113,7 @@ function Dashboard({
   }
 
   return (
-    <div class="mx-auto flex min-h-screen max-w-md flex-col px-5 py-10">
+    <div class="mx-auto flex min-h-screen max-w-md flex-col px-5 pb-24 pt-10">
       <header class="flex items-center justify-between">
         <h1 class="text-2xl font-semibold tracking-tight text-slate-900">Sprachen</h1>
         <button

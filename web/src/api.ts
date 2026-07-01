@@ -9,6 +9,11 @@ import type {
   ReviewRequest,
   ReviewResult,
   TodayResponse,
+  VerbListItem,
+  VerbProgressResponse,
+  VerbReviewRequest,
+  VerbReviewResult,
+  VerbTodayResponse,
 } from "../../shared/types";
 
 // Same-origin in prod; in dev Vite proxies /api to the Hono server.
@@ -48,6 +53,22 @@ export function getDecks() {
 
 export function getDeck(id: string) {
   return api<DeckDetail>(`/decks/${id}`);
+}
+
+export function getVerbToday() {
+  return api<VerbTodayResponse>("/verbs/session/today");
+}
+
+export function getVerbProgress() {
+  return api<VerbProgressResponse>("/verbs/progress");
+}
+
+export function getVerbList() {
+  return api<VerbListItem[]>("/verbs/list");
+}
+
+export function postVerbReview(req: VerbReviewRequest) {
+  return api<VerbReviewResult>("/verbs/reviews", { method: "POST", body: JSON.stringify(req) });
 }
 
 export function postChat(messages: ChatMessage[]) {

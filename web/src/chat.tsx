@@ -19,7 +19,7 @@ const EXAMPLES = [
 ];
 
 /** The AI tutor chat: talk through German, build decks as you go. */
-export function ChatTutor({ onBack }: { onBack: () => void }) {
+export function ChatTutor() {
   const [turns, setTurns] = useState<Turn[]>([]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
@@ -51,13 +51,9 @@ export function ChatTutor({ onBack }: { onBack: () => void }) {
   }
 
   return (
-    <div class="mx-auto flex h-screen max-w-md flex-col px-5 py-6">
-      <header class="flex items-center justify-between">
-        <button onClick={onBack} class="text-sm text-slate-500 hover:text-slate-900 hover:underline">
-          ← Back
-        </button>
+    <div class="mx-auto flex h-screen max-w-md flex-col px-5 pb-20 pt-6">
+      <header class="text-center">
         <h1 class="text-base font-semibold tracking-tight text-slate-900">Tutor</h1>
-        <span class="w-10" />
       </header>
 
       <main class="mt-4 flex-1 space-y-4 overflow-y-auto">

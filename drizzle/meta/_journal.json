@@ -15,6 +15,20 @@
       "when": 1782060427537,
       "tag": "0001_thankful_sharon_ventura",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1782941865013,
+      "tag": "0002_wild_amazoness",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1782942081017,
+      "tag": "0003_seed_verbs",
+      "breakpoints": true
     }
   ]
 }

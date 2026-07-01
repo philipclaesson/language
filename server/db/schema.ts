@@ -6,6 +6,7 @@ import {
   doublePrecision,
   integer,
   boolean,
+  jsonb,
   unique,
 } from "drizzle-orm/pg-core";
 
@@ -67,6 +68,68 @@ export const reviewState = pgTable(
   },
   (t) => [unique("review_state_user_card").on(t.userId, t.cardId)],
 );
+
+// ---- Verbs mode (VERBS.md) ----
+// A GLOBAL, shared catalog of verbs to drill (no owner) — reference data, ordered
+// by frequency. This departs from the personal-libraries model of decks/cards on
+// purpose: there's one verb list, edited in one place. Per-user progress lives in
+// verb_review_state, mirroring the cards/review_state split.
+export const verbs = pgTable("verbs", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  infinitive: text("infinitive").notNull().unique(), // "gehen"
+  english: text("english").notNull(), // "to go" — shown as the prompt subtitle
+  regularity: text("regularity").notNull(), // 'regular' | 'irregular'
+  frequencyRank: integer("frequency_rank").notNull(), // 1 = most frequent; new-verb order
+  // Present-tense forms. er = er/sie/es; sie = sie/Sie (plural + formal).
+  formIch: text("form_ich").notNull(),
+  formDu: text("form_du").notNull(),
+  formEr: text("form_er").notNull(),
+  formWir: text("form_wir").notNull(),
+  formIhr: text("form_ihr").notNull(),
+  formSie: text("form_sie").notNull(),
+  notes: text("notes"), // optional irregularity note / mnemonic
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+// SRS scheduler state per (user, verb) — identical shape to review_state so the
+// FSRS wrapper (srs/scheduler.ts) and tiers (srs/tiers.ts) are reused as-is.
+export const verbReviewState = pgTable(
+  "verb_review_state",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    verbId: uuid("verb_id")
+      .notNull()
+      .references(() => verbs.id, { onDelete: "cascade" }),
+    due: timestamp("due", { withTimezone: true }).notNull().defaultNow(),
+    stability: doublePrecision("stability").notNull().default(0),
+    difficulty: doublePrecision("difficulty").notNull().default(0),
+    reps: integer("reps").notNull().default(0),
+    lapses: integer("lapses").notNull().default(0),
+    lastReview: timestamp("last_review", { withTimezone: true }),
+    state: text("state").notNull().default("new"),
+  },
+  (t) => [unique("verb_review_state_user_verb").on(t.userId, t.verbId)],
+);
+
+// Append-only log of every verb attempt (parity with `reviews`; drives the day-
+// planner's "reviewed/correct today" and a future FSRS optimizer).
+export const verbReviews = pgTable("verb_reviews", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  verbId: uuid("verb_id")
+    .notNull()
+    .references(() => verbs.id, { onDelete: "cascade" }),
+  rating: integer("rating").notNull(), // 1 = fail, 3 = pass (all-or-nothing)
+  graded: boolean("graded").notNull().default(true), // first-attempt-of-day only
+  typedAnswer: jsonb("typed_answer"), // the six typed forms
+  reviewedAt: timestamp("reviewed_at", { withTimezone: true }).notNull().defaultNow(),
+  elapsedMs: integer("elapsed_ms"),
+});
 
 // Append-only log of every answer (analytics + future FSRS optimization).
 export const reviews = pgTable("reviews", {

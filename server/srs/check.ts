@@ -19,7 +19,9 @@ export type CheckResult = {
   expected: string; // full canonical answer shown to the user afterwards
 };
 
-function normalize(s: string, tolerant: boolean): string {
+// Exported so the verb conjugation matcher (server/verbs/check.ts) shares the
+// exact same normalization (trim, collapse whitespace, case-fold, umlaut/ß tolerance).
+export function normalize(s: string, tolerant: boolean): string {
   let t = s.normalize("NFC").trim().toLowerCase().replace(/\s+/g, " ");
   if (tolerant) {
     t = t

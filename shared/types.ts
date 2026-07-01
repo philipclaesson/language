@@ -98,6 +98,70 @@ export type DeckDetail = {
   cards: DeckCard[];
 };
 
+// ---- Verbs mode (VERBS.md) ----
+
+// The six present-tense slots. er = er/sie/es; sie = sie/Sie (plural + formal).
+export type VerbForm = "ich" | "du" | "er" | "wir" | "ihr" | "sie";
+export const VERB_FORMS: VerbForm[] = ["ich", "du", "er", "wir", "ihr", "sie"];
+export const VERB_FORM_LABELS: Record<VerbForm, string> = {
+  ich: "ich",
+  du: "du",
+  er: "er/sie/es",
+  wir: "wir",
+  ihr: "ihr",
+  sie: "sie/Sie",
+};
+
+export type Conjugation = Record<VerbForm, string>;
+export type VerbRegularity = "regular" | "irregular";
+
+// What the client sees before answering. Deliberately omits the six forms — they
+// are the answer (cf. SessionCard omitting the noun's article).
+export type SessionVerb = {
+  id: string;
+  infinitive: string; // "gehen"
+  english: string; // "to go"
+  regularity: VerbRegularity;
+};
+
+export type VerbReviewRequest = {
+  verbId: string;
+  typed: Conjugation; // the six forms the user filled in
+  elapsedMs?: number;
+};
+
+export type VerbReviewResult = {
+  correct: boolean; // all six forms matched (all-or-nothing)
+  expected: Conjugation; // full correct set, revealed on a miss
+  perForm: Record<VerbForm, boolean>; // which rows were right (for highlighting)
+  nextDue: string; // ISO timestamp
+  graded: boolean; // first-attempt-of-day only drives FSRS (see §5a)
+  needsRedrill: boolean; // true when this answer was wrong (still needs a correct typing today)
+};
+
+// The verb day's required work — mirrors TodayResponse. `verbs` is the still-PENDING
+// set (verbs not yet conjugated correctly today), so a refresh rebuilds the queue.
+export type VerbTodayResponse = {
+  verbs: SessionVerb[];
+  dueTotal: number;
+  newTotal: number;
+  done: number;
+  pending: number;
+  complete: boolean;
+};
+
+// Verb mastery reuses the same tier scheme as words.
+export type VerbProgressResponse = ProgressResponse;
+
+// One verb in the browse-all list, tagged with this user's mastery tier.
+export type VerbListItem = {
+  id: string;
+  infinitive: string;
+  english: string;
+  regularity: VerbRegularity;
+  tier: MasteryTier;
+};
+
 // ---- Phase 5: AI chat tutor ----
 
 // One turn of the tutor conversation. The client holds the whole history (chats

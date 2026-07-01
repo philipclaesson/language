@@ -3,7 +3,7 @@
 Plain-markdown record of everything we provisioned (no IaC). Update this file
 when infra changes. Secret *values* are never stored here — only names.
 
-Last updated: 2026-07-01.
+Last updated: 2026-07-01 (added Verbs mode: verb catalog tables + seed migration).
 
 ## Summary
 
@@ -60,6 +60,15 @@ push the image to Artifact Registry, and deploy a new revision.
   to the `-pooler` host.
 - Schema is managed by **Drizzle**; migrations live in `drizzle/`.
 - Neon Auth: **not used** (we run our own Google auth).
+- **Verbs mode (VERBS.md)** adds three tables — `verbs` (a *global*, shared
+  catalog, no owner), `verb_review_state`, `verb_reviews` — via
+  `drizzle/0002_*.sql`. The ~100-verb catalog itself is seeded by a **data
+  migration** (`drizzle/0003_seed_verbs.sql`, `INSERT … ON CONFLICT (infinitive)
+  DO NOTHING`, generated from `server/db/verbs.ts`), so it lands in **both**
+  branches through the normal `db:migrate` path — dev locally, prod via the CI
+  `migrate` job. To grow the catalog later: edit `server/db/verbs.ts`, then either
+  `npm run db:seed:verbs` (idempotent upsert against the current `DATABASE_URL`)
+  or add a new data migration.
 
 ### Branches & migrations
 

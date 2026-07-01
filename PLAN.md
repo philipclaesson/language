@@ -19,6 +19,14 @@
   client (re-drill loop, finishable "done for today", mastery tiers bar). Retired
   `/session/next`. The `reviews.graded` migration is applied to prod (by the CI
   `migrate` job) and deployed. **Pending:** verify against a live session.
+- ✅ **Verbs mode — built:** a separate tab (bottom nav: Tutor · Words · Verbs)
+  that drills the six present-tense conjugations of a **global, frequency-ordered
+  verb catalog** (~100 verbs, seeded to both DB branches by a data migration). New
+  verbs are introduced 5/day at a fixed 3-irregular : 2-regular mix; a card tests
+  all six forms all-or-nothing on the same §5a daily loop (first-attempt grading,
+  drill-until-correct). Additive: new `verbs`/`verb_review_state`/`verb_reviews`
+  tables, `verb-routes.ts`, `verbs/{check,plan}.ts` (pure, tested); the words core
+  loop, FSRS wrapper, and tiers are reused unchanged. Full spec in **VERBS.md**.
 - ⏭️ **Next:** *use the live daily loop for a few days*, then bonus work
   (designed — see **EXTRA_WORK.md**) → streaks → Phase 3 (deck UI) → Phase 4
   (polish) → more AI modules.
@@ -517,4 +525,9 @@ chat → AI modules → news → voice.
     can't un-complete the day).
 11. **Practice ordering → weakest-first.** Practice serves studied, not-yet-due
     cards by lowest stability first; one-and-done (no re-drill gate).
+12. **Verbs → global catalog, present tense, all-or-nothing.** One shared,
+    frequency-ordered `verbs` table (not per-user decks); per-user progress only.
+    Cards drill the six present-tense forms at once and pass only if all six match.
+    New verbs introduced 5/day at a fixed 3-irregular : 2-regular mix (irregular =
+    present-tense deviation). Reuses the §5a daily loop wholesale. See VERBS.md.
 ```

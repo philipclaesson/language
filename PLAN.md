@@ -17,8 +17,8 @@
   pure `tiers`/`day` logic (unit-tested) + `/session/today`, reworked `/reviews`
   (first-attempt-of-day grading, training-only re-drills), `/progress`, and the
   client (re-drill loop, finishable "done for today", mastery tiers bar). Retired
-  `/session/next`. **Pending:** apply the `reviews.graded` migration to the DB,
-  deploy, and verify against a live session.
+  `/session/next`. The `reviews.graded` migration is applied to prod (by the CI
+  `migrate` job) and deployed. **Pending:** verify against a live session.
 - ⏭️ **Next:** *use the live daily loop for a few days*, then bonus work
   (designed — see **EXTRA_WORK.md**) → streaks → Phase 3 (deck UI) → Phase 4
   (polish) → more AI modules.
@@ -417,10 +417,12 @@ Don't start from an empty app. Ship a seed deck:
   you outgrow domain mapping — not needed now.)
 - **Secrets:** Google OAuth client id/secret, DB URL, session signing key in
   **Secret Manager**, injected as env vars into Cloud Run.
-- **DB:** Neon project, one Postgres database, connection string in Secret
-  Manager. Drizzle migrations run as a step in the deploy action (or manually).
+- **DB:** Neon project, Postgres database on the `production` branch, connection
+  string in Secret Manager. Drizzle migrations run as the `migrate` job in the
+  deploy action (check → migrate → deploy) on push to `main`.
 - **Local dev:** `vite dev` for the SPA proxying `/api` to a local
-  `node server`, pointed at a Neon dev branch (or local Postgres in Docker).
+  `node server`, pointed at a Neon `dev` branch (migrated locally with
+  `npm run db:migrate`).
 
 Estimated cost: effectively **$0/mo** at this usage — Cloud Run free tier covers
 two users easily, Neon free tier covers the DB. Only real cost later is AI API

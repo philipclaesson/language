@@ -19,7 +19,9 @@ full design. This README covers running it.
    ```
 
 2. **Set up a Neon database** (free tier) at <https://neon.tech>, then copy the
-   *pooled* connection string.
+   *pooled* connection string. For local dev, point `DATABASE_URL` at a Neon
+   **`dev` branch** (a copy-on-write clone of `production`), not at prod — so
+   local changes never touch real data. Prod is migrated by CI (see Deploy).
 
 3. **Set up Google OAuth** in the GCP console:
    - APIs & Services → OAuth consent screen → External, **Testing** mode, add both
@@ -40,8 +42,11 @@ full design. This README covers running it.
 
    ```sh
    npm run db:generate   # creates SQL from server/db/schema.ts (commit the output)
-   npm run db:migrate    # applies it to the DB in DATABASE_URL
+   npm run db:migrate    # applies it to the DB in DATABASE_URL (your dev branch)
    ```
+
+   Commit the generated SQL. You don't migrate prod by hand — CI does it on push
+   to `main` (see Deploy).
 
 6. **Start dev servers** (Vite on :5173, Hono on :8787, with /api proxied)
 
@@ -63,8 +68,12 @@ One-time setup:
 4. Map the domain: `gcloud run domain-mappings create --service=language --domain=language.levanto.dev`
    and add the resulting DNS record at levanto.dev.
 
-After that, pushing to `main` deploys. The OAuth redirect URI for prod must be
-registered in the Google OAuth client (step 3 above).
+After that, pushing to `main` runs CI as **check → migrate → deploy**: it
+typechecks/tests/builds, applies pending Drizzle migrations to the prod Neon
+branch (reading `DATABASE_URL` from Secret Manager), then deploys. The deploy SA
+needs `secretmanager.secretAccessor` on `DATABASE_URL` for the migrate step (see
+INFRA.md). The OAuth redirect URI for prod must be registered in the Google OAuth
+client (step 3 above).
 
 ## Scripts
 

@@ -3,7 +3,7 @@
 Plain-markdown record of everything we provisioned (no IaC). Update this file
 when infra changes. Secret *values* are never stored here — only names.
 
-Last updated: 2026-06-18.
+Last updated: 2026-07-01.
 
 ## Summary
 

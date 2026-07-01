@@ -46,8 +46,11 @@ TypeScript everywhere. One Cloud Run service serves the SPA and the API.
 - `npm run check` — typecheck + test + build. **Run before every commit.**
 - `npm test` — `node:test` unit tests.
 - `npm run db:generate` / `npm run db:migrate` — after editing `schema.ts`.
+  `db:migrate` targets whatever `DATABASE_URL` is in `.env` — the Neon **dev**
+  branch locally. **Prod migrations run in CI on push to main** (the `migrate`
+  job); don't migrate prod by hand. See INFRA.md > Branches & migrations.
 - `npm run db:seed` — give existing users the starter deck.
-- Deploy = **push to main** (CI runs check, then deploys). Manual deploy in INFRA.md.
+- Deploy = **push to main** (CI: check → migrate → deploy). Manual deploy in INFRA.md.
 
 ## How we work (to avoid breaking things / spaghetti)
 
@@ -58,7 +61,8 @@ TypeScript everywhere. One Cloud Run service serves the SPA and the API.
 2. **Types first.** Add/adjust `shared/types.ts`, then implement server + client
    against it. `npm run check` catches drift.
 3. **Migrations, never hand-edits.** Edit `schema.ts` → `db:generate` →
-   `db:migrate` → commit the generated SQL.
+   `db:migrate` (applies to your **dev** branch) → commit the generated SQL.
+   CI applies it to prod on push to main.
 4. **Green commits.** Run `npm run check` before committing — a push to main
    deploys to prod (CI also gates on check, so a red build won't deploy).
 5. **Small, focused changes.** One feature per branch/PR is ideal (PRs get CI

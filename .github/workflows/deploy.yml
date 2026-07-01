@@ -26,8 +26,41 @@ jobs:
       - run: npm ci
       - run: npm run check # typecheck + test + build
 
+  # Applies pending Drizzle migrations to the PROD Neon branch before deploying.
+  # Runs only on push to main / manual (not on PRs). The prod DATABASE_URL is read
+  # from Secret Manager (single source of truth) — the deploy SA has secretAccessor
+  # on it. Dev-branch migrations are applied locally by the developer, not here.
+  migrate:
+    needs: check # only migrate a green build
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # required for Workload Identity Federation
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+
+      - id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_DEPLOY_SA }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Migrate prod database
+        run: |
+          DATABASE_URL="$(gcloud secrets versions access latest \
+            --secret=DATABASE_URL --project="$PROJECT_ID")" \
+            npm run db:migrate
+
   deploy:
-    needs: check # never deploy unless check passed
+    needs: migrate # migrate (which needs check) must pass first
     if: github.event_name != 'pull_request' # deploy on push to main / manual only
     runs-on: ubuntu-latest
     permissions:

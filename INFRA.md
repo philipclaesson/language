@@ -58,9 +58,22 @@ push the image to Artifact Registry, and deploy a new revision.
 - Database: `neondb`. Connection string is the **direct** (non-pooled) endpoint
   `ep-soft-sea-asykboyr...` — fine at this scale; for higher concurrency switch
   to the `-pooler` host.
-- Schema is managed by **Drizzle**; migrations live in `drizzle/` and are applied
-  with `npm run db:migrate`.
+- Schema is managed by **Drizzle**; migrations live in `drizzle/`.
 - Neon Auth: **not used** (we run our own Google auth).
+
+### Branches & migrations
+
+- **`main`** (production) — the branch Cloud Run connects to (`DATABASE_URL`
+  secret). Migrations are applied by **CI** on push to `main` (see CI/CD below),
+  so prod schema tracks `main` automatically. Don't run `db:migrate` against prod
+  by hand.
+- **`dev`** — a Neon branch (copy-on-write clone of `main`) used for **local
+  development**. Local `.env` `DATABASE_URL` points here, so `npm run dev` and
+  local scripts never touch real prod data. Apply migrations to it locally with
+  `npm run db:migrate` while iterating on `schema.ts`.
+- Create/manage branches in the Neon console (Project → Branches). Each branch
+  has its own connection string; the `dev` branch's string goes in local `.env`
+  only (never committed).
 
 ## Auth — Google OAuth
 
@@ -90,9 +103,20 @@ push the image to Artifact Registry, and deploy a new revision.
 
 ## CI/CD
 
-**Active.** `.github/workflows/deploy.yml` deploys on every push to `main` (and
-via manual `workflow_dispatch`) using `gcloud run deploy --source .`. Auth is via
-**Workload Identity Federation** — no service-account keys.
+**Active.** `.github/workflows/deploy.yml` runs on every push to `main` (and via
+manual `workflow_dispatch`) as three jobs: **check** → **migrate** → **deploy**.
+`check` (typecheck + test + build) also runs on PRs and gates everything.
+`migrate` applies pending Drizzle migrations to the **prod** Neon branch, reading
+`DATABASE_URL` from Secret Manager. `deploy` does `gcloud run deploy --source .`.
+Auth is via **Workload Identity Federation** — no service-account keys.
+
+- The deploy SA needs `roles/secretmanager.secretAccessor` on the `DATABASE_URL`
+  secret so the `migrate` job can read the prod connection string:
+  ```sh
+  gcloud secrets add-iam-policy-binding DATABASE_URL \
+    --member="serviceAccount:github-deployer@language-499814.iam.gserviceaccount.com" \
+    --role="roles/secretmanager.secretAccessor" --project=language-499814
+  ```
 
 WIF setup (project `language-499814`):
 - Deploy service account: `github-deployer@language-499814.iam.gserviceaccount.com`,

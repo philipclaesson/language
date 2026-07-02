@@ -29,7 +29,6 @@ export function Stats() {
     <div class="mx-auto flex min-h-screen max-w-md flex-col px-5 pb-24 pt-10">
       <header>
         <h1 class="text-2xl font-semibold tracking-tight text-slate-900">Stats</h1>
-        <p class="mt-1 text-slate-500">Your progress, just for the fun of it.</p>
       </header>
 
       {err ? (

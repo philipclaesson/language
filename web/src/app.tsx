@@ -101,7 +101,6 @@ function Home({ user }: { user: SessionUser }) {
         user={user}
         onStart={() => navigate("/review")}
         onOpenDeck={(id) => navigate(`/decks/${id}`)}
-        onOpenChat={() => navigate("/chat")}
         onStartExtra={(type) => navigate(extraPath("/review", type))}
       />
     );
@@ -118,13 +117,11 @@ function Dashboard({
   user,
   onStart,
   onOpenDeck,
-  onOpenChat,
   onStartExtra,
 }: {
   user: SessionUser;
   onStart: () => void;
   onOpenDeck: (id: string) => void;
-  onOpenChat: () => void;
   onStartExtra: (type: ExtraType) => void;
 }) {
   const [today, setToday] = useState<TodayResponse | null>(null);
@@ -205,17 +202,6 @@ function Dashboard({
         </div>
 
         <MasteryCard progress={progress} />
-
-        <button
-          onClick={onOpenChat}
-          class="mt-4 flex w-full items-center gap-3 rounded-2xl border border-slate-200 px-5 py-4 text-left transition-colors hover:border-slate-300 hover:bg-slate-50"
-        >
-          <span class="text-xl">💬</span>
-          <span>
-            <span class="block font-medium text-slate-900">Build with the tutor</span>
-            <span class="block text-sm text-slate-500">Chat about German and create decks to drill.</span>
-          </span>
-        </button>
 
         <h2 class="mt-10 mb-3 text-sm font-medium uppercase tracking-wide text-slate-400">
           Your decks

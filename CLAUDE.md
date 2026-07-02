@@ -128,9 +128,11 @@ the route/tool glue isn't.
   corpus). Reads widen to `or(ownerId = user, ownerId IS NULL)` (review-routes +
   deck-routes); **writes stay scoped to `ownerId = user`**, so global decks are
   automatically read-only and hidden from the tutor. When adding a new read over
-  `decks`, decide whether it should include globals. `cards.frequency_rank` (set
-  only on the corpus) drives new-card order: `frequency_rank asc NULLS FIRST` —
-  a user's own cards (null rank) come **before** the corpus.
+  `decks`, decide whether it should include globals. New cards each day are split
+  **50/50** between the user's own decks and stock/global decks (`srs/day.ts`
+  `pickFresh`, keyed off `CardToday.stock` = an ownerless deck), spilling into
+  whichever pool still has cards. Within a pool, order is `cards.frequency_rank`
+  (stock) or `createdAt` (own).
 - Cloud Run is in **europe-west1** (domain mappings aren't supported in west3).
 - The `pg` SSL deprecation warning in logs is harmless.
 - `Date.now()`/`Math.random()` are fine in server code (the ban is only in

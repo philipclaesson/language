@@ -140,7 +140,33 @@ export type CardToday = {
   reviewedToday: boolean;
   correctToday: boolean;
   reviewedBeforeToday: boolean;
+  // From a global/stock deck (ownerless) rather than the user's own decks. New
+  // cards are introduced 50/50 between the two; defaults to false (own).
+  stock?: boolean;
 };
+
+// New cards each day are split evenly between the user's own cards and the stock
+// corpus; whichever pool runs dry, the other fills the remaining slots. Both pools
+// must arrive in introduction order (own: createdAt; stock: frequency rank).
+function pickFresh(own: CardToday[], stock: CardToday[], slots: number): CardToday[] {
+  if (slots <= 0) return [];
+  const picked: CardToday[] = [];
+  const ownTarget = Math.ceil(slots / 2); // own cards get the odd one out
+  let o = 0;
+  let s = 0;
+
+  const takeOwn = Math.min(ownTarget, own.length, slots);
+  for (; o < takeOwn; o++) picked.push(own[o]);
+
+  const takeStock = Math.min(slots - picked.length, stock.length);
+  for (; s < takeStock; s++) picked.push(stock[s]);
+
+  // Spill-over: fill any remaining slots from whichever pool still has cards.
+  while (picked.length < slots && o < own.length) picked.push(own[o++]);
+  while (picked.length < slots && s < stock.length) picked.push(stock[s++]);
+
+  return picked;
+}
 
 export type TodayPlan = {
   pendingIds: string[]; // required cards not yet typed correctly today (to present)
@@ -159,7 +185,8 @@ export type TodayPlan = {
  *     already touched today (so a card you failed stays required even though its
  *     FSRS due moved to tomorrow);
  *   - **introduced today** — brand-new cards whose first-ever attempt was today;
- *   - **fresh** — unstudied cards pulled in to fill the daily new-card quota.
+ *   - **fresh** — unstudied cards pulled in to fill the daily new-card quota,
+ *     split 50/50 between the user's own cards and the stock corpus (see pickFresh).
  * The total (due + new) is stable across the day: completing a card moves it from
  * pending to done without changing the denominator.
  */
@@ -190,8 +217,13 @@ export function planToday(
     // else: a studied card not due and untouched today — not part of today.
   }
 
-  const newTotal = newRequiredCount(introduced.length, fresh.length, limit);
-  const freshToPresent = fresh.slice(0, Math.max(0, newTotal - introduced.length));
+  const slotsLeft = Math.max(0, limit - introduced.length);
+  const freshToPresent = pickFresh(
+    fresh.filter((c) => !c.stock),
+    fresh.filter((c) => c.stock),
+    slotsLeft,
+  );
+  const newTotal = introduced.length + freshToPresent.length;
 
   const required = [...dueReq, ...introduced, ...freshToPresent];
   const correct = new Set(cards.filter((c) => c.correctToday).map((c) => c.id));

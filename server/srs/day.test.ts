@@ -117,6 +117,7 @@ function card(id: string, o: Partial<CardToday> = {}): CardToday {
     reviewedToday: o.reviewedToday ?? false,
     correctToday: o.correctToday ?? false,
     reviewedBeforeToday: o.reviewedBeforeToday ?? false,
+    stock: o.stock ?? false,
   };
 }
 
@@ -184,6 +185,48 @@ test("planToday: a studied, not-due, untouched card is not part of today", () =>
   assert.equal(p.dueTotal, 1);
   assert.equal(p.newTotal, 0);
   assert.deepEqual(p.pendingIds, ["d1"]);
+});
+
+test("planToday: fresh new cards split 50/50 between own and stock", () => {
+  const cards = [
+    ...Array.from({ length: 20 }, (_, i) => card(`own${i}`, { stock: false })),
+    ...Array.from({ length: 20 }, (_, i) => card(`stk${i}`, { stock: true })),
+  ];
+  const p = planToday(cards, NOW, { limit: 10 });
+  assert.equal(p.newTotal, 10);
+  const own = p.pendingIds.filter((id) => id.startsWith("own")).length;
+  const stk = p.pendingIds.filter((id) => id.startsWith("stk")).length;
+  assert.equal(own, 5, "5 of the user's own cards");
+  assert.equal(stk, 5, "5 stock-corpus cards");
+});
+
+test("planToday: split spills into stock when own pool is short", () => {
+  const cards = [
+    card("own0", { stock: false }),
+    card("own1", { stock: false }),
+    ...Array.from({ length: 20 }, (_, i) => card(`stk${i}`, { stock: true })),
+  ];
+  const p = planToday(cards, NOW, { limit: 10 });
+  assert.equal(p.newTotal, 10, "quota still filled");
+  const own = p.pendingIds.filter((id) => id.startsWith("own")).length;
+  const stk = p.pendingIds.filter((id) => id.startsWith("stk")).length;
+  assert.equal(own, 2, "both of the user's cards");
+  assert.equal(stk, 8, "stock fills the rest");
+});
+
+test("planToday: odd remaining slots favour the user's own cards", () => {
+  // 1 introduced today leaves 9 slots → ceil(9/2)=5 own, 4 stock.
+  const cards = [
+    card("nX", { hasState: true, due: TOMORROW, reviewedToday: true, correctToday: true, reviewedBeforeToday: false }),
+    ...Array.from({ length: 20 }, (_, i) => card(`own${i}`, { stock: false })),
+    ...Array.from({ length: 20 }, (_, i) => card(`stk${i}`, { stock: true })),
+  ];
+  const p = planToday(cards, NOW, { limit: 10 });
+  assert.equal(p.newTotal, 10, "1 introduced + 9 fresh");
+  const own = p.pendingIds.filter((id) => id.startsWith("own")).length;
+  const stk = p.pendingIds.filter((id) => id.startsWith("stk")).length;
+  assert.equal(own, 5);
+  assert.equal(stk, 4);
 });
 
 test("planToday: everything done — complete", () => {

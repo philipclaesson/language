@@ -31,8 +31,9 @@
   imported from an Anki deck, as a single **global (ownerless) `decks` row** that
   flows through the existing Words loop unchanged — no new tables/routes, because
   a word *is* a card. `decks.owner_id` is now nullable (null = global, read-only,
-  hidden from the tutor); reads widen to include globals; `cards.frequency_rank`
-  drives new-card order (frequency-first, personal cards ahead of the corpus).
+  hidden from the tutor); reads widen to include globals. New cards each day are
+  introduced **50/50** between the user's own decks and stock/global decks
+  (`srs/day.ts` `pickFresh`), stock ordered by `cards.frequency_rank`.
   Seeded by data migration `0005_seed_words.sql`, regenerable via
   `scripts/gen-words.ts`; cleaning rules in `db/words-parse.ts` (tested).
 - ⏭️ **Next:** *use the live daily loop for a few days*, then bonus work

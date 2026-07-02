@@ -45,6 +45,7 @@ reviewRoutes.get("/session/today", async (c) => {
       id: cards.id,
       prompt: cards.prompt,
       partOfSpeech: cards.partOfSpeech,
+      ownerId: decks.ownerId, // null = global/stock deck
       due: reviewState.due,
       stateId: reviewState.id,
     })
@@ -82,6 +83,7 @@ reviewRoutes.get("/session/today", async (c) => {
     reviewedToday: reviewedToday.has(r.id),
     correctToday: correctToday.has(r.id),
     reviewedBeforeToday: reviewedBefore.has(r.id),
+    stock: r.ownerId === null, // global/stock deck → the 50/50 new-card split
   }));
 
   const plan = planToday(todayCards, now);

@@ -27,6 +27,14 @@
   drill-until-correct). Additive: new `verbs`/`verb_review_state`/`verb_reviews`
   tables, `verb-routes.ts`, `verbs/{check,plan}.ts` (pure, tested); the words core
   loop, FSRS wrapper, and tiers are reused unchanged. Full spec in **VERBS.md**.
+- ✅ **Frequency word corpus — built:** ~3,700 frequency-ranked German words
+  imported from an Anki deck, as a single **global (ownerless) `decks` row** that
+  flows through the existing Words loop unchanged — no new tables/routes, because
+  a word *is* a card. `decks.owner_id` is now nullable (null = global, read-only,
+  hidden from the tutor); reads widen to include globals; `cards.frequency_rank`
+  drives new-card order (frequency-first, personal cards ahead of the corpus).
+  Seeded by data migration `0005_seed_words.sql`, regenerable via
+  `scripts/gen-words.ts`; cleaning rules in `db/words-parse.ts` (tested).
 - ⏭️ **Next:** *use the live daily loop for a few days*, then bonus work
   (designed — see **EXTRA_WORK.md**) → streaks → Phase 3 (deck UI) → Phase 4
   (polish) → more AI modules.

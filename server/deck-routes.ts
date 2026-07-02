@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { and, eq } from "drizzle-orm";
+import { and, asc, eq, isNull, or, sql } from "drizzle-orm";
 import { db } from "./db/client";
 import { cards, decks, reviewState } from "./db/schema";
 import { requireAuth, type AppEnv } from "./auth";
@@ -35,7 +35,8 @@ deckRoutes.get("/decks", async (c) => {
       reviewState,
       and(eq(reviewState.cardId, cards.id), eq(reviewState.userId, userId)),
     )
-    .where(eq(decks.ownerId, userId))
+    // Owned decks + global (ownerless) decks like the frequency word corpus.
+    .where(or(eq(decks.ownerId, userId), isNull(decks.ownerId)))
     .orderBy(decks.createdAt);
 
   const byDeck = new Map<string, DeckSummary>();
@@ -62,7 +63,7 @@ deckRoutes.get("/decks/:id", async (c) => {
   const [deck] = await db
     .select()
     .from(decks)
-    .where(and(eq(decks.id, id), eq(decks.ownerId, userId)))
+    .where(and(eq(decks.id, id), or(eq(decks.ownerId, userId), isNull(decks.ownerId))))
     .limit(1);
   if (!deck) return c.json({ error: "deck not found" }, 404);
 
@@ -82,7 +83,8 @@ deckRoutes.get("/decks/:id", async (c) => {
       and(eq(reviewState.cardId, cards.id), eq(reviewState.userId, userId)),
     )
     .where(eq(cards.deckId, id))
-    .orderBy(cards.createdAt);
+    // Frequency order for the corpus; createdAt for ordinary decks (null rank).
+    .orderBy(sql`${cards.frequencyRank} asc nulls first`, asc(cards.createdAt));
 
   const deckCards: DeckCard[] = rows.map((r) => ({
     id: r.id,

@@ -3,7 +3,8 @@
 Plain-markdown record of everything we provisioned (no IaC). Update this file
 when infra changes. Secret *values* are never stored here — only names.
 
-Last updated: 2026-07-01 (added Verbs mode: verb catalog tables + seed migration).
+Last updated: 2026-07-02 (added the global frequency word corpus: nullable
+`decks.owner_id` + `cards.frequency_rank`, seeded via a data migration).
 
 ## Summary
 
@@ -69,6 +70,14 @@ push the image to Artifact Registry, and deploy a new revision.
   `migrate` job. To grow the catalog later: edit `server/db/verbs.ts`, then either
   `npm run db:seed:verbs` (idempotent upsert against the current `DATABASE_URL`)
   or add a new data migration.
+- **Frequency word corpus.** `drizzle/0004_*.sql` makes `decks.owner_id` nullable
+  and adds `cards.frequency_rank`; `drizzle/0005_seed_words.sql` inserts one
+  *global* (null-owner) deck + ~3,700 cards — a plain multi-row `INSERT` (like the
+  verb seed), guarded so a hand re-run won't duplicate the deck. Same
+  `db:migrate` path lands it in both branches (dev locally, prod via CI). The
+  corpus + this migration are regenerated from the source Anki `.apkg` by
+  `scripts/gen-words.ts`; `npm run db:seed:words` loads it against the current
+  `DATABASE_URL` for a fresh DB.
 
 ### Branches & migrations
 

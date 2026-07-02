@@ -18,6 +18,7 @@
     "db:migrate": "drizzle-kit migrate",
     "db:seed": "tsx server/db/seed-all.ts",
     "db:seed:verbs": "tsx server/db/seed-verbs.ts",
+    "db:seed:words": "tsx server/db/seed-words.ts",
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {

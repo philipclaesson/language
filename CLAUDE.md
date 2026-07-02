@@ -17,6 +17,9 @@ later without touching the core loop.
   **chat tutor** (chat to build/maintain decks; Claude tool-use, `source='ai_chat'`).
   **Verbs mode** (VERBS.md): a separate tab that drills the six present-tense
   conjugations of a global, frequency-ordered verb catalog on the same daily loop.
+  **Frequency word corpus:** ~3,700 frequency-ranked German words as a single
+  *global* (ownerless) deck that flows through the normal Words loop, introduced
+  most-frequent-first. Imported from an Anki deck; reaches prod via a data migration.
 - **Live:** https://language.levanto.dev — Cloud Run, **auto-deploys on push to main**.
 - **Next:** Phase 3 (deck management UI), Phase 4 (polish), more AI modules
   (news, voice). See PLAN.md §12.
@@ -45,9 +48,13 @@ TypeScript everywhere. One Cloud Run service serves the SPA and the API.
     (+ `check.test.ts`) · `srs/scheduler.ts` FSRS wrapper · `srs/day.ts` daily-loop
     logic · `verbs/check.ts` conjugation matcher + `verbs/plan.ts` verb day-planner
     (both pure, tested) · `db/schema.ts` Drizzle schema · `db/seed.ts` starter deck ·
-    `db/verbs.ts` the global verb catalog · `env.ts` env validation.
+    `db/verbs.ts` the global verb catalog · `db/words.ts` loads the global word
+    corpus + `db/words-parse.ts` pure Anki-note cleaner (+ `words-parse.test.ts`) ·
+    `env.ts` env validation.
 - `shared/types.ts` — the client/server contract. **Change types here first.**
 - `drizzle/` — committed SQL migrations.
+- `scripts/gen-words.ts` — one-off, re-runnable generator: reads the source Anki
+  `.apkg` and regenerates `server/db/words.data.json` + `drizzle/0005_seed_words.sql`.
 
 ## Commands
 
@@ -61,6 +68,9 @@ TypeScript everywhere. One Cloud Run service serves the SPA and the API.
 - `npm run db:seed` — give existing users the starter deck.
 - `npm run db:seed:verbs` — load/refresh the global verb catalog (idempotent).
   The initial catalog reaches prod via the `0003_seed_verbs.sql` data migration.
+- `npm run db:seed:words` — load the global frequency word corpus (idempotent:
+  no-op if the global deck exists). Prod gets it via the `0005_seed_words.sql`
+  data migration. Regenerate the corpus with `scripts/gen-words.ts`.
 - Deploy = **push to main** (CI: check → migrate → deploy). Manual deploy in INFRA.md.
 
 ## How we work (to avoid breaking things / spaghetti)
@@ -114,6 +124,13 @@ the route/tool glue isn't.
   only `verb_review_state`/`verb_reviews` are per-user. The core loop, FSRS
   wrapper (`srs/scheduler.ts`), and mastery tiers (`srs/tiers.ts`) are reused
   unchanged — Verbs mode is additive, like an AI module.
+- **A `decks` row with `owner_id = NULL` is a *global* deck** (the frequency word
+  corpus). Reads widen to `or(ownerId = user, ownerId IS NULL)` (review-routes +
+  deck-routes); **writes stay scoped to `ownerId = user`**, so global decks are
+  automatically read-only and hidden from the tutor. When adding a new read over
+  `decks`, decide whether it should include globals. `cards.frequency_rank` (set
+  only on the corpus) drives new-card order: `frequency_rank asc NULLS FIRST` —
+  a user's own cards (null rank) come **before** the corpus.
 - Cloud Run is in **europe-west1** (domain mappings aren't supported in west3).
 - The `pg` SSL deprecation warning in logs is harmless.
 - `Date.now()`/`Math.random()` are fine in server code (the ban is only in

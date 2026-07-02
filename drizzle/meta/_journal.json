@@ -29,6 +29,20 @@
       "when": 1782942081017,
       "tag": "0003_seed_verbs",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1783018364937,
+      "tag": "0004_round_professor_monster",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1783018364938,
+      "tag": "0005_seed_words",
+      "breakpoints": true
     }
   ]
 }

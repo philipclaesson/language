@@ -17,12 +17,15 @@ export const users = pgTable("users", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
-// A "module": a named group of cards. Personal — every deck belongs to one user.
+// A "module": a named group of cards. Usually personal (belongs to one user).
+// A NULL owner marks a GLOBAL deck: shared reference data (the frequency word
+// corpus, seeded by a data migration) that every user reviews but nobody owns —
+// so it's read-only (all mutations scope to owner_id = the user) and surfaced by
+// the review queries via `or(ownerId = user, ownerId IS NULL)`. Cf. the verbs
+// catalog, which is global by living in its own table.
 export const decks = pgTable("decks", {
   id: uuid("id").primaryKey().defaultRandom(),
-  ownerId: uuid("owner_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
+  ownerId: uuid("owner_id").references(() => users.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
   // 'manual' | 'seed' | 'ai_chat' | 'ai_module' | 'news'
   source: text("source").notNull().default("manual"),
@@ -41,6 +44,10 @@ export const cards = pgTable("cards", {
   partOfSpeech: text("part_of_speech"), // drives answer-checking rules
   article: text("article"), // der/die/das for nouns
   notes: text("notes"), // example sentence / mnemonic
+  // Lower = more frequent. Set on the global frequency corpus; null for manual /
+  // AI / starter cards. Drives new-card introduction order (frequency_rank asc,
+  // nulls first) so personal cards come before the corpus. See srs/day.ts.
+  frequencyRank: integer("frequency_rank"),
   source: text("source").notNull().default("manual"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });

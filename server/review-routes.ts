@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { and, eq, gte, lt } from "drizzle-orm";
+import { and, asc, eq, gte, isNull, lt, or, sql } from "drizzle-orm";
 import { db } from "./db/client";
 import { cards, decks, reviewState, reviews } from "./db/schema";
 import { checkAnswer } from "./srs/check";
@@ -54,8 +54,11 @@ reviewRoutes.get("/session/today", async (c) => {
       reviewState,
       and(eq(reviewState.cardId, cards.id), eq(reviewState.userId, userId)),
     )
-    .where(eq(decks.ownerId, userId))
-    .orderBy(cards.createdAt); // stable order → fresh cards introduced oldest-first
+    // Owned decks + global (ownerless) decks like the frequency word corpus.
+    .where(or(eq(decks.ownerId, userId), isNull(decks.ownerId)))
+    // New-card introduction order: most-frequent first, and personal cards
+    // (null rank) before the corpus. Ties fall back to createdAt for stability.
+    .orderBy(sql`${cards.frequencyRank} asc nulls first`, asc(cards.createdAt));
 
   // All of the user's attempts, split around the start of today. "Correct" counts
   // any pass (rating >= 3), including a re-drill that finally landed.
@@ -111,7 +114,9 @@ reviewRoutes.post("/reviews", async (c) => {
     .select()
     .from(cards)
     .innerJoin(decks, eq(decks.id, cards.deckId))
-    .where(and(eq(cards.id, cardId), eq(decks.ownerId, userId)))
+    .where(
+      and(eq(cards.id, cardId), or(eq(decks.ownerId, userId), isNull(decks.ownerId))),
+    )
     .limit(1)
     .then((rows) => rows.map((r) => r.cards));
 
@@ -205,7 +210,7 @@ reviewRoutes.get("/progress", async (c) => {
       reviewState,
       and(eq(reviewState.cardId, cards.id), eq(reviewState.userId, userId)),
     )
-    .where(eq(decks.ownerId, userId));
+    .where(or(eq(decks.ownerId, userId), isNull(decks.ownerId)));
 
   const stabilities = rows.map((r) => (r.stateId === null ? null : r.stability));
 

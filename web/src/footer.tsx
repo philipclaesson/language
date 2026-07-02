@@ -17,6 +17,7 @@ const TABS: Tab[] = [
     isActive: (p) => p === "/" || p.startsWith("/review") || p.startsWith("/decks/"),
   },
   { label: "Verbs", icon: "🔤", path: "/verbs", isActive: (p) => p.startsWith("/verbs") },
+  { label: "Stats", icon: "📊", path: "/stats", isActive: (p) => p.startsWith("/stats") },
 ];
 
 export function TabBar() {

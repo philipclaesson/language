@@ -36,9 +36,9 @@
   (`srs/day.ts` `pickFresh`), stock ordered by `cards.frequency_rank`.
   Seeded by data migration `0005_seed_words.sql`, regenerable via
   `scripts/gen-words.ts`; cleaning rules in `db/words-parse.ts` (tested).
-- ⏭️ **Next:** streaks → Phase 3 (deck UI) → Phase 4 (polish) → more AI modules.
-  (Bonus work — "learn more" / "practice" — **shipped 2026-07-02** for Words and
-  Verbs; see **EXTRA_WORK.md**.)
+- ⏭️ **Next:** Phase 3 (deck UI) → Phase 4 (polish) → more AI modules.
+  (Bonus work — "learn more" / "practice" — and a **Stats** tab with streaks +
+  activity heatmap both **shipped 2026-07-02**; see **EXTRA_WORK.md**.)
 
 (Build phases detailed in §12. Operating guide in CLAUDE.md.)
 
@@ -336,8 +336,13 @@ type-it-correctly-once completion gate with training-only re-drills, stability
 tiers + a live Mastered count. **Shipped 2026-07-02:** bonus work (above) — the
 `reviews.bonus` / `verb_reviews.bonus` flag + `/session/extra` + the two UI on-ramps,
 for both Words and Verbs. See **EXTRA_WORK.md** for the built spec + deviations.
-**Deferred:** streaks; per-user `daily_new_limit`/`timezone` settings; any settings
-UI.
+**Shipped 2026-07-02:** a **Stats** tab (`GET /api/stats`) — GitHub-style activity
+heatmap (last 6 weeks, one row per week), current + longest streak, cards practiced
+in the last week, and the mastery tier bar over the whole library (words + verbs).
+All derived ad-hoc from `reviews`/`verb_reviews` (nothing stored); day-bucketing in
+`DAY_TZ`, streak/heatmap logic pure + tested in `server/srs/stats.ts`.
+**Deferred:** streak *mechanics* (freezes, streak affecting completion/rewards);
+per-user `daily_new_limit`/`timezone` settings; any settings UI.
 
 ---
 

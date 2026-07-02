@@ -10,6 +10,7 @@ import type {
   ProgressResponse,
   ReviewRequest,
   ReviewResult,
+  StatsResponse,
   TodayResponse,
   VerbExtraResponse,
   VerbListItem,
@@ -44,6 +45,10 @@ export function getToday() {
 
 export function getProgress() {
   return api<ProgressResponse>("/progress");
+}
+
+export function getStats() {
+  return api<StatsResponse>("/stats");
 }
 
 export function postReview(req: ReviewRequest) {

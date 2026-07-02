@@ -82,6 +82,22 @@ export type ExtraResponse = {
   cards: SessionCard[];
 };
 
+// ---- Stats (motivation only; all derived ad-hoc, nothing stored) ----
+
+// One day cell in the activity heatmap. `count` = cards done that day (graded
+// first-of-day reviews, words + verbs combined). `future` days (after today) are
+// rendered blank. Cells span whole Monday-first weeks, oldest first.
+export type HeatmapCell = { date: string; count: number; future: boolean };
+
+export type StatsResponse = {
+  heatmap: HeatmapCell[]; // weeks * 7 cells, oldest first (chunk by 7 for rows)
+  weeks: number; // number of week-rows in the heatmap
+  currentStreak: number; // consecutive active days ending today (or yesterday)
+  longestStreak: number; // best consecutive-active-days run ever
+  practicedLastWeek: number; // cards done in the last 7 days
+  mastery: ProgressResponse; // tier bar — words + verbs combined
+};
+
 export type DeckCardState = "new" | "learning" | "review" | "relearning";
 
 export type DeckSummary = {

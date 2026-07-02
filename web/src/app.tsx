@@ -5,6 +5,7 @@ import { ExtraButtons, Review, type ReviewMode } from "./review";
 import { DeckDetailView, DeckList } from "./decks";
 import { ChatTutor } from "./chat";
 import { VerbsHome, VerbReview, VerbAllView } from "./verbs";
+import { Stats } from "./stats";
 import { TabBar } from "./footer";
 import { navigate, usePath } from "./router";
 import { TIERS } from "./tiers";
@@ -87,6 +88,8 @@ function Home({ user }: { user: SessionUser }) {
   const content =
     path === "/chat" ? (
       <ChatTutor />
+    ) : path === "/stats" ? (
+      <Stats />
     ) : path === "/verbs" ? (
       <VerbsHome
         onStart={() => navigate("/verbs/review")}

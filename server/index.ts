@@ -8,6 +8,7 @@ import { reviewRoutes } from "./review-routes";
 import { deckRoutes } from "./deck-routes";
 import { verbRoutes } from "./verb-routes";
 import { chatRoutes } from "./chat-routes";
+import { statsRoutes } from "./stats-routes";
 
 const app = new Hono<AppEnv>();
 
@@ -19,6 +20,7 @@ api.route("/", reviewRoutes); // /session/today, /reviews, /progress
 api.route("/", deckRoutes); // /decks, /decks/:id
 api.route("/", verbRoutes); // /verbs/session/today, /verbs/reviews, /verbs/progress
 api.route("/", chatRoutes); // /chat
+api.route("/", statsRoutes); // /stats
 
 app.route("/api", api);
 

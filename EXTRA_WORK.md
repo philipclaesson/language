@@ -1,12 +1,27 @@
 # Extra work (bonus) — feature spec
 
-> **Status:** Designed, **not built**. Deliberately deferred on 2026-06-21 to live
-> with the core daily loop for a few days first (real usage is the best signal for
-> whether bonus is even needed yet, and how it should feel). Revisit ~late June 2026.
+> **Status: BUILT (2026-07-02).** Shipped for **both Words and Verbs**. Two buttons
+> appear on the "Done for today" screen (in-session done phase + the dashboards) and
+> whenever there's no required work left: **"Pick 5 new cards ✋"** (learn) and
+> **"Repeat 10 cards 📝"** (practice). Bonus reviews carry `reviews.bonus` /
+> `verb_reviews.bonus` so they never touch the required daily set.
 >
-> This is the full context for the feature so it can be picked up cold. The core
-> daily loop it builds on is **live** (PLAN.md §5a). Summary also in PLAN.md §5a
-> ("Bonus work") + decisions §13.10–11; this file is the detailed version.
+> **Deviations from the original design below:**
+> - Counts fixed at **5 new / 10 practice** (`EXTRA_NEW`/`EXTRA_PRACTICE` in
+>   `shared/types.ts`) — the client labels read from those constants.
+> - **Extra new verbs are pulled in plain frequency order**, skipping the daily
+>   3:2 irregular-lean (`verbs/plan.ts` `pickFresh`) for simplicity. Easy to add.
+> - **"reviewed *before* today" counts ALL prior reviews** (bonus + non-bonus), not
+>   just non-bonus as the spec originally said — otherwise a card you bonus-learned
+>   on a prior day would be miscategorised as a fresh introduction when it comes due.
+>   Only "reviewed/correct **today**" is filtered to non-bonus (the leak fix).
+> - The `isDue` leak worried about in review turned out to be a non-issue:
+>   `enable_short_term: false` means every just-reviewed card is due ≥1 day out, so a
+>   card reviewed today (bonus or not) can never be `due < end-of-today`. The
+>   `reviewedToday` filter alone fully closes the leak.
+>
+> The rest of this doc is the original design context, kept for the rationale.
+> Summary also in PLAN.md §5a ("Bonus work") + decisions §13.10–11.
 
 ## Why this exists
 

@@ -133,6 +133,11 @@ export const verbReviews = pgTable("verb_reviews", {
     .references(() => verbs.id, { onDelete: "cascade" }),
   rating: integer("rating").notNull(), // 1 = fail, 3 = pass (all-or-nothing)
   graded: boolean("graded").notNull().default(true), // first-attempt-of-day only
+  // Extra/bonus work (EXTRA_WORK.md): a review done via "learn more"/"practice"
+  // beyond the day's required set. The day planner reads today's REQUIRED
+  // membership from non-bonus reviews only, so a missed bonus card can't silently
+  // un-complete your finished day. Mastery/progress still counts every graded row.
+  bonus: boolean("bonus").notNull().default(false),
   typedAnswer: jsonb("typed_answer"), // the six typed forms
   reviewedAt: timestamp("reviewed_at", { withTimezone: true }).notNull().defaultNow(),
   elapsedMs: integer("elapsed_ms"),
@@ -152,6 +157,8 @@ export const reviews = pgTable("reviews", {
   // a card is graded; later same-day attempts are training-only re-drills logged
   // with graded=false, so they don't pollute the optimizer's view. See PLAN.md §5a.
   graded: boolean("graded").notNull().default(true),
+  // Extra/bonus work (EXTRA_WORK.md) — see verb_reviews.bonus for the rationale.
+  bonus: boolean("bonus").notNull().default(false),
   typedAnswer: text("typed_answer"),
   reviewedAt: timestamp("reviewed_at", { withTimezone: true }).notNull().defaultNow(),
   elapsedMs: integer("elapsed_ms"),

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "preact/hooks";
 import type {
   Conjugation,
+  ExtraType,
   SessionVerb,
   VerbForm,
   VerbListItem,
@@ -8,8 +9,9 @@ import type {
   VerbReviewResult,
   VerbTodayResponse,
 } from "../../shared/types";
-import { VERB_FORMS, VERB_FORM_LABELS } from "../../shared/types";
-import { getVerbList, getVerbProgress, getVerbToday, postVerbReview } from "./api";
+import { EXTRA_NEW, EXTRA_PRACTICE, VERB_FORMS, VERB_FORM_LABELS } from "../../shared/types";
+import { getVerbExtra, getVerbList, getVerbProgress, getVerbToday, postVerbReview } from "./api";
+import { ExtraButtons, type ReviewMode } from "./review";
 import { TIERS, TIER_BY_KEY } from "./tiers";
 
 const emptyConj = (): Conjugation => ({ ich: "", du: "", er: "", wir: "", ihr: "", sie: "" });
@@ -43,7 +45,15 @@ function RegularityTag({ regularity }: { regularity: string }) {
 
 // ---- Verbs dashboard (tab root) ----
 
-export function VerbsHome({ onStart, onOpenList }: { onStart: () => void; onOpenList: () => void }) {
+export function VerbsHome({
+  onStart,
+  onOpenList,
+  onStartExtra,
+}: {
+  onStart: () => void;
+  onOpenList: () => void;
+  onStartExtra: (type: ExtraType) => void;
+}) {
   const [today, setToday] = useState<VerbTodayResponse | null>(null);
   const [progress, setProgress] = useState<VerbProgressResponse | null>(null);
 
@@ -55,6 +65,7 @@ export function VerbsHome({ onStart, onOpenList }: { onStart: () => void; onOpen
   const requiredTotal = today ? today.dueTotal + today.newTotal : 0;
   const pending = today?.pending ?? 0;
   const started = (today?.done ?? 0) > 0;
+  const canReview = pending > 0; // else offer extra work (done today, or nothing due)
 
   return (
     <div class="mx-auto flex min-h-screen max-w-md flex-col px-5 pb-24 pt-10">
@@ -83,13 +94,25 @@ export function VerbsHome({ onStart, onOpenList }: { onStart: () => void; onOpen
               </p>
             )}
           </div>
-          <button
-            onClick={onStart}
-            disabled={pending === 0}
-            class="mt-4 w-full rounded-xl bg-slate-900 px-5 py-3 font-medium text-white transition hover:bg-slate-700 disabled:opacity-40"
-          >
-            {started && pending > 0 ? "Continue" : "Start verbs"}
-          </button>
+          {canReview && (
+            <button
+              onClick={onStart}
+              class="mt-4 w-full rounded-xl bg-slate-900 px-5 py-3 font-medium text-white transition hover:bg-slate-700"
+            >
+              {started ? "Continue" : "Start verbs"}
+            </button>
+          )}
+          {!canReview && today && (
+            <div class="mt-4">
+              <ExtraButtons
+                noun="verbs"
+                newAvailable={today.newAvailable}
+                practiceAvailable={today.practiceAvailable}
+                onNew={() => onStartExtra("new")}
+                onPractice={() => onStartExtra("practice")}
+              />
+            </div>
+          )}
         </div>
 
         <VerbMasteryCard progress={progress} onClick={onOpenList} />
@@ -204,12 +227,21 @@ export function VerbAllView({ onBack }: { onBack: () => void }) {
 
 // ---- Verb review loop ----
 
-// `input` = filling in the six forms from recall (graded on the server).
-// `drill` = got it wrong; the correct forms are revealed and you re-type the wrong
-//           rows to continue (the correct rows stay locked).
-type Phase = "loading" | "input" | "drill" | "empty" | "done";
+// `input`  = filling in the six forms from recall (graded on the server).
+// `drill`  = got it wrong (hammer modes); correct forms revealed, re-type the wrong
+//            rows to continue (correct rows stay locked).
+// `reveal` = got it wrong in practice; all forms shown, one tap to move on.
+type Phase = "loading" | "input" | "drill" | "reveal" | "empty" | "done";
 
-export function VerbReview({ onDone }: { onDone: () => void }) {
+export function VerbReview({
+  mode = "daily",
+  onDone,
+  onStartExtra,
+}: {
+  mode?: ReviewMode;
+  onDone: () => void;
+  onStartExtra: (type: ExtraType) => void;
+}) {
   const [queue, setQueue] = useState<SessionVerb[]>([]);
   const [phase, setPhase] = useState<Phase>("loading");
   const [typed, setTyped] = useState<Conjugation>(emptyConj());
@@ -218,58 +250,81 @@ export function VerbReview({ onDone }: { onDone: () => void }) {
   const [flash, setFlash] = useState<"green" | "red" | null>(null);
   const [requiredTotal, setRequiredTotal] = useState(0);
   const [baseDone, setBaseDone] = useState(0);
+  const [avail, setAvail] = useState({ new: 0, practice: 0 });
   const [completed, setCompleted] = useState(0);
   const startedAt = useRef(0);
   const inputRefs = useRef<Partial<Record<VerbForm, HTMLInputElement | null>>>({});
 
-  useEffect(() => {
-    getVerbToday()
-      .then((t) => {
-        setRequiredTotal(t.dueTotal + t.newTotal);
-        setBaseDone(t.done);
-        if (t.verbs.length === 0) {
-          setPhase(t.dueTotal + t.newTotal > 0 ? "done" : "empty");
-        } else {
-          setQueue(t.verbs);
-          setPhase("input");
-          startedAt.current = Date.now();
-        }
-      })
-      .catch(() => setPhase("empty"));
-  }, []);
+  const isBonus = mode !== "daily";
+  const oneAndDone = mode === "practice";
+
+  function load() {
+    setPhase("loading");
+    setResult(null);
+    setTyped(emptyConj());
+    setFlash(null);
+    setCompleted(0);
+    setSubmitting(false);
+    const start = (verbs: SessionVerb[], hadRequired: boolean) => {
+      if (verbs.length === 0) {
+        setPhase(hadRequired ? "done" : "empty");
+      } else {
+        setQueue(verbs);
+        setPhase("input");
+        startedAt.current = Date.now();
+      }
+    };
+    if (mode === "daily") {
+      getVerbToday()
+        .then((t) => {
+          setRequiredTotal(t.dueTotal + t.newTotal);
+          setBaseDone(t.done);
+          setAvail({ new: t.newAvailable, practice: t.practiceAvailable });
+          start(t.verbs, t.dueTotal + t.newTotal > 0);
+        })
+        .catch(() => setPhase("empty"));
+    } else {
+      getVerbExtra(mode === "learn" ? "new" : "practice")
+        .then((r) => start(r.verbs, false))
+        .catch(() => setPhase("empty"));
+    }
+  }
+
+  useEffect(load, [mode]);
 
   const current = queue[0];
   const doneCount = baseDone + completed;
 
-  // In the drill only the previously-wrong rows are editable; in input, all six.
+  // In the drill only the previously-wrong rows are editable; in input, all six;
+  // in reveal, none.
   const editableForms = (): VerbForm[] =>
     phase === "drill" && result
       ? VERB_FORMS.filter((f) => !result.perForm[f])
-      : [...VERB_FORMS];
+      : phase === "reveal"
+        ? []
+        : [...VERB_FORMS];
 
-  // Focus the first editable field whenever a new card or phase appears, so the
-  // mobile keyboard stays open across the whole session.
   useEffect(() => {
     if (phase !== "input" && phase !== "drill") return;
     const first = editableForms()[0];
     if (first) inputRefs.current[first]?.focus();
   }, [phase, queue]);
 
-  function advance(wasCorrect: boolean) {
+  function next(drop: boolean, counted: boolean) {
     const [head, ...rest] = queue;
-    const next = wasCorrect ? rest : [...rest, head];
-    if (wasCorrect) setCompleted((c) => c + 1);
+    const nextQueue = drop ? rest : [...rest, head];
+    if (counted) setCompleted((c) => c + 1);
 
     setResult(null);
     setTyped(emptyConj());
     setFlash(null);
     setSubmitting(false);
-    if (next.length === 0) {
-      setQueue(next);
+    if (nextQueue.length === 0) {
+      setQueue(nextQueue);
       setPhase("done");
       return;
     }
-    setQueue(next);
+    setQueue(nextQueue);
     setPhase("input");
     startedAt.current = Date.now();
   }
@@ -282,13 +337,21 @@ export function VerbReview({ onDone }: { onDone: () => void }) {
         verbId: current.id,
         typed,
         elapsedMs: Date.now() - startedAt.current,
+        bonus: isBonus,
       });
       if (r.correct) {
         setFlash("green");
-        setTimeout(() => advance(true), 200);
+        setTimeout(() => next(true, true), 200);
+      } else if (oneAndDone) {
+        // Practice: reveal every correct form, one tap to move on (one-and-done).
+        setResult(r);
+        setTyped({ ...r.expected });
+        setFlash("red");
+        setPhase("reveal");
+        setSubmitting(false);
+        setTimeout(() => setFlash(null), 450);
       } else {
-        // Reveal the correct set; keep correct rows filled + locked, clear the
-        // wrong rows for the learner to re-type.
+        // Hammer modes: keep correct rows filled + locked, clear the wrong rows.
         setResult(r);
         const revealed = emptyConj();
         for (const f of VERB_FORMS) revealed[f] = r.perForm[f] ? r.expected[f] : "";
@@ -307,7 +370,7 @@ export function VerbReview({ onDone }: { onDone: () => void }) {
   function drillSubmit() {
     if (!result) return;
     const allFixed = editableForms().every((f) => norm(typed[f]) === norm(result.expected[f]));
-    if (allFixed) advance(false);
+    if (allFixed) next(false, false); // rotate to back, come again
     else {
       setFlash("red");
       setTimeout(() => setFlash(null), 450);
@@ -317,6 +380,7 @@ export function VerbReview({ onDone }: { onDone: () => void }) {
   function submit() {
     if (phase === "input") void grade();
     else if (phase === "drill") drillSubmit();
+    else if (phase === "reveal") next(true, true);
   }
 
   function onKey(e: KeyboardEvent, form: VerbForm) {
@@ -338,7 +402,13 @@ export function VerbReview({ onDone }: { onDone: () => void }) {
       <Shell>
         <div class="text-center">
           <p class="text-2xl">🌙</p>
-          <p class="mt-2 text-slate-600">No verbs to do right now. Come back later!</p>
+          <p class="mt-2 text-slate-600">
+            {mode === "learn"
+              ? "No new verbs to learn right now."
+              : mode === "practice"
+                ? "No verbs to practice right now."
+                : "No verbs to do right now. Come back later!"}
+          </p>
           <BackButton onDone={onDone} label="Back" />
         </div>
       </Shell>
@@ -348,13 +418,60 @@ export function VerbReview({ onDone }: { onDone: () => void }) {
   if (phase === "done") {
     return (
       <Shell>
-        <div class="text-center">
+        <div class="w-full max-w-sm text-center">
           <p class="text-3xl">🎉</p>
-          <p class="mt-3 text-2xl font-semibold text-slate-900">Done for today</p>
-          <p class="mt-2 text-slate-600">
-            {requiredTotal} {requiredTotal === 1 ? "verb" : "verbs"} conjugated. See you tomorrow.
-          </p>
-          <BackButton onDone={onDone} label="Back to verbs" />
+          {mode === "daily" ? (
+            <>
+              <p class="mt-3 text-2xl font-semibold text-slate-900">Done for today</p>
+              <p class="mt-2 text-slate-600">
+                {requiredTotal} {requiredTotal === 1 ? "verb" : "verbs"} conjugated. See you tomorrow.
+              </p>
+              <div class="mt-6">
+                <ExtraButtons
+                  noun="verbs"
+                  newAvailable={avail.new}
+                  practiceAvailable={avail.practice}
+                  onNew={() => onStartExtra("new")}
+                  onPractice={() => onStartExtra("practice")}
+                />
+              </div>
+              <button
+                onClick={onDone}
+                class="mt-3 text-sm text-slate-500 underline-offset-2 hover:text-slate-900 hover:underline"
+              >
+                Back to verbs
+              </button>
+            </>
+          ) : (
+            <>
+              <p class="mt-3 text-2xl font-semibold text-slate-900">Nice work</p>
+              <p class="mt-2 text-slate-600">
+                {mode === "learn"
+                  ? `${completed} new ${completed === 1 ? "verb" : "verbs"} learned.`
+                  : `${completed} ${completed === 1 ? "verb" : "verbs"} practiced.`}
+              </p>
+              <button
+                onClick={load}
+                class="mt-6 w-full rounded-xl bg-slate-900 px-5 py-3 font-medium text-white transition hover:bg-slate-700"
+              >
+                {mode === "learn" ? `Learn ${EXTRA_NEW} more` : `Practice ${EXTRA_PRACTICE} more`}
+              </button>
+              <button
+                onClick={() => onStartExtra(mode === "learn" ? "practice" : "new")}
+                class="mt-3 w-full rounded-xl border border-slate-200 px-5 py-3 font-medium text-slate-700 transition hover:bg-slate-50"
+              >
+                {mode === "learn"
+                  ? `Practice ${EXTRA_PRACTICE} verbs 📝`
+                  : `Pick ${EXTRA_NEW} new verbs ✋`}
+              </button>
+              <button
+                onClick={onDone}
+                class="mt-3 text-sm text-slate-500 underline-offset-2 hover:text-slate-900 hover:underline"
+              >
+                Back to verbs
+              </button>
+            </>
+          )}
         </div>
       </Shell>
     );
@@ -366,19 +483,29 @@ export function VerbReview({ onDone }: { onDone: () => void }) {
     <Shell>
       <div class="w-full max-w-md">
         <div class="mb-2 flex items-center justify-between text-sm text-slate-400">
-          <span>
-            {doneCount} / {requiredTotal} today
-          </span>
+          {isBonus ? (
+            <span>
+              {mode === "learn" ? "Learning" : "Practice"} · +{completed}
+            </span>
+          ) : (
+            <span>
+              {doneCount} / {requiredTotal} today
+            </span>
+          )}
           <button onClick={onDone} class="hover:text-slate-700 hover:underline">
             End session
           </button>
         </div>
-        <div class="mb-6 h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
-          <div
-            class="h-full rounded-full bg-slate-900 transition-all"
-            style={{ width: `${requiredTotal ? (doneCount / requiredTotal) * 100 : 0}%` }}
-          />
-        </div>
+        {!isBonus ? (
+          <div class="mb-6 h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
+            <div
+              class="h-full rounded-full bg-slate-900 transition-all"
+              style={{ width: `${requiredTotal ? (doneCount / requiredTotal) * 100 : 0}%` }}
+            />
+          </div>
+        ) : (
+          <div class="mb-6" />
+        )}
 
         <div class="flex items-center justify-center gap-2">
           {current && <RegularityTag regularity={current.regularity} />}
@@ -392,9 +519,10 @@ export function VerbReview({ onDone }: { onDone: () => void }) {
           {VERB_FORMS.map((f) => {
             const isEditable = editable.has(f);
             const wrongInDrill = phase === "drill" && result && !result.perForm[f];
+            const revealedRow = phase === "reveal";
             const border = wrongInDrill
               ? "border-red-300 focus:border-red-500"
-              : phase === "drill" && !isEditable
+              : (phase === "drill" && !isEditable) || revealedRow
                 ? "border-emerald-200 bg-emerald-50 text-emerald-800"
                 : flash === "green"
                   ? "border-green-500"
@@ -442,13 +570,19 @@ export function VerbReview({ onDone }: { onDone: () => void }) {
             <p class="mt-1 opacity-70">You'll see this verb again later.</p>
           </div>
         )}
+        {phase === "reveal" && (
+          <div class="mt-4 rounded-xl bg-amber-50 px-4 py-3 text-center text-sm text-amber-900 ring-1 ring-amber-200">
+            <p class="font-medium">Not quite — here are the correct forms.</p>
+            <p class="mt-1 opacity-70">It'll come round again sooner.</p>
+          </div>
+        )}
 
         <button
           onClick={submit}
           disabled={submitting}
           class="mt-6 w-full rounded-xl bg-slate-900 px-5 py-3 font-medium text-white transition hover:bg-slate-700 disabled:opacity-50"
         >
-          {phase === "drill" ? "Continue" : "Check"}
+          {phase === "input" ? "Check" : "Continue"}
         </button>
       </div>
     </Shell>

@@ -36,9 +36,9 @@
   (`srs/day.ts` `pickFresh`), stock ordered by `cards.frequency_rank`.
   Seeded by data migration `0005_seed_words.sql`, regenerable via
   `scripts/gen-words.ts`; cleaning rules in `db/words-parse.ts` (tested).
-- ⏭️ **Next:** *use the live daily loop for a few days*, then bonus work
-  (designed — see **EXTRA_WORK.md**) → streaks → Phase 3 (deck UI) → Phase 4
-  (polish) → more AI modules.
+- ⏭️ **Next:** streaks → Phase 3 (deck UI) → Phase 4 (polish) → more AI modules.
+  (Bonus work — "learn more" / "practice" — **shipped 2026-07-02** for Words and
+  Verbs; see **EXTRA_WORK.md**.)
 
 (Build phases detailed in §12. Operating guide in CLAUDE.md.)
 
@@ -333,9 +333,9 @@ the `reviews` log — **no new tables needed**.
 
 **Shipped:** finishable "today's set" (due + up to 10 new), the
 type-it-correctly-once completion gate with training-only re-drills, stability
-tiers + a live Mastered count. **Designed, not yet built:** bonus work (above) —
-needs the `reviews.bonus` flag + `/session/extra` + the two UI on-ramps. Full
-self-contained spec in **EXTRA_WORK.md** (deferred ~late June 2026).
+tiers + a live Mastered count. **Shipped 2026-07-02:** bonus work (above) — the
+`reviews.bonus` / `verb_reviews.bonus` flag + `/session/extra` + the two UI on-ramps,
+for both Words and Verbs. See **EXTRA_WORK.md** for the built spec + deviations.
 **Deferred:** streaks; per-user `daily_new_limit`/`timezone` settings; any settings
 UI.
 

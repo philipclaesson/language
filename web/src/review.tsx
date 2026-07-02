@@ -1,74 +1,109 @@
 import { useEffect, useRef, useState } from "preact/hooks";
-import type { ReviewResult, SessionCard } from "../../shared/types";
-import { getToday, postReview } from "./api";
+import type { ExtraType, ReviewResult, SessionCard } from "../../shared/types";
+import { EXTRA_NEW, EXTRA_PRACTICE } from "../../shared/types";
+import { getExtra, getToday, postReview } from "./api";
 
-// `input` = typing the answer from recall (graded on the server).
-// `drill`  = got it wrong, now copying the revealed answer to continue.
-type Phase = "loading" | "input" | "drill" | "empty" | "done";
+// `daily`    = the required daily set (due + new), hammer-until-correct.
+// `learn`    = bonus: extra fresh cards, hammer-until-correct (you're learning them).
+// `practice` = bonus: known cards, weakest-first, one-and-done (a miss just moves on).
+export type ReviewMode = "daily" | "learn" | "practice";
 
-export function Review({ onDone }: { onDone: () => void }) {
-  // `queue` holds the cards still needing a correct typing today. We always show
-  // queue[0]; a correct answer drops it, a wrong one rotates it to the back so it
-  // comes round again — "hammer until correct" (PLAN.md §5a).
+// `input`  = typing the answer from recall (graded on the server).
+// `drill`  = got it wrong; copy the revealed answer to continue (hammer modes).
+// `reveal` = got it wrong in practice; see the answer, one tap to move on (one-and-done).
+type Phase = "loading" | "input" | "drill" | "reveal" | "empty" | "done";
+
+export function Review({
+  mode = "daily",
+  onDone,
+  onStartExtra,
+}: {
+  mode?: ReviewMode;
+  onDone: () => void;
+  onStartExtra: (type: ExtraType) => void;
+}) {
+  // `queue` holds the cards still needing a correct typing. We always show queue[0];
+  // a correct answer drops it, a wrong one (hammer modes) rotates it to the back so
+  // it comes round again — "hammer until correct" (PLAN.md §5a).
   const [queue, setQueue] = useState<SessionCard[]>([]);
   const [phase, setPhase] = useState<Phase>("loading");
   const [typed, setTyped] = useState("");
   const [result, setResult] = useState<ReviewResult | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  // Transient border flash that gives correct/wrong feedback without a screen
-  // change, so the keyboard never has to close. Cleared by a timer.
   const [flash, setFlash] = useState<"green" | "red" | null>(null);
-  // Today's required total and how many were already done before this session.
+  // Daily-only: today's required total and how many were done before this session.
   const [requiredTotal, setRequiredTotal] = useState(0);
   const [baseDone, setBaseDone] = useState(0);
-  const [completed, setCompleted] = useState(0); // unique cards finished this session
+  // Availability of the two on-ramps, for the "Done for today" buttons (daily mode).
+  const [avail, setAvail] = useState({ new: 0, practice: 0 });
+  const [completed, setCompleted] = useState(0); // cards finished this session
   const startedAt = useRef(0);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    getToday()
-      .then((t) => {
-        setRequiredTotal(t.dueTotal + t.newTotal);
-        setBaseDone(t.done);
-        if (t.cards.length === 0) {
-          // No pending cards: either today's work is finished, or there was none.
-          setPhase(t.dueTotal + t.newTotal > 0 ? "done" : "empty");
-        } else {
-          setQueue(t.cards);
-          setPhase("input");
-          startedAt.current = Date.now();
-        }
-      })
-      .catch(() => setPhase("empty"));
-  }, []);
+  const isBonus = mode !== "daily";
+  const oneAndDone = mode === "practice";
+
+  // (Re)load the session for the current mode. Called on mount / mode change and by
+  // "Go again" on the bonus done screen.
+  function load() {
+    setPhase("loading");
+    setResult(null);
+    setTyped("");
+    setFlash(null);
+    setCompleted(0);
+    setSubmitting(false);
+    const start = (cards: SessionCard[], hadRequired: boolean) => {
+      if (cards.length === 0) {
+        setPhase(hadRequired ? "done" : "empty");
+      } else {
+        setQueue(cards);
+        setPhase("input");
+        startedAt.current = Date.now();
+      }
+    };
+    if (mode === "daily") {
+      getToday()
+        .then((t) => {
+          setRequiredTotal(t.dueTotal + t.newTotal);
+          setBaseDone(t.done);
+          setAvail({ new: t.newAvailable, practice: t.practiceAvailable });
+          start(t.cards, t.dueTotal + t.newTotal > 0);
+        })
+        .catch(() => setPhase("empty"));
+    } else {
+      getExtra(mode === "learn" ? "new" : "practice")
+        .then((r) => start(r.cards, false))
+        .catch(() => setPhase("empty"));
+    }
+  }
+
+  useEffect(load, [mode]);
 
   const current = queue[0];
   const doneCount = baseDone + completed;
 
-  // Keep the one input focused so the mobile keyboard never closes. iOS won't
-  // *reopen* a keyboard programmatically, so the whole loop is built to never
-  // blur: a single persistent input, submit via the return key, auto-advance.
+  // Keep the one input focused so the mobile keyboard never closes.
   useEffect(() => {
     if (phase === "input" || phase === "drill") inputRef.current?.focus();
   }, [phase, queue]);
 
-  // Move past the current card. Correct → drop it (one more done). Wrong → send
-  // it to the back so it comes round again for a real recall test (PLAN.md §5a).
-  function advance(wasCorrect: boolean) {
+  // Move past the current card. `drop` removes it; otherwise it rotates to the back
+  // to come round again. `counted` bumps the finished-cards tally.
+  function next(drop: boolean, counted: boolean) {
     const [head, ...rest] = queue;
-    const next = wasCorrect ? rest : [...rest, head];
-    if (wasCorrect) setCompleted((c) => c + 1);
+    const nextQueue = drop ? rest : [...rest, head];
+    if (counted) setCompleted((c) => c + 1);
 
     setResult(null);
     setTyped("");
     setFlash(null);
     setSubmitting(false);
-    if (next.length === 0) {
-      setQueue(next);
+    if (nextQueue.length === 0) {
+      setQueue(nextQueue);
       setPhase("done");
       return;
     }
-    setQueue(next);
+    setQueue(nextQueue);
     setPhase("input");
     startedAt.current = Date.now();
   }
@@ -81,13 +116,21 @@ export function Review({ onDone }: { onDone: () => void }) {
         cardId: current.id,
         typedAnswer: typed,
         elapsedMs: Date.now() - startedAt.current,
+        bonus: isBonus,
       });
       if (r.correct) {
-        // Flash green, then move on — no separate "success" screen or tap.
         setFlash("green");
-        setTimeout(() => advance(true), 160);
+        setTimeout(() => next(true, true), 160);
+      } else if (oneAndDone) {
+        // Practice: reveal the answer, one tap to move on. A miss already
+        // rescheduled the card sooner (FSRS Again) — no re-drill.
+        setResult(r);
+        setFlash("red");
+        setPhase("reveal");
+        setSubmitting(false);
+        setTimeout(() => setFlash(null), 450);
       } else {
-        // Reveal the answer and make them type it to continue (the drill).
+        // Hammer modes: reveal the answer and make them type it to continue.
         setResult(r);
         setFlash("red");
         setTyped("");
@@ -96,14 +139,10 @@ export function Review({ onDone }: { onDone: () => void }) {
         setTimeout(() => setFlash(null), 450);
       }
     } catch {
-      // leave in input phase so they can retry
       setSubmitting(false);
     }
   }
 
-  // In the drill, the answer is on screen — they just have to reproduce it and
-  // press enter (same gesture as the recall input). Typing the right answer but
-  // not matching on enter just leaves them in the drill.
   function matchesExpected(value: string) {
     return !!result && value.trim() === result.expected.trim();
   }
@@ -112,7 +151,7 @@ export function Review({ onDone }: { onDone: () => void }) {
     e.preventDefault();
     if (phase === "input") void grade();
     else if (phase === "drill") {
-      if (matchesExpected(typed)) advance(false);
+      if (matchesExpected(typed)) next(false, false); // rotate to back, come again
       else {
         setFlash("red");
         setTimeout(() => setFlash(null), 450);
@@ -127,7 +166,13 @@ export function Review({ onDone }: { onDone: () => void }) {
       <Shell>
         <div class="text-center">
           <p class="text-2xl">🌙</p>
-          <p class="mt-2 text-slate-600">Nothing to do right now. Come back later!</p>
+          <p class="mt-2 text-slate-600">
+            {mode === "learn"
+              ? "No new words to learn right now."
+              : mode === "practice"
+                ? "Nothing to practice right now."
+                : "Nothing to do right now. Come back later!"}
+          </p>
           <BackButton onDone={onDone} label="Back" />
         </div>
       </Shell>
@@ -137,13 +182,60 @@ export function Review({ onDone }: { onDone: () => void }) {
   if (phase === "done") {
     return (
       <Shell>
-        <div class="text-center">
+        <div class="w-full max-w-sm text-center">
           <p class="text-3xl">🎉</p>
-          <p class="mt-3 text-2xl font-semibold text-slate-900">Done for today</p>
-          <p class="mt-2 text-slate-600">
-            {requiredTotal} {requiredTotal === 1 ? "word" : "words"} reviewed. See you tomorrow.
-          </p>
-          <BackButton onDone={onDone} label="Back to home" />
+          {mode === "daily" ? (
+            <>
+              <p class="mt-3 text-2xl font-semibold text-slate-900">Done for today</p>
+              <p class="mt-2 text-slate-600">
+                {requiredTotal} {requiredTotal === 1 ? "word" : "words"} reviewed. See you tomorrow.
+              </p>
+              <div class="mt-6">
+                <ExtraButtons
+                  noun="cards"
+                  newAvailable={avail.new}
+                  practiceAvailable={avail.practice}
+                  onNew={() => onStartExtra("new")}
+                  onPractice={() => onStartExtra("practice")}
+                />
+              </div>
+              <button
+                onClick={onDone}
+                class="mt-3 text-sm text-slate-500 underline-offset-2 hover:text-slate-900 hover:underline"
+              >
+                Back to home
+              </button>
+            </>
+          ) : (
+            <>
+              <p class="mt-3 text-2xl font-semibold text-slate-900">Nice work</p>
+              <p class="mt-2 text-slate-600">
+                {mode === "learn"
+                  ? `${completed} new ${completed === 1 ? "word" : "words"} learned.`
+                  : `${completed} ${completed === 1 ? "word" : "words"} practiced.`}
+              </p>
+              <button
+                onClick={load}
+                class="mt-6 w-full rounded-xl bg-slate-900 px-5 py-3 font-medium text-white transition hover:bg-slate-700"
+              >
+                {mode === "learn" ? `Learn ${EXTRA_NEW} more` : `Practice ${EXTRA_PRACTICE} more`}
+              </button>
+              <button
+                onClick={() => onStartExtra(mode === "learn" ? "practice" : "new")}
+                class="mt-3 w-full rounded-xl border border-slate-200 px-5 py-3 font-medium text-slate-700 transition hover:bg-slate-50"
+              >
+                {mode === "learn"
+                  ? `Practice ${EXTRA_PRACTICE} words 📝`
+                  : `Pick ${EXTRA_NEW} new words ✋`}
+              </button>
+              <button
+                onClick={onDone}
+                class="mt-3 text-sm text-slate-500 underline-offset-2 hover:text-slate-900 hover:underline"
+              >
+                Back to home
+              </button>
+            </>
+          )}
         </div>
       </Shell>
     );
@@ -160,19 +252,28 @@ export function Review({ onDone }: { onDone: () => void }) {
     <Shell>
       <div class="w-full max-w-md">
         <div class="mb-2 flex items-center justify-between text-sm text-slate-400">
-          <span>
-            {doneCount} / {requiredTotal} today
-          </span>
+          {isBonus ? (
+            <span>
+              {mode === "learn" ? "Learning" : "Practice"} · +{completed}
+            </span>
+          ) : (
+            <span>
+              {doneCount} / {requiredTotal} today
+            </span>
+          )}
           <button onClick={onDone} class="hover:text-slate-700 hover:underline">
             End session
           </button>
         </div>
-        <div class="mb-6 h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
-          <div
-            class="h-full rounded-full bg-slate-900 transition-all"
-            style={{ width: `${requiredTotal ? (doneCount / requiredTotal) * 100 : 0}%` }}
-          />
-        </div>
+        {!isBonus && (
+          <div class="mb-6 h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
+            <div
+              class="h-full rounded-full bg-slate-900 transition-all"
+              style={{ width: `${requiredTotal ? (doneCount / requiredTotal) * 100 : 0}%` }}
+            />
+          </div>
+        )}
+        {isBonus && <div class="mb-6" />}
 
         <p class="text-center text-sm uppercase tracking-wide text-slate-400">
           {current?.partOfSpeech ?? "translate"}
@@ -187,6 +288,7 @@ export function Review({ onDone }: { onDone: () => void }) {
             value={typed}
             onInput={(e) => setTyped((e.target as HTMLInputElement).value)}
             placeholder={phase === "drill" ? "Type it to continue…" : "Type the German…"}
+            disabled={phase === "reveal"}
             autocomplete="off"
             autocapitalize="off"
             autocorrect="off"
@@ -195,7 +297,7 @@ export function Review({ onDone }: { onDone: () => void }) {
             class={`w-full rounded-xl border px-4 py-3 text-lg outline-none transition-colors ${inputBorder}`}
           />
 
-          {phase === "drill" && result && (
+          {(phase === "drill" || phase === "reveal") && result && (
             <div class="mt-4 rounded-xl bg-amber-50 px-4 py-3 text-center text-amber-900 ring-1 ring-amber-200">
               <p class="font-medium">
                 {result.reason === "missing_article"
@@ -203,7 +305,9 @@ export function Review({ onDone }: { onDone: () => void }) {
                   : "Not quite"}
               </p>
               <p class="mt-1 text-lg font-semibold">{result.expected}</p>
-              <p class="mt-1 text-xs opacity-70">Type it to continue — you'll see it again later.</p>
+              <p class="mt-1 text-xs opacity-70">
+                {phase === "reveal" ? "It'll come round again sooner." : "Type it to continue — you'll see it again later."}
+              </p>
             </div>
           )}
 
@@ -216,9 +320,56 @@ export function Review({ onDone }: { onDone: () => void }) {
               Check
             </button>
           )}
+          {phase === "reveal" && (
+            <button
+              type="button"
+              onClick={() => next(true, true)}
+              class="mt-6 w-full rounded-xl bg-slate-900 px-5 py-3 font-medium text-white transition hover:bg-slate-700"
+            >
+              Continue
+            </button>
+          )}
         </form>
       </div>
     </Shell>
+  );
+}
+
+// The two extra-work on-ramps, shown on a "Done for today" screen (and reused on
+// the dashboards). Each button hides when its pool is empty. See EXTRA_WORK.md.
+export function ExtraButtons({
+  noun,
+  newAvailable,
+  practiceAvailable,
+  onNew,
+  onPractice,
+}: {
+  noun: "cards" | "verbs";
+  newAvailable: number;
+  practiceAvailable: number;
+  onNew: () => void;
+  onPractice: () => void;
+}) {
+  if (newAvailable === 0 && practiceAvailable === 0) return null;
+  return (
+    <div class="space-y-2">
+      {newAvailable > 0 && (
+        <button
+          onClick={onNew}
+          class="w-full rounded-xl bg-slate-900 px-5 py-3 font-medium text-white transition hover:bg-slate-700"
+        >
+          Pick {EXTRA_NEW} new {noun} ✋
+        </button>
+      )}
+      {practiceAvailable > 0 && (
+        <button
+          onClick={onPractice}
+          class="w-full rounded-xl border border-slate-200 px-5 py-3 font-medium text-slate-700 transition hover:bg-slate-50"
+        >
+          Repeat {EXTRA_PRACTICE} {noun} 📝
+        </button>
+      )}
+    </div>
   );
 }
 

@@ -4,11 +4,14 @@ import type {
   ChatResponse,
   DeckDetail,
   DeckSummary,
+  ExtraResponse,
+  ExtraType,
   MeResponse,
   ProgressResponse,
   ReviewRequest,
   ReviewResult,
   TodayResponse,
+  VerbExtraResponse,
   VerbListItem,
   VerbProgressResponse,
   VerbReviewRequest,
@@ -47,6 +50,10 @@ export function postReview(req: ReviewRequest) {
   return api<ReviewResult>("/reviews", { method: "POST", body: JSON.stringify(req) });
 }
 
+export function getExtra(type: ExtraType) {
+  return api<ExtraResponse>(`/session/extra?type=${type}`);
+}
+
 export function getDecks() {
   return api<DeckSummary[]>("/decks");
 }
@@ -69,6 +76,10 @@ export function getVerbList() {
 
 export function postVerbReview(req: VerbReviewRequest) {
   return api<VerbReviewResult>("/verbs/reviews", { method: "POST", body: JSON.stringify(req) });
+}
+
+export function getVerbExtra(type: ExtraType) {
+  return api<VerbExtraResponse>(`/verbs/session/extra?type=${type}`);
 }
 
 export function postChat(messages: ChatMessage[]) {

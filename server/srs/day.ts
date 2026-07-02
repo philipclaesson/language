@@ -5,8 +5,15 @@
 // yet — see §5a "Constants for now"). When a settings screen arrives these become
 // `users.timezone` / `users.daily_new_limit`.
 
+// Extra/bonus batch sizes (EXTRA_WORK.md): how many cards each "learn more" /
+// "practice" pull serves. Defined in the shared contract so the client's button
+// labels stay in sync. Bonus work never touches the required daily set.
+import { EXTRA_NEW, EXTRA_PRACTICE } from "../../shared/types";
+export { EXTRA_NEW, EXTRA_PRACTICE };
+
 export const DAY_TZ = "Europe/Berlin";
 export const NEW_PER_DAY = 10;
+
 
 /**
  * Offset (ms) of `tz` at the instant `date`, such that local = utc + offset.
@@ -126,6 +133,57 @@ export function newRequiredCount(
 ): number {
   const slotsLeft = Math.max(0, limit - introducedToday);
   return introducedToday + Math.min(slotsLeft, available);
+}
+
+// ---- Extra/bonus work pools (EXTRA_WORK.md) ----
+
+// A candidate for the "learn more" pool: an unstudied card, passed in introduction
+// order (the order you'd normally meet new cards).
+export type FreshCandidate = { id: string; hasState: boolean; reviewedToday: boolean };
+
+/**
+ * The "learn more" pool: fresh, never-studied cards not touched today, in the
+ * given order. Used both to pull a bonus batch and to count what's available.
+ * `reviewedToday` here means non-bonus attempts (the route filters it) — a card
+ * you already learned as bonus today still has no review_state, but should not be
+ * re-served. Pass `limit: Infinity` to count everything available.
+ */
+export function freshPool(
+  cands: FreshCandidate[],
+  limit: number = EXTRA_NEW,
+): string[] {
+  const eligible = cands.filter((c) => !c.hasState && !c.reviewedToday);
+  return eligible.slice(0, limit).map((c) => c.id);
+}
+
+// A candidate for the "practice" pool: a studied card (has a due) plus its FSRS
+// stability and whether it was touched today.
+export type PracticeCandidate = {
+  id: string;
+  due: Date | null;
+  stability: number;
+  reviewedToday: boolean;
+};
+
+/**
+ * The "practice" pool: studied cards that are NOT due today and were NOT reviewed
+ * today, weakest-first (lowest FSRS stability). Reinforcement of things you know;
+ * reviewing them early feeds FSRS as an early review (it damps the gain by how
+ * early). Pass `limit: Infinity` to count everything available.
+ */
+export function practicePool(
+  cands: PracticeCandidate[],
+  now: Date,
+  opts: { tz?: string; limit?: number } = {},
+): string[] {
+  const tz = opts.tz ?? DAY_TZ;
+  const limit = opts.limit ?? EXTRA_PRACTICE;
+  const end = endOfDay(now, tz).getTime();
+  return cands
+    .filter((c) => !c.reviewedToday && c.due !== null && c.due.getTime() >= end)
+    .sort((a, b) => a.stability - b.stability)
+    .slice(0, limit)
+    .map((c) => c.id);
 }
 
 // One card's daily-relevant facts, gathered by the route from review_state + the

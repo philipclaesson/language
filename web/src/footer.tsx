@@ -14,7 +14,7 @@ const TABS: Tab[] = [
     label: "Words",
     icon: "📖",
     path: "/",
-    isActive: (p) => p === "/" || p === "/review" || p.startsWith("/decks/"),
+    isActive: (p) => p === "/" || p.startsWith("/review") || p.startsWith("/decks/"),
   },
   { label: "Verbs", icon: "🔤", path: "/verbs", isActive: (p) => p.startsWith("/verbs") },
 ];

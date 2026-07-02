@@ -1,6 +1,6 @@
 {
-  "id": "c693b695-2c2e-4319-a8c0-59afb6632851",
-  "prevId": "b31c9026-1695-4877-84c5-f06f9ca38a09",
+  "id": "f074f242-8d63-4069-ab14-143b566f520f",
+  "prevId": "c693b695-2c2e-4319-a8c0-59afb6632851",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -319,6 +319,13 @@
           "notNull": true,
           "default": true
         },
+        "bonus": {
+          "name": "bonus",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
         "typed_answer": {
           "name": "typed_answer",
           "type": "text",
@@ -572,6 +579,13 @@
           "primaryKey": false,
           "notNull": true,
           "default": true
+        },
+        "bonus": {
+          "name": "bonus",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
         },
         "typed_answer": {
           "name": "typed_answer",

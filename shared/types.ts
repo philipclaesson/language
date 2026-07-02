@@ -24,6 +24,9 @@ export type ReviewRequest = {
   cardId: string;
   typedAnswer: string;
   elapsedMs?: number;
+  // Set by the extra-work flows ("learn more" / "practice"). Bonus reviews grade
+  // via FSRS and grow mastery but never affect today's required set. See EXTRA_WORK.md.
+  bonus?: boolean;
 };
 
 export type ReviewResult = {
@@ -52,6 +55,10 @@ export type TodayResponse = {
   done: number; // required cards already typed correctly today
   pending: number; // required cards still needing a correct typing (= cards.length)
   complete: boolean; // pending === 0 — "done for today"
+  // Whether the extra-work on-ramps have anything to offer (drives the buttons on
+  // the "Done for today" screen). See EXTRA_WORK.md.
+  newAvailable: number; // unstudied cards left to learn (beyond today's quota)
+  practiceAvailable: number; // studied, not-due cards available to practice
 };
 
 // Mastery tiers by FSRS stability. See PLAN.md §5a.
@@ -65,6 +72,11 @@ export type ProgressResponse = {
 };
 
 // Bonus work beyond the required set: more new cards, or practice of known cards.
+// "new" = learn fresh cards (graded, hammer-until-correct); "practice" = drill
+// studied but not-yet-due cards, weakest-first, one-and-done. See EXTRA_WORK.md.
+// Batch sizes are shared so the server pull and the client's button labels agree.
+export const EXTRA_NEW = 5; // "Pick 5 new"
+export const EXTRA_PRACTICE = 10; // "Repeat 10"
 export type ExtraType = "new" | "practice";
 export type ExtraResponse = {
   cards: SessionCard[];
@@ -128,6 +140,7 @@ export type VerbReviewRequest = {
   verbId: string;
   typed: Conjugation; // the six forms the user filled in
   elapsedMs?: number;
+  bonus?: boolean; // extra-work review — see ReviewRequest.bonus / EXTRA_WORK.md
 };
 
 export type VerbReviewResult = {
@@ -148,6 +161,13 @@ export type VerbTodayResponse = {
   done: number;
   pending: number;
   complete: boolean;
+  newAvailable: number; // unstudied verbs left to learn (beyond today's quota)
+  practiceAvailable: number; // studied, not-due verbs available to practice
+};
+
+// Extra/bonus verb work — mirrors ExtraResponse for words. See EXTRA_WORK.md.
+export type VerbExtraResponse = {
+  verbs: SessionVerb[];
 };
 
 // Verb mastery reuses the same tier scheme as words.

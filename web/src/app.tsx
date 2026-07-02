@@ -1,13 +1,21 @@
 import { useEffect, useState } from "preact/hooks";
-import type { ProgressResponse, SessionUser, TodayResponse } from "../../shared/types";
+import type { ExtraType, ProgressResponse, SessionUser, TodayResponse } from "../../shared/types";
 import { getMe, getToday, getProgress, logout } from "./api";
-import { Review } from "./review";
+import { ExtraButtons, Review, type ReviewMode } from "./review";
 import { DeckDetailView, DeckList } from "./decks";
 import { ChatTutor } from "./chat";
 import { VerbsHome, VerbReview, VerbAllView } from "./verbs";
 import { TabBar } from "./footer";
 import { navigate, usePath } from "./router";
 import { TIERS } from "./tiers";
+
+// Map an extra-work route suffix (/review/learn, /review/practice) to a review
+// mode; bare /review is the required daily set.
+function modeFromSuffix(suffix: string | undefined): ReviewMode {
+  return suffix === "learn" ? "learn" : suffix === "practice" ? "practice" : "daily";
+}
+const extraPath = (base: string, type: ExtraType) =>
+  `${base}/${type === "new" ? "learn" : "practice"}`;
 
 type AuthState =
   | { status: "loading" }
@@ -51,8 +59,25 @@ function Home({ user }: { user: SessionUser }) {
 
   // Full-screen review loops render without the tab bar — their single persistent
   // input keeps the mobile keyboard open, and a nav bar there is a focus hazard.
-  if (path === "/review") return <Review onDone={() => navigate("/")} />;
-  if (path === "/verbs/review") return <VerbReview onDone={() => navigate("/verbs")} />;
+  // /review, /review/learn, /review/practice (and the /verbs/review equivalents).
+  const reviewMatch = path.match(/^\/review(?:\/(learn|practice))?$/);
+  if (reviewMatch)
+    return (
+      <Review
+        mode={modeFromSuffix(reviewMatch[1])}
+        onDone={() => navigate("/")}
+        onStartExtra={(type) => navigate(extraPath("/review", type))}
+      />
+    );
+  const verbReviewMatch = path.match(/^\/verbs\/review(?:\/(learn|practice))?$/);
+  if (verbReviewMatch)
+    return (
+      <VerbReview
+        mode={modeFromSuffix(verbReviewMatch[1])}
+        onDone={() => navigate("/verbs")}
+        onStartExtra={(type) => navigate(extraPath("/verbs/review", type))}
+      />
+    );
 
   // Drill-downs (a deck detail, the browse-all verbs list): own back button, no tab bar.
   if (deckMatch) return <DeckDetailView deckId={deckMatch[1]} onBack={() => navigate("/")} />;
@@ -66,6 +91,7 @@ function Home({ user }: { user: SessionUser }) {
       <VerbsHome
         onStart={() => navigate("/verbs/review")}
         onOpenList={() => navigate("/verbs/list")}
+        onStartExtra={(type) => navigate(extraPath("/verbs/review", type))}
       />
     ) : (
       <Dashboard
@@ -73,6 +99,7 @@ function Home({ user }: { user: SessionUser }) {
         onStart={() => navigate("/review")}
         onOpenDeck={(id) => navigate(`/decks/${id}`)}
         onOpenChat={() => navigate("/chat")}
+        onStartExtra={(type) => navigate(extraPath("/review", type))}
       />
     );
 
@@ -89,11 +116,13 @@ function Dashboard({
   onStart,
   onOpenDeck,
   onOpenChat,
+  onStartExtra,
 }: {
   user: SessionUser;
   onStart: () => void;
   onOpenDeck: (id: string) => void;
   onOpenChat: () => void;
+  onStartExtra: (type: ExtraType) => void;
 }) {
   const [today, setToday] = useState<TodayResponse | null>(null);
   const [progress, setProgress] = useState<ProgressResponse | null>(null);
@@ -106,6 +135,9 @@ function Dashboard({
   const requiredTotal = today ? today.dueTotal + today.newTotal : 0;
   const pending = today?.pending ?? 0;
   const started = (today?.done ?? 0) > 0;
+  // No required work left to do (finished today, or nothing was due) → offer the
+  // extra-work on-ramps instead of a dead "Start" button.
+  const canReview = pending > 0;
 
   async function onLogout() {
     await logout();
@@ -148,13 +180,25 @@ function Dashboard({
               </p>
             )}
           </div>
-          <button
-            onClick={onStart}
-            disabled={pending === 0}
-            class="mt-4 w-full rounded-xl bg-slate-900 px-5 py-3 font-medium text-white transition hover:bg-slate-700 disabled:opacity-40"
-          >
-            {started && pending > 0 ? "Continue" : "Start review"}
-          </button>
+          {canReview && (
+            <button
+              onClick={onStart}
+              class="mt-4 w-full rounded-xl bg-slate-900 px-5 py-3 font-medium text-white transition hover:bg-slate-700"
+            >
+              {started ? "Continue" : "Start review"}
+            </button>
+          )}
+          {!canReview && today && (
+            <div class="mt-4">
+              <ExtraButtons
+                noun="cards"
+                newAvailable={today.newAvailable}
+                practiceAvailable={today.practiceAvailable}
+                onNew={() => onStartExtra("new")}
+                onPractice={() => onStartExtra("practice")}
+              />
+            </div>
+          )}
         </div>
 
         <MasteryCard progress={progress} />

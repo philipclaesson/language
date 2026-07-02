@@ -43,6 +43,13 @@
       "when": 1783018364938,
       "tag": "0005_seed_words",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1783021534624,
+      "tag": "0006_fresh_george_stacy",
+      "breakpoints": true
     }
   ]
 }

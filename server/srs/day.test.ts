@@ -8,6 +8,8 @@ import {
   dayProgress,
   newRequiredCount,
   planToday,
+  freshPool,
+  practicePool,
   type CardToday,
 } from "./day.ts";
 
@@ -239,4 +241,37 @@ test("planToday: everything done — complete", () => {
   assert.equal(p.pending, 0);
   assert.equal(p.complete, true);
   assert.deepEqual(p.pendingIds, []);
+});
+
+// ---- Extra/bonus pools (EXTRA_WORK.md) ----
+
+test("freshPool: unstudied, untouched-today cards in order, capped by limit", () => {
+  const cands = [
+    { id: "a", hasState: true, reviewedToday: false }, // studied → excluded
+    { id: "b", hasState: false, reviewedToday: true }, // touched today → excluded
+    { id: "c", hasState: false, reviewedToday: false },
+    { id: "d", hasState: false, reviewedToday: false },
+    { id: "e", hasState: false, reviewedToday: false },
+  ];
+  assert.deepEqual(freshPool(cands, 2), ["c", "d"]);
+  assert.deepEqual(freshPool(cands, Infinity), ["c", "d", "e"]);
+});
+
+test("practicePool: studied, not-due, not-reviewed-today, weakest-first", () => {
+  const cands = [
+    { id: "due", due: NOW, stability: 5, reviewedToday: false }, // due today → excluded
+    { id: "today", due: TOMORROW, stability: 1, reviewedToday: true }, // touched today → excluded
+    { id: "strong", due: TOMORROW, stability: 30, reviewedToday: false },
+    { id: "weak", due: TOMORROW, stability: 8, reviewedToday: false },
+    { id: "weakest", due: TOMORROW, stability: 2, reviewedToday: false },
+  ];
+  // Weakest-first, and the due / already-reviewed cards are gone.
+  assert.deepEqual(practicePool(cands, NOW, { limit: 10 }), ["weakest", "weak", "strong"]);
+  assert.deepEqual(practicePool(cands, NOW, { limit: 2 }), ["weakest", "weak"]);
+});
+
+test("practicePool: a card due exactly at end-of-day is still practice-eligible", () => {
+  const end = endOfDay(NOW, TZ); // due >= end counts as not-due-today
+  const cands = [{ id: "edge", due: end, stability: 3, reviewedToday: false }];
+  assert.deepEqual(practicePool(cands, NOW, { limit: 10 }), ["edge"]);
 });

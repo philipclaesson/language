@@ -8,14 +8,19 @@ import {
   startOfDay,
   isFirstAttemptOfDay,
   planToday,
+  freshPool,
+  practicePool,
   type CardToday,
 } from "./srs/day";
 import { summarizeProgress } from "./srs/tiers";
 import { requireAuth, type AppEnv } from "./auth";
 import type {
+  ExtraResponse,
+  ExtraType,
   ProgressResponse,
   ReviewRequest,
   ReviewResult,
+  SessionCard,
   TodayResponse,
 } from "../shared/types";
 
@@ -31,22 +36,18 @@ function shuffle<T>(arr: T[]): T[] {
   return arr;
 }
 
-// The daily loop (PLAN.md §5a): today's required set + progress. Returns only the
-// still-pending cards (those without a correct typing today), so a refresh mid-
-// session rebuilds the queue. Never leaks answer or article.
-reviewRoutes.get("/session/today", async (c) => {
-  const userId = c.get("user").id;
-  const now = new Date();
-  const dayStart = startOfDay(now);
-
-  // Every owned card + this user's schedule state (left join → null = unstudied).
-  const cardRows = await db
+// Every owned card + this user's schedule state (left join → null = unstudied),
+// in new-card introduction order (most-frequent first; personal cards before the
+// corpus; createdAt breaks ties). Shared by /session/today and /session/extra.
+function loadCardsWithState(userId: string) {
+  return db
     .select({
       id: cards.id,
       prompt: cards.prompt,
       partOfSpeech: cards.partOfSpeech,
       ownerId: decks.ownerId, // null = global/stock deck
       due: reviewState.due,
+      stability: reviewState.stability,
       stateId: reviewState.id,
     })
     .from(cards)
@@ -57,14 +58,17 @@ reviewRoutes.get("/session/today", async (c) => {
     )
     // Owned decks + global (ownerless) decks like the frequency word corpus.
     .where(or(eq(decks.ownerId, userId), isNull(decks.ownerId)))
-    // New-card introduction order: most-frequent first, and personal cards
-    // (null rank) before the corpus. Ties fall back to createdAt for stability.
     .orderBy(sql`${cards.frequencyRank} asc nulls first`, asc(cards.createdAt));
+}
 
-  // All of the user's attempts, split around the start of today. "Correct" counts
-  // any pass (rating >= 3), including a re-drill that finally landed.
+// This user's attempts split around the start of today. `reviewedTodayAny` counts
+// bonus + non-bonus (used to exclude cards from the extra-work pools). The others
+// are NON-BONUS only, so bonus work can't expand the required set / un-complete the
+// day (EXTRA_WORK.md). `reviewedBefore` counts ALL prior reviews — a card learned
+// as bonus on an earlier day is a returning card, not a fresh introduction.
+async function todayReviewSets(userId: string, dayStart: Date) {
   const todays = await db
-    .select({ cardId: reviews.cardId, rating: reviews.rating })
+    .select({ cardId: reviews.cardId, rating: reviews.rating, bonus: reviews.bonus })
     .from(reviews)
     .where(and(eq(reviews.userId, userId), gte(reviews.reviewedAt, dayStart)));
   const earlier = await db
@@ -72,21 +76,58 @@ reviewRoutes.get("/session/today", async (c) => {
     .from(reviews)
     .where(and(eq(reviews.userId, userId), lt(reviews.reviewedAt, dayStart)));
 
-  const reviewedToday = new Set(todays.map((r) => r.cardId));
-  const correctToday = new Set(todays.filter((r) => r.rating >= 3).map((r) => r.cardId));
-  const reviewedBefore = new Set(earlier.map((r) => r.cardId));
+  const nonBonus = todays.filter((r) => !r.bonus);
+  return {
+    reviewedTodayAny: new Set(todays.map((r) => r.cardId)),
+    reviewedToday: new Set(nonBonus.map((r) => r.cardId)),
+    correctToday: new Set(nonBonus.filter((r) => r.rating >= 3).map((r) => r.cardId)),
+    reviewedBefore: new Set(earlier.map((r) => r.cardId)),
+  };
+}
+
+// The daily loop (PLAN.md §5a): today's required set + progress. Returns only the
+// still-pending cards (those without a correct typing today), so a refresh mid-
+// session rebuilds the queue. Never leaks answer or article.
+reviewRoutes.get("/session/today", async (c) => {
+  const userId = c.get("user").id;
+  const now = new Date();
+  const dayStart = startOfDay(now);
+
+  const cardRows = await loadCardsWithState(userId);
+  const sets = await todayReviewSets(userId, dayStart);
 
   const todayCards: CardToday[] = cardRows.map((r) => ({
     id: r.id,
     hasState: r.stateId !== null,
     due: r.due,
-    reviewedToday: reviewedToday.has(r.id),
-    correctToday: correctToday.has(r.id),
-    reviewedBeforeToday: reviewedBefore.has(r.id),
+    reviewedToday: sets.reviewedToday.has(r.id),
+    correctToday: sets.correctToday.has(r.id),
+    reviewedBeforeToday: sets.reviewedBefore.has(r.id),
     stock: r.ownerId === null, // global/stock deck → the 50/50 new-card split
   }));
 
   const plan = planToday(todayCards, now);
+
+  // Extra-work availability (drives the "Done for today" buttons). Uses
+  // reviewedTodayAny so a card already touched today (incl. bonus) isn't offered.
+  const newAvailable = freshPool(
+    cardRows.map((r) => ({
+      id: r.id,
+      hasState: r.stateId !== null,
+      reviewedToday: sets.reviewedTodayAny.has(r.id),
+    })),
+    Infinity,
+  ).length;
+  const practiceAvailable = practicePool(
+    cardRows.map((r) => ({
+      id: r.id,
+      due: r.due,
+      stability: r.stability ?? 0,
+      reviewedToday: sets.reviewedTodayAny.has(r.id),
+    })),
+    now,
+    { limit: Infinity },
+  ).length;
 
   const byId = new Map(cardRows.map((r) => [r.id, r]));
   const pending = shuffle(
@@ -103,13 +144,58 @@ reviewRoutes.get("/session/today", async (c) => {
     done: plan.done,
     pending: plan.pending,
     complete: plan.complete,
+    newAvailable,
+    practiceAvailable,
   };
+  return c.json(body);
+});
+
+// Extra/bonus work beyond the required set (EXTRA_WORK.md). `new` = fresh cards to
+// learn; `practice` = studied, not-due cards weakest-first. Never leaks answer/
+// article. The client sends these reviews with `bonus: true`.
+reviewRoutes.get("/session/extra", async (c) => {
+  const userId = c.get("user").id;
+  const type = (c.req.query("type") ?? "new") as ExtraType;
+  const now = new Date();
+  const dayStart = startOfDay(now);
+
+  const cardRows = await loadCardsWithState(userId);
+  const sets = await todayReviewSets(userId, dayStart);
+
+  const ids =
+    type === "practice"
+      ? practicePool(
+          cardRows.map((r) => ({
+            id: r.id,
+            due: r.due,
+            stability: r.stability ?? 0,
+            reviewedToday: sets.reviewedTodayAny.has(r.id),
+          })),
+          now,
+        )
+      : freshPool(
+          cardRows.map((r) => ({
+            id: r.id,
+            hasState: r.stateId !== null,
+            reviewedToday: sets.reviewedTodayAny.has(r.id),
+          })),
+        );
+
+  // Order is deliberate — practice is weakest-first, learn-more is frequency
+  // order — so we don't shuffle (unlike the daily set).
+  const byId = new Map(cardRows.map((r) => [r.id, r]));
+  const cardsOut: SessionCard[] = ids.map((id) => {
+    const r = byId.get(id)!;
+    return { id: r.id, prompt: r.prompt, partOfSpeech: r.partOfSpeech };
+  });
+
+  const body: ExtraResponse = { cards: cardsOut };
   return c.json(body);
 });
 
 reviewRoutes.post("/reviews", async (c) => {
   const userId = c.get("user").id;
-  const { cardId, typedAnswer, elapsedMs } = (await c.req.json()) as ReviewRequest;
+  const { cardId, typedAnswer, elapsedMs, bonus } = (await c.req.json()) as ReviewRequest;
 
   // Load the card and verify the user owns it (via deck ownership).
   const [card] = await db
@@ -182,6 +268,7 @@ reviewRoutes.post("/reviews", async (c) => {
     cardId,
     rating: result.correct ? 3 : 1,
     graded,
+    bonus: bonus ?? false,
     typedAnswer: typedAnswer ?? null,
     elapsedMs: elapsedMs ?? null,
   });

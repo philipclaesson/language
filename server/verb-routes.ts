@@ -5,12 +5,20 @@ import { verbs, verbReviewState, verbReviews } from "./db/schema";
 import { checkConjugation } from "./verbs/check";
 import { planVerbDay, type VerbToday } from "./verbs/plan";
 import { scheduleNext, type StoredSrs } from "./srs/scheduler";
-import { startOfDay, isFirstAttemptOfDay } from "./srs/day";
+import {
+  startOfDay,
+  isFirstAttemptOfDay,
+  freshPool,
+  practicePool,
+} from "./srs/day";
 import { summarizeProgress, tierFor } from "./srs/tiers";
 import { requireAuth, type AppEnv } from "./auth";
 import {
   VERB_FORMS,
   type Conjugation,
+  type ExtraType,
+  type SessionVerb,
+  type VerbExtraResponse,
   type VerbListItem,
   type VerbProgressResponse,
   type VerbReviewRequest,
@@ -50,16 +58,10 @@ function conjugationOf(v: {
   };
 }
 
-// Today's required verb set + progress (VERBS.md), mirroring /session/today for
-// words. Returns only still-pending verbs (no correct conjugation today yet).
-// NEVER leaks the six forms — those are the answer.
-verbRoutes.get("/verbs/session/today", async (c) => {
-  const userId = c.get("user").id;
-  const now = new Date();
-  const dayStart = startOfDay(now);
-
-  // Whole global catalog + this user's schedule state (left join → null = unstudied).
-  const rows = await db
+// Whole global verb catalog + this user's schedule state (left join → null =
+// unstudied), in frequency order. Shared by /verbs/session/today and .../extra.
+function loadVerbsWithState(userId: string) {
+  return db
     .select({
       id: verbs.id,
       infinitive: verbs.infinitive,
@@ -67,6 +69,7 @@ verbRoutes.get("/verbs/session/today", async (c) => {
       regularity: verbs.regularity,
       frequencyRank: verbs.frequencyRank,
       due: verbReviewState.due,
+      stability: verbReviewState.stability,
       stateId: verbReviewState.id,
     })
     .from(verbs)
@@ -75,9 +78,14 @@ verbRoutes.get("/verbs/session/today", async (c) => {
       and(eq(verbReviewState.verbId, verbs.id), eq(verbReviewState.userId, userId)),
     )
     .orderBy(verbs.frequencyRank);
+}
 
+// Verb attempts split around the start of today (mirrors todayReviewSets for
+// words). `reviewedTodayAny` = bonus + non-bonus (pool exclusion); the required-set
+// signals are non-bonus only; `reviewedBefore` is all prior reviews. See EXTRA_WORK.md.
+async function todayVerbReviewSets(userId: string, dayStart: Date) {
   const todays = await db
-    .select({ verbId: verbReviews.verbId, rating: verbReviews.rating })
+    .select({ verbId: verbReviews.verbId, rating: verbReviews.rating, bonus: verbReviews.bonus })
     .from(verbReviews)
     .where(and(eq(verbReviews.userId, userId), gte(verbReviews.reviewedAt, dayStart)));
   const earlier = await db
@@ -85,9 +93,39 @@ verbRoutes.get("/verbs/session/today", async (c) => {
     .from(verbReviews)
     .where(and(eq(verbReviews.userId, userId), lt(verbReviews.reviewedAt, dayStart)));
 
-  const reviewedToday = new Set(todays.map((r) => r.verbId));
-  const correctToday = new Set(todays.filter((r) => r.rating >= 3).map((r) => r.verbId));
-  const reviewedBefore = new Set(earlier.map((r) => r.verbId));
+  const nonBonus = todays.filter((r) => !r.bonus);
+  return {
+    reviewedTodayAny: new Set(todays.map((r) => r.verbId)),
+    reviewedToday: new Set(nonBonus.map((r) => r.verbId)),
+    correctToday: new Set(nonBonus.filter((r) => r.rating >= 3).map((r) => r.verbId)),
+    reviewedBefore: new Set(earlier.map((r) => r.verbId)),
+  };
+}
+
+function sessionVerbOf(r: {
+  id: string;
+  infinitive: string;
+  english: string;
+  regularity: string;
+}): SessionVerb {
+  return {
+    id: r.id,
+    infinitive: r.infinitive,
+    english: r.english,
+    regularity: r.regularity as VerbRegularity,
+  };
+}
+
+// Today's required verb set + progress (VERBS.md), mirroring /session/today for
+// words. Returns only still-pending verbs (no correct conjugation today yet).
+// NEVER leaks the six forms — those are the answer.
+verbRoutes.get("/verbs/session/today", async (c) => {
+  const userId = c.get("user").id;
+  const now = new Date();
+  const dayStart = startOfDay(now);
+
+  const rows = await loadVerbsWithState(userId);
+  const sets = await todayVerbReviewSets(userId, dayStart);
 
   const todayVerbs: VerbToday[] = rows.map((r) => ({
     id: r.id,
@@ -95,25 +133,34 @@ verbRoutes.get("/verbs/session/today", async (c) => {
     frequencyRank: r.frequencyRank,
     hasState: r.stateId !== null,
     due: r.due,
-    reviewedToday: reviewedToday.has(r.id),
-    correctToday: correctToday.has(r.id),
-    reviewedBeforeToday: reviewedBefore.has(r.id),
+    reviewedToday: sets.reviewedToday.has(r.id),
+    correctToday: sets.correctToday.has(r.id),
+    reviewedBeforeToday: sets.reviewedBefore.has(r.id),
   }));
 
   const plan = planVerbDay(todayVerbs, now);
 
+  const newAvailable = freshPool(
+    rows.map((r) => ({
+      id: r.id,
+      hasState: r.stateId !== null,
+      reviewedToday: sets.reviewedTodayAny.has(r.id),
+    })),
+    Infinity,
+  ).length;
+  const practiceAvailable = practicePool(
+    rows.map((r) => ({
+      id: r.id,
+      due: r.due,
+      stability: r.stability ?? 0,
+      reviewedToday: sets.reviewedTodayAny.has(r.id),
+    })),
+    now,
+    { limit: Infinity },
+  ).length;
+
   const byId = new Map(rows.map((r) => [r.id, r]));
-  const pending = shuffle(
-    plan.pendingIds.map((id) => {
-      const r = byId.get(id)!;
-      return {
-        id: r.id,
-        infinitive: r.infinitive,
-        english: r.english,
-        regularity: r.regularity as VerbRegularity,
-      };
-    }),
-  );
+  const pending = shuffle(plan.pendingIds.map((id) => sessionVerbOf(byId.get(id)!)));
 
   const body: VerbTodayResponse = {
     verbs: pending,
@@ -122,7 +169,44 @@ verbRoutes.get("/verbs/session/today", async (c) => {
     done: plan.done,
     pending: plan.pending,
     complete: plan.complete,
+    newAvailable,
+    practiceAvailable,
   };
+  return c.json(body);
+});
+
+// Extra/bonus verb work (EXTRA_WORK.md). `new` = fresh verbs (frequency order);
+// `practice` = studied, not-due verbs weakest-first. Never leaks the six forms.
+verbRoutes.get("/verbs/session/extra", async (c) => {
+  const userId = c.get("user").id;
+  const type = (c.req.query("type") ?? "new") as ExtraType;
+  const now = new Date();
+  const dayStart = startOfDay(now);
+
+  const rows = await loadVerbsWithState(userId);
+  const sets = await todayVerbReviewSets(userId, dayStart);
+
+  const ids =
+    type === "practice"
+      ? practicePool(
+          rows.map((r) => ({
+            id: r.id,
+            due: r.due,
+            stability: r.stability ?? 0,
+            reviewedToday: sets.reviewedTodayAny.has(r.id),
+          })),
+          now,
+        )
+      : freshPool(
+          rows.map((r) => ({
+            id: r.id,
+            hasState: r.stateId !== null,
+            reviewedToday: sets.reviewedTodayAny.has(r.id),
+          })),
+        );
+
+  const byId = new Map(rows.map((r) => [r.id, r]));
+  const body: VerbExtraResponse = { verbs: ids.map((id) => sessionVerbOf(byId.get(id)!)) };
   return c.json(body);
 });
 
@@ -159,7 +243,7 @@ verbRoutes.get("/verbs/list", async (c) => {
 
 verbRoutes.post("/verbs/reviews", async (c) => {
   const userId = c.get("user").id;
-  const { verbId, typed, elapsedMs } = (await c.req.json()) as VerbReviewRequest;
+  const { verbId, typed, elapsedMs, bonus } = (await c.req.json()) as VerbReviewRequest;
 
   const [verb] = await db.select().from(verbs).where(eq(verbs.id, verbId)).limit(1);
   if (!verb) return c.json({ error: "verb not found" }, 404);
@@ -214,6 +298,7 @@ verbRoutes.post("/verbs/reviews", async (c) => {
     verbId,
     rating: result.correct ? 3 : 1,
     graded,
+    bonus: bonus ?? false,
     typedAnswer: cleanTyped,
     elapsedMs: elapsedMs ?? null,
   });

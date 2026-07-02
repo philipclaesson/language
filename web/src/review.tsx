@@ -8,10 +8,10 @@ import { getExtra, getToday, postReview } from "./api";
 // `practice` = bonus: known cards, weakest-first, one-and-done (a miss just moves on).
 export type ReviewMode = "daily" | "learn" | "practice";
 
-// `input`  = typing the answer from recall (graded on the server).
-// `drill`  = got it wrong; copy the revealed answer to continue (hammer modes).
-// `reveal` = got it wrong in practice; see the answer, one tap to move on (one-and-done).
-type Phase = "loading" | "input" | "drill" | "reveal" | "empty" | "done";
+// `input` = typing the answer from recall (graded on the server).
+// `drill` = got it wrong; copy the revealed answer to continue. All modes hammer
+//           until correct — a miss rotates the card to the back to come round again.
+type Phase = "loading" | "input" | "drill" | "empty" | "done";
 
 export function Review({
   mode = "daily",
@@ -41,7 +41,6 @@ export function Review({
   const inputRef = useRef<HTMLInputElement>(null);
 
   const isBonus = mode !== "daily";
-  const oneAndDone = mode === "practice";
 
   // (Re)load the session for the current mode. Called on mount / mode change and by
   // "Go again" on the bonus done screen.
@@ -121,16 +120,10 @@ export function Review({
       if (r.correct) {
         setFlash("green");
         setTimeout(() => next(true, true), 160);
-      } else if (oneAndDone) {
-        // Practice: reveal the answer, one tap to move on. A miss already
-        // rescheduled the card sooner (FSRS Again) — no re-drill.
-        setResult(r);
-        setFlash("red");
-        setPhase("reveal");
-        setSubmitting(false);
-        setTimeout(() => setFlash(null), 450);
       } else {
-        // Hammer modes: reveal the answer and make them type it to continue.
+        // Wrong (all modes, incl. practice): reveal the answer and make them type
+        // it to continue; the card rotates to the back to come round again. The
+        // miss was already graded on this first-of-day attempt (FSRS Again).
         setResult(r);
         setFlash("red");
         setTyped("");
@@ -288,7 +281,6 @@ export function Review({
             value={typed}
             onInput={(e) => setTyped((e.target as HTMLInputElement).value)}
             placeholder={phase === "drill" ? "Type it to continue…" : "Type the German…"}
-            disabled={phase === "reveal"}
             autocomplete="off"
             autocapitalize="off"
             autocorrect="off"
@@ -297,7 +289,7 @@ export function Review({
             class={`w-full rounded-xl border px-4 py-3 text-lg outline-none transition-colors ${inputBorder}`}
           />
 
-          {(phase === "drill" || phase === "reveal") && result && (
+          {phase === "drill" && result && (
             <div class="mt-4 rounded-xl bg-amber-50 px-4 py-3 text-center text-amber-900 ring-1 ring-amber-200">
               <p class="font-medium">
                 {result.reason === "missing_article"
@@ -305,9 +297,7 @@ export function Review({
                   : "Not quite"}
               </p>
               <p class="mt-1 text-lg font-semibold">{result.expected}</p>
-              <p class="mt-1 text-xs opacity-70">
-                {phase === "reveal" ? "It'll come round again sooner." : "Type it to continue — you'll see it again later."}
-              </p>
+              <p class="mt-1 text-xs opacity-70">Type it to continue — you'll see it again later.</p>
             </div>
           )}
 
@@ -318,15 +308,6 @@ export function Review({
               class="mt-6 w-full rounded-xl bg-slate-900 px-5 py-3 font-medium text-white transition hover:bg-slate-700 disabled:opacity-50"
             >
               Check
-            </button>
-          )}
-          {phase === "reveal" && (
-            <button
-              type="button"
-              onClick={() => next(true, true)}
-              class="mt-6 w-full rounded-xl bg-slate-900 px-5 py-3 font-medium text-white transition hover:bg-slate-700"
-            >
-              Continue
             </button>
           )}
         </form>

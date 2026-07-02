@@ -227,11 +227,11 @@ export function VerbAllView({ onBack }: { onBack: () => void }) {
 
 // ---- Verb review loop ----
 
-// `input`  = filling in the six forms from recall (graded on the server).
-// `drill`  = got it wrong (hammer modes); correct forms revealed, re-type the wrong
-//            rows to continue (correct rows stay locked).
-// `reveal` = got it wrong in practice; all forms shown, one tap to move on.
-type Phase = "loading" | "input" | "drill" | "reveal" | "empty" | "done";
+// `input` = filling in the six forms from recall (graded on the server).
+// `drill` = got it wrong; correct forms revealed, re-type the wrong rows to continue
+//           (correct rows stay locked). All modes hammer until correct — a miss
+//           rotates the verb to the back to come round again.
+type Phase = "loading" | "input" | "drill" | "empty" | "done";
 
 export function VerbReview({
   mode = "daily",
@@ -256,7 +256,6 @@ export function VerbReview({
   const inputRefs = useRef<Partial<Record<VerbForm, HTMLInputElement | null>>>({});
 
   const isBonus = mode !== "daily";
-  const oneAndDone = mode === "practice";
 
   function load() {
     setPhase("loading");
@@ -300,9 +299,7 @@ export function VerbReview({
   const editableForms = (): VerbForm[] =>
     phase === "drill" && result
       ? VERB_FORMS.filter((f) => !result.perForm[f])
-      : phase === "reveal"
-        ? []
-        : [...VERB_FORMS];
+      : [...VERB_FORMS];
 
   useEffect(() => {
     if (phase !== "input" && phase !== "drill") return;
@@ -342,16 +339,10 @@ export function VerbReview({
       if (r.correct) {
         setFlash("green");
         setTimeout(() => next(true, true), 200);
-      } else if (oneAndDone) {
-        // Practice: reveal every correct form, one tap to move on (one-and-done).
-        setResult(r);
-        setTyped({ ...r.expected });
-        setFlash("red");
-        setPhase("reveal");
-        setSubmitting(false);
-        setTimeout(() => setFlash(null), 450);
       } else {
-        // Hammer modes: keep correct rows filled + locked, clear the wrong rows.
+        // Wrong (all modes, incl. practice): keep correct rows filled + locked,
+        // clear the wrong rows to re-type; the verb rotates to the back. The miss
+        // was already graded on this first-of-day attempt (FSRS Again).
         setResult(r);
         const revealed = emptyConj();
         for (const f of VERB_FORMS) revealed[f] = r.perForm[f] ? r.expected[f] : "";
@@ -380,7 +371,6 @@ export function VerbReview({
   function submit() {
     if (phase === "input") void grade();
     else if (phase === "drill") drillSubmit();
-    else if (phase === "reveal") next(true, true);
   }
 
   function onKey(e: KeyboardEvent, form: VerbForm) {
@@ -519,10 +509,9 @@ export function VerbReview({
           {VERB_FORMS.map((f) => {
             const isEditable = editable.has(f);
             const wrongInDrill = phase === "drill" && result && !result.perForm[f];
-            const revealedRow = phase === "reveal";
             const border = wrongInDrill
               ? "border-red-300 focus:border-red-500"
-              : (phase === "drill" && !isEditable) || revealedRow
+              : phase === "drill" && !isEditable
                 ? "border-emerald-200 bg-emerald-50 text-emerald-800"
                 : flash === "green"
                   ? "border-green-500"
@@ -568,12 +557,6 @@ export function VerbReview({
           <div class="mt-4 rounded-xl bg-amber-50 px-4 py-3 text-center text-sm text-amber-900 ring-1 ring-amber-200">
             <p class="font-medium">Not quite — type the correct forms shown to continue.</p>
             <p class="mt-1 opacity-70">You'll see this verb again later.</p>
-          </div>
-        )}
-        {phase === "reveal" && (
-          <div class="mt-4 rounded-xl bg-amber-50 px-4 py-3 text-center text-sm text-amber-900 ring-1 ring-amber-200">
-            <p class="font-medium">Not quite — here are the correct forms.</p>
-            <p class="mt-1 opacity-70">It'll come round again sooner.</p>
           </div>
         )}
 

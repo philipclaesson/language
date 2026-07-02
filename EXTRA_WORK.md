@@ -7,6 +7,12 @@
 > `verb_reviews.bonus` so they never touch the required daily set.
 >
 > **Deviations from the original design below:**
+> - **Practice is hammer-until-correct, NOT one-and-done** (changed 2026-07-02 after
+>   using it). A missed practice card reveals the answer, you re-type it, and it
+>   rotates to the back to come round again — identical to the daily loop. This only
+>   changes the *drill UX*: the FSRS grade is still the first-of-day attempt (a miss
+>   is still an `Again` that reschedules sooner), so practice and learn now share the
+>   exact same client mechanics and differ only in which cards they pull.
 > - Counts fixed at **5 new / 10 practice** (`EXTRA_NEW`/`EXTRA_PRACTICE` in
 >   `shared/types.ts`) — the client labels read from those constants.
 > - **Extra new verbs are pulled in plain frequency order**, skipping the daily

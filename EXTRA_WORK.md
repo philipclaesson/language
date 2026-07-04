@@ -7,9 +7,11 @@
 > `verb_reviews.bonus` so they never touch the required daily set.
 >
 > **Third mode added (2026-07-04): "Fix N misses 🎯" (`ExtraType = "misses"`).**
-> Re-drills the cards whose *first graded, non-bonus* attempt today was a miss
-> (`graded && !bonus && rating < 3`) — the words you fumbled and want to hammer until
-> they stick. Hammer-until-correct like `learn`. Key differences from the other two:
+> Re-drills every card whose *first graded* attempt today was a miss
+> (`graded && rating < 3`) — daily OR bonus (e.g. a new card you picked and flunked) —
+> the words you fumbled and want to hammer until they stick. Hammer-until-correct like
+> `learn`. `missedToday` drives only the re-drill pool + its count, never completion,
+> so including bonus misses is safe. Key differences from the other two:
 > - **FSRS is untouched, for free.** Every card in the pool already has a graded
 >   first-of-day attempt (the miss), so re-drills are `graded=false` and the schedule
 >   branch is skipped. No new grading logic. The first right/wrong answer is all FSRS sees.

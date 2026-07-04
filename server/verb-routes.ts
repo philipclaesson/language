@@ -104,10 +104,12 @@ async function todayVerbReviewSets(userId: string, dayStart: Date) {
     reviewedTodayAny: new Set(todays.map((r) => r.verbId)),
     reviewedToday: new Set(nonBonus.map((r) => r.verbId)),
     correctToday: new Set(nonBonus.filter((r) => r.rating >= 3).map((r) => r.verbId)),
-    // Verbs whose first graded (non-bonus) attempt today was a miss — the "misses"
-    // pool. Stable all day (later re-drills are graded=false). See EXTRA_WORK.md.
+    // Every verb whose first graded attempt today was a miss — the "misses" pool.
+    // Includes bonus/extra verbs (e.g. new verbs learned today that you flunked); it
+    // drives the re-drill pool + its count, never completion, so bonus misses are
+    // safe. Stable all day (later re-drills are graded=false). See EXTRA_WORK.md.
     missedToday: new Set(
-      nonBonus.filter((r) => r.graded && r.rating < 3).map((r) => r.verbId),
+      todays.filter((r) => r.graded && r.rating < 3).map((r) => r.verbId),
     ),
     reviewedBefore: new Set(earlier.map((r) => r.verbId)),
   };

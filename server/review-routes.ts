@@ -88,11 +88,14 @@ async function todayReviewSets(userId: string, dayStart: Date) {
     reviewedTodayAny: new Set(todays.map((r) => r.cardId)),
     reviewedToday: new Set(nonBonus.map((r) => r.cardId)),
     correctToday: new Set(nonBonus.filter((r) => r.rating >= 3).map((r) => r.cardId)),
-    // Cards whose first graded (non-bonus) attempt today was a miss — the "misses"
-    // pool. graded=true isolates the first-of-day attempt (later re-drills are
-    // graded=false), so this stays stable no matter how much you re-drill.
+    // Every card whose first graded attempt today was a miss — the "misses" pool.
+    // Includes bonus/extra cards (e.g. new cards learned today that you flunked), not
+    // just the daily set: it drives the re-drill pool + its count, never completion,
+    // so bonus misses are safe here. graded=true isolates the first-of-day attempt
+    // (later re-drills are graded=false), so it stays stable no matter how much you
+    // re-drill.
     missedToday: new Set(
-      nonBonus.filter((r) => r.graded && r.rating < 3).map((r) => r.cardId),
+      todays.filter((r) => r.graded && r.rating < 3).map((r) => r.cardId),
     ),
     reviewedBefore: new Set(earlier.map((r) => r.cardId)),
   };

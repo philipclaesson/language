@@ -186,16 +186,17 @@ export function practicePool(
     .map((c) => c.id);
 }
 
-// A candidate for the "misses" pool: a card, flagged if its first graded (non-bonus)
-// attempt today was a miss.
+// A candidate for the "misses" pool: a card, flagged if its first graded attempt
+// today was a miss (whether met as daily or bonus/extra work).
 export type MissCandidate = { id: string; missedToday: boolean };
 
 /**
- * The "misses" pool: cards whose first graded attempt today was wrong, in the given
- * order. Unlike freshPool/practicePool it does NOT exclude cards reviewed today —
- * the whole point is to re-drill today's work — so the pool is stable all day: bonus
- * re-drills are graded=false and never clear the miss. FSRS is untouched (the miss
- * was already graded on the first-of-day attempt). See EXTRA_WORK.md.
+ * The "misses" pool: cards whose first graded attempt today was wrong — daily OR
+ * bonus (e.g. a new card learned today that you flunked) — in the given order.
+ * Unlike freshPool/practicePool it does NOT exclude cards reviewed today (the whole
+ * point is to re-drill today's work), so the pool is stable all day: bonus re-drills
+ * are graded=false and never clear the miss. FSRS is untouched (the miss was already
+ * graded on the first-of-day attempt). See EXTRA_WORK.md.
  */
 export function missesPool(cands: MissCandidate[], limit: number = Infinity): string[] {
   return cands

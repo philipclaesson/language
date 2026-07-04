@@ -18,6 +18,10 @@ export type SessionCard = {
   id: string;
   prompt: string;
   partOfSpeech: string | null;
+  // English gloss of the word's example sentence, shown up front for context (many
+  // prompts are ambiguous — "well" → wohl). Safe pre-answer: it's English and never
+  // reveals the German answer or its article. Null for cards without an example.
+  exampleEn: string | null;
 };
 
 export type ReviewRequest = {
@@ -41,6 +45,10 @@ export type ReviewResult = {
   // True when the card still needs a correct typing today to be "done" (i.e. this
   // answer was wrong). The client keeps re-showing it until this is false.
   needsRedrill: boolean;
+  // German example sentence for the word, shown in the drill panel after a wrong
+  // answer to memorise it in context. Returned only post-answer because it embeds
+  // the answer word ("Ich fühle mich nicht wohl."). Null for cards without one.
+  exampleDe: string | null;
 };
 
 // ---- Daily loop (PLAN.md §5a) ----

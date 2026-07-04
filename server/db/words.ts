@@ -32,6 +32,8 @@ export function wordRows() {
     partOfSpeech: w.partOfSpeech,
     article: w.article,
     notes: w.notes,
+    exampleEn: w.exampleEn,
+    exampleDe: w.exampleDe,
     frequencyRank: w.frequencyRank,
     source: "seed",
   }));

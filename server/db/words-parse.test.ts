@@ -79,7 +79,9 @@ test("parseNote maps a full noun note", () => {
   assert.equal(w.article, "die");
   assert.equal(w.partOfSpeech, "noun");
   assert.equal(w.frequencyRank, 50);
-  assert.equal(w.notes, "Die andere Seite.\nThe other side.");
+  assert.equal(w.exampleDe, "Die andere Seite.");
+  assert.equal(w.exampleEn, "The other side.");
+  assert.equal(w.notes, null);
 });
 
 test("parseNote appends the NotThisWord disambiguation hint to the prompt", () => {
@@ -92,5 +94,7 @@ test("parseNote appends the NotThisWord disambiguation hint to the prompt", () =
     englishSentence: "",
   });
   assert.equal(w.prompt, "just, right now (not: straight)");
+  assert.equal(w.exampleDe, null);
+  assert.equal(w.exampleEn, null);
   assert.equal(w.notes, null);
 });

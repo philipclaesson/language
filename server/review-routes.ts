@@ -45,6 +45,7 @@ function loadCardsWithState(userId: string) {
       id: cards.id,
       prompt: cards.prompt,
       partOfSpeech: cards.partOfSpeech,
+      exampleEn: cards.exampleEn, // English context, safe pre-answer
       ownerId: decks.ownerId, // null = global/stock deck
       due: reviewState.due,
       stability: reviewState.stability,
@@ -133,7 +134,7 @@ reviewRoutes.get("/session/today", async (c) => {
   const pending = shuffle(
     plan.pendingIds.map((id) => {
       const r = byId.get(id)!;
-      return { id: r.id, prompt: r.prompt, partOfSpeech: r.partOfSpeech };
+      return { id: r.id, prompt: r.prompt, partOfSpeech: r.partOfSpeech, exampleEn: r.exampleEn };
     }),
   );
 
@@ -186,7 +187,7 @@ reviewRoutes.get("/session/extra", async (c) => {
   const byId = new Map(cardRows.map((r) => [r.id, r]));
   const cardsOut: SessionCard[] = ids.map((id) => {
     const r = byId.get(id)!;
-    return { id: r.id, prompt: r.prompt, partOfSpeech: r.partOfSpeech };
+    return { id: r.id, prompt: r.prompt, partOfSpeech: r.partOfSpeech, exampleEn: r.exampleEn };
   });
 
   const body: ExtraResponse = { cards: cardsOut };
@@ -280,6 +281,7 @@ reviewRoutes.post("/reviews", async (c) => {
     nextDue: nextDue.toISOString(),
     graded,
     needsRedrill: !result.correct,
+    exampleDe: card.exampleDe ?? null,
   };
   return c.json(body);
 });

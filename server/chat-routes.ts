@@ -43,6 +43,8 @@ async function ownCard(userId: string, cardId: string) {
       partOfSpeech: cards.partOfSpeech,
       answerAlts: cards.answerAlts,
       notes: cards.notes,
+      exampleEn: cards.exampleEn,
+      exampleDe: cards.exampleDe,
     })
     .from(cards)
     .innerJoin(decks, eq(cards.deckId, decks.id))
@@ -95,6 +97,8 @@ async function execTool(name: string, input: unknown, userId: string): Promise<T
           partOfSpeech: c.partOfSpeech,
           article: c.article,
           notes: c.notes,
+          exampleEn: c.exampleEn,
+          exampleDe: c.exampleDe,
           source: "ai_chat",
         })),
       );
@@ -120,6 +124,8 @@ async function execTool(name: string, input: unknown, userId: string): Promise<T
         part_of_speech: field(input, "part_of_speech") ?? existing.partOfSpeech ?? undefined,
         answer_alts: field(input, "answer_alts") ?? existing.answerAlts,
         notes: field(input, "notes") ?? existing.notes ?? undefined,
+        example_en: field(input, "example_en") ?? existing.exampleEn ?? undefined,
+        example_de: field(input, "example_de") ?? existing.exampleDe ?? undefined,
       };
       let c;
       try {
@@ -136,6 +142,8 @@ async function execTool(name: string, input: unknown, userId: string): Promise<T
           partOfSpeech: c.partOfSpeech,
           article: c.article,
           notes: c.notes,
+          exampleEn: c.exampleEn,
+          exampleDe: c.exampleDe,
         })
         .where(eq(cards.id, cardId));
       return {

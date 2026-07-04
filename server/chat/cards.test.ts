@@ -67,7 +67,20 @@ test("missing prompt or answer throws", () => {
   assert.throws(() => normalizeCardInput({ prompt: "the dog" }));
 });
 
-test("notes default to null", () => {
+test("notes and example fields default to null", () => {
   const c = normalizeCardInput({ prompt: "today", answer: "heute" });
   assert.equal(c.notes, null);
+  assert.equal(c.exampleEn, null);
+  assert.equal(c.exampleDe, null);
+});
+
+test("example sentences are trimmed and kept", () => {
+  const c = normalizeCardInput({
+    prompt: "well",
+    answer: "wohl",
+    example_de: "  Ich fühle mich nicht wohl.  ",
+    example_en: "I am not feeling well.",
+  });
+  assert.equal(c.exampleDe, "Ich fühle mich nicht wohl.");
+  assert.equal(c.exampleEn, "I am not feeling well.");
 });

@@ -23,7 +23,9 @@ export type ParsedWord = {
   answerAlts: string[]; // alternative surface forms / abbreviations
   article: string | null; // der/die/das when unambiguous, else null
   partOfSpeech: string | null; // "noun" for article-led entries, else null
-  notes: string | null; // example sentence(s), shown after answering
+  notes: string | null; // free-form note / mnemonic (unused by the corpus — always null here)
+  exampleEn: string | null; // English gloss of the sample sentence (context, safe pre-answer)
+  exampleDe: string | null; // German sample sentence (embeds the answer; shown on a miss)
   frequencyRank: number | null; // lower = more frequent; new-card order
 };
 
@@ -120,17 +122,18 @@ export function parseNote(raw: RawNote): ParsedWord {
     cleanHtml(raw.german),
   );
 
-  const de = cleanHtml(raw.germanSentence);
-  const en = cleanHtml(raw.englishSentence);
-  const notes = [de, en].filter(Boolean).join("\n") || null;
-
+  // The two sample sentences live in dedicated fields: the English gloss is shown
+  // up front for context; the German sentence (which contains the answer word) is
+  // revealed only after a wrong answer. `notes` is left free for tutor mnemonics.
   return {
     prompt,
     answer,
     answerAlts,
     article,
     partOfSpeech,
-    notes,
+    notes: null,
+    exampleEn: cleanHtml(raw.englishSentence) || null,
+    exampleDe: cleanHtml(raw.germanSentence) || null,
     frequencyRank: parseRank(raw.rank),
   };
 }

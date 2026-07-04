@@ -274,6 +274,9 @@ export function Review({
         <h2 class="mt-2 text-center text-3xl font-semibold tracking-tight text-slate-900">
           {current?.prompt}
         </h2>
+        {current?.exampleEn && (
+          <p class="mt-2 text-center text-sm italic text-slate-400">“{current.exampleEn}”</p>
+        )}
 
         <form onSubmit={onSubmit} class="mt-8">
           <input
@@ -297,6 +300,9 @@ export function Review({
                   : "Not quite"}
               </p>
               <p class="mt-1 text-lg font-semibold">{result.expected}</p>
+              {result.exampleDe && (
+                <p class="mt-2 text-sm italic text-amber-800">“{result.exampleDe}”</p>
+              )}
               <p class="mt-1 text-xs opacity-70">Type it to continue — you'll see it again later.</p>
             </div>
           )}

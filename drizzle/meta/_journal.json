@@ -50,6 +50,20 @@
       "when": 1783021534624,
       "tag": "0006_fresh_george_stacy",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1783162601797,
+      "tag": "0007_fantastic_gwen_stacy",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1783162601798,
+      "tag": "0008_split_word_examples",
+      "breakpoints": true
     }
   ]
 }

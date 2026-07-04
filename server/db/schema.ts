@@ -43,7 +43,13 @@ export const cards = pgTable("cards", {
   answerAlts: text("answer_alts").array().notNull().default([]),
   partOfSpeech: text("part_of_speech"), // drives answer-checking rules
   article: text("article"), // der/die/das for nouns
-  notes: text("notes"), // example sentence / mnemonic
+  notes: text("notes"), // mnemonic / free-form note (tutor cards)
+  // Example sentences (set on the frequency corpus; null elsewhere). `exampleEn` is
+  // the English gloss — safe to show before answering, for disambiguating context.
+  // `exampleDe` is the German sentence — it embeds the answer word, so it's only
+  // revealed after a wrong answer (in the drill panel). See review-routes.ts.
+  exampleEn: text("example_en"),
+  exampleDe: text("example_de"),
   // Lower = more frequent. Set on the global frequency corpus; null for manual /
   // AI / starter cards. Drives new-card introduction order (frequency_rank asc,
   // nulls first) so personal cards come before the corpus. See srs/day.ts.

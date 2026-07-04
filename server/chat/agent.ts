@@ -29,7 +29,17 @@ const CARD_PROPS = {
     items: { type: "string" },
     description: "Other accepted spellings/synonyms (bare, no article), e.g. [\"Wagen\"] for \"das Auto\".",
   },
-  notes: { type: "string", description: "Optional example sentence or mnemonic." },
+  example_en: {
+    type: "string",
+    description:
+      "Optional English gloss of an example sentence, shown to the learner UP FRONT for context (helps when the prompt is ambiguous). Must NOT contain the German answer.",
+  },
+  example_de: {
+    type: "string",
+    description:
+      "Optional German example sentence using the target word, revealed only AFTER a wrong answer to reinforce it in context. It's the translation of `example_en`; supply the two together.",
+  },
+  notes: { type: "string", description: "Optional short mnemonic or usage note (not an example sentence)." },
 } as const;
 
 export const tools: Anthropic.Tool[] = [
@@ -127,6 +137,7 @@ CARD CONVENTION — follow this exactly, or cards become ungradeable:
 - Always set part_of_speech = "noun" and the correct article for nouns — gender is a core thing the learner is testing.
 - Use answer_alts for accepted synonyms or alternate spellings (bare, no article).
 - Keep prompts unambiguous: if two German words share an English gloss, disambiguate the prompt (e.g. "the friend (male)").
+- Prefer adding an example sentence pair: example_de (a natural German sentence using the word) and example_en (its English translation). The learner sees example_en up front for context and example_de after a miss, so it's a strong memory aid — especially for abstract or ambiguous words. example_en must not give away the German answer.
 
 Working style:
 - When the learner asks to build a deck, propose the words first (briefly), then create the deck and add the cards. Don't ask for permission for normal create/add — just do it and report what you made.

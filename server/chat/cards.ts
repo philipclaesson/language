@@ -15,6 +15,8 @@ export type RawCardInput = {
   part_of_speech?: unknown;
   answer_alts?: unknown;
   notes?: unknown;
+  example_en?: unknown;
+  example_de?: unknown;
 };
 
 export type NormalizedCard = {
@@ -24,6 +26,8 @@ export type NormalizedCard = {
   partOfSpeech: string | null;
   article: string | null;
   notes: string | null;
+  exampleEn: string | null;
+  exampleDe: string | null;
 };
 
 function str(v: unknown): string | undefined {
@@ -82,5 +86,7 @@ export function normalizeCardInput(raw: RawCardInput): NormalizedCard {
     partOfSpeech: pos,
     article,
     notes: str(raw.notes) ?? null,
+    exampleEn: str(raw.example_en) ?? null,
+    exampleDe: str(raw.example_de) ?? null,
   };
 }

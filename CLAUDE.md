@@ -54,7 +54,9 @@ TypeScript everywhere. One Cloud Run service serves the SPA and the API.
 - `shared/types.ts` — the client/server contract. **Change types here first.**
 - `drizzle/` — committed SQL migrations.
 - `scripts/gen-words.ts` — one-off, re-runnable generator: reads the source Anki
-  `.apkg` and regenerates `server/db/words.data.json` + `drizzle/0005_seed_words.sql`.
+  `.apkg` and regenerates `server/db/words.data.json`. (`drizzle/0005_seed_words.sql`
+  is frozen — already applied and predates the `example_*` columns; the sample
+  sentences reach existing/new DBs via the 0007 ALTER + 0008 backfill migrations.)
 
 ## Commands
 
@@ -118,7 +120,11 @@ the route/tool glue isn't.
 - `/session/today` must **never** send the answer or the article to the client
   (the article reveals a noun's gender — the thing being tested). Likewise
   `/verbs/session/today` must never send the six conjugated forms — they are the
-  answer. Both send only the prompt/metadata.
+  answer. Both send only the prompt/metadata. The corpus's **example sentences**
+  split along the same line: `cards.example_en` (English gloss) is sent up front for
+  context and rendered under the prompt; `cards.example_de` (German sentence, which
+  contains the answer word) is withheld until after answering and returned in the
+  `/reviews` result, shown only in the drill panel on a miss.
 - **Verbs are a global catalog**, not per-user decks: the `verbs` table has no
   owner (edited in one place, seeded to both DB branches by a data migration);
   only `verb_review_state`/`verb_reviews` are per-user. The core loop, FSRS

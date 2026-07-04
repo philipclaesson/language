@@ -1,9 +1,14 @@
 // One-off, re-runnable generator for the frequency word corpus.
 //
-// Reads the Anki deck "5000 German words sorted by frequency" and writes two
-// committed artifacts:
+// Reads the Anki deck "5000 German words sorted by frequency" and regenerates the
+// committed corpus:
 //   - server/db/words.data.json  — the cleaned corpus (used by db:seed:words)
-//   - drizzle/0005_seed_words.sql — the data migration that loads it into prod
+//
+// NOTE: drizzle/0005_seed_words.sql is FROZEN — it's already applied to prod, and it
+// predates the example_en/example_de columns (so it must not reference them). This
+// script therefore no longer emits it; the sample sentences reach existing/new
+// environments via the ALTER + backfill migrations (see drizzle/0007+). Re-run this
+// only to refresh words.data.json for local `db:seed:words`.
 //
 // The messy per-note cleaning rules live in server/db/words-parse.ts (tested).
 // This script is just I/O: unpack, read SQLite, parse, sort, emit.
@@ -15,16 +20,10 @@
 
 import { DatabaseSync } from "node:sqlite";
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir, homedir } from "node:os";
 import { join } from "node:path";
 import { parseNote, type ParsedWord, type RawNote } from "../server/db/words-parse.ts";
-
-// The global corpus deck's fixed id — shared by words.ts and the migration so
-// both the seed script and the migration target the same row.
-export const WORD_DECK_ID = "b7c8e3a0-6d4f-4e2a-9c1b-000000005000";
-const DECK_NAME = "German — Frequency 5000";
-const DECK_DESC = "The ~3,700 most frequent German words, ordered by frequency.";
 
 // Anki note field order for this deck's note model (from col.models[…].flds).
 const FIELDS = [
@@ -42,18 +41,6 @@ function collectionPath(input: string): string {
   const dir = mkdtempSync(join(tmpdir(), "apkg-"));
   execFileSync("unzip", ["-o", "-d", dir, input, "collection.anki2"]);
   return join(dir, "collection.anki2");
-}
-
-function sqlStr(s: string): string {
-  return `'${s.replace(/'/g, "''")}'`;
-}
-function sqlNullable(s: string | null): string {
-  return s === null ? "NULL" : sqlStr(s);
-}
-function sqlArray(items: string[]): string {
-  return items.length === 0
-    ? "ARRAY[]::text[]"
-    : `ARRAY[${items.map(sqlStr).join(", ")}]::text[]`;
 }
 
 const input =
@@ -87,49 +74,7 @@ const gendered = words.filter((w) => w.article).length;
 const jsonPath = join(import.meta.dirname, "..", "server", "db", "words.data.json");
 writeFileSync(jsonPath, JSON.stringify(words, null, 0) + "\n");
 
-// --- 0005_seed_words.sql ---
-const header = `-- Seed the global frequency word corpus. Generated from an Anki deck by
--- scripts/gen-words.ts; the cleaning rules live in server/db/words-parse.ts.
--- Creates ONE ownerless (global) deck + ${words.length} cards. The deck's null
--- owner_id makes it read-only to users and hidden from the tutor, while the
--- widened review queries surface its cards in every user's daily loop, ordered
--- by frequency_rank. Applied to dev via db:migrate and to prod by the CI migrate
--- job on push to main. Idempotent on the deck (guarded); migration tracking
--- keeps the cards from being inserted twice.
-
-INSERT INTO "decks" ("id", "owner_id", "name", "source", "description")
-SELECT '${WORD_DECK_ID}'::uuid, NULL, ${sqlStr(DECK_NAME)}, 'seed', ${sqlStr(DECK_DESC)}
-WHERE NOT EXISTS (SELECT 1 FROM "decks" WHERE "id" = '${WORD_DECK_ID}'::uuid);
-`;
-
-const valueRows = words.map((w) => {
-  const cols = [
-    `'${WORD_DECK_ID}'`,
-    sqlStr(w.prompt),
-    sqlStr(w.answer),
-    sqlArray(w.answerAlts),
-    sqlNullable(w.partOfSpeech),
-    sqlNullable(w.article),
-    sqlNullable(w.notes),
-    w.frequencyRank === null ? "NULL" : String(w.frequencyRank),
-    "'seed'",
-  ];
-  return `  (${cols.join(", ")})`;
-});
-
-// Plain multi-row INSERT (as in 0003_seed_verbs.sql): each literal is coerced to
-// its target column type — notably the unknown deck_id literal → uuid, which an
-// INSERT ... SELECT would not do. Runs once (migration-tracked); the guarded deck
-// insert above keeps a hand re-run from duplicating the deck.
-const insert = `
-INSERT INTO "cards" ("deck_id", "prompt", "answer", "answer_alts", "part_of_speech", "article", "notes", "frequency_rank", "source") VALUES
-${valueRows.join(",\n")};
-`;
-
-const sqlPath = join(import.meta.dirname, "..", "drizzle", "0005_seed_words.sql");
-writeFileSync(sqlPath, header + insert);
-
 console.log(
   `Wrote ${words.length} words (${nouns} nouns, ${gendered} gender-tested).\n` +
-    `  → ${jsonPath}\n  → ${sqlPath}`,
+    `  → ${jsonPath}`,
 );

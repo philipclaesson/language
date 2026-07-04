@@ -100,6 +100,7 @@ async function todayVerbReviewSets(userId: string, dayStart: Date) {
     .where(and(eq(verbReviews.userId, userId), lt(verbReviews.reviewedAt, dayStart)));
 
   const nonBonus = todays.filter((r) => !r.bonus);
+  const reviewedBefore = new Set(earlier.map((r) => r.verbId));
   return {
     reviewedTodayAny: new Set(todays.map((r) => r.verbId)),
     reviewedToday: new Set(nonBonus.map((r) => r.verbId)),
@@ -111,7 +112,15 @@ async function todayVerbReviewSets(userId: string, dayStart: Date) {
     missedToday: new Set(
       todays.filter((r) => r.graded && r.rating < 3).map((r) => r.verbId),
     ),
-    reviewedBefore: new Set(earlier.map((r) => r.verbId)),
+    reviewedBefore,
+    // NEW verbs learned today as bonus ("learn more"): a graded bonus review on a
+    // verb with no review before today. Excludes daily new verbs and bonus
+    // practice/misses re-drills (reviewed before today). Drives the "+N bonus" line.
+    bonusNewToday: new Set(
+      todays
+        .filter((r) => r.bonus && r.graded && !reviewedBefore.has(r.verbId))
+        .map((r) => r.verbId),
+    ).size,
   };
 }
 
@@ -188,6 +197,7 @@ verbRoutes.get("/verbs/session/today", async (c) => {
     newAvailable,
     practiceAvailable,
     missesAvailable,
+    bonusToday: sets.bonusNewToday,
   };
   return c.json(body);
 });

@@ -94,6 +94,11 @@ export function VerbsHome({
               </p>
             )}
           </div>
+          {today && today.bonusToday > 0 && (
+            <p class="mt-2 text-sm text-slate-400">
+              +{today.bonusToday} bonus {today.bonusToday === 1 ? "verb" : "verbs"} today ✨
+            </p>
+          )}
           {canReview && (
             <button
               onClick={onStart}

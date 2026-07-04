@@ -84,6 +84,7 @@ async function todayReviewSets(userId: string, dayStart: Date) {
     .where(and(eq(reviews.userId, userId), lt(reviews.reviewedAt, dayStart)));
 
   const nonBonus = todays.filter((r) => !r.bonus);
+  const reviewedBefore = new Set(earlier.map((r) => r.cardId));
   return {
     reviewedTodayAny: new Set(todays.map((r) => r.cardId)),
     reviewedToday: new Set(nonBonus.map((r) => r.cardId)),
@@ -97,7 +98,15 @@ async function todayReviewSets(userId: string, dayStart: Date) {
     missedToday: new Set(
       todays.filter((r) => r.graded && r.rating < 3).map((r) => r.cardId),
     ),
-    reviewedBefore: new Set(earlier.map((r) => r.cardId)),
+    reviewedBefore,
+    // NEW cards learned today as bonus ("learn more"): a graded bonus review on a
+    // card with no review before today. Excludes daily new cards (non-bonus) and
+    // bonus practice/misses re-drills (those were reviewed before today). "+N bonus".
+    bonusNewToday: new Set(
+      todays
+        .filter((r) => r.bonus && r.graded && !reviewedBefore.has(r.cardId))
+        .map((r) => r.cardId),
+    ).size,
   };
 }
 
@@ -166,6 +175,7 @@ reviewRoutes.get("/session/today", async (c) => {
     newAvailable,
     practiceAvailable,
     missesAvailable,
+    bonusToday: sets.bonusNewToday,
   };
   return c.json(body);
 });

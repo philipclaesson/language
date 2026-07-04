@@ -201,6 +201,11 @@ function Dashboard({
               </p>
             )}
           </div>
+          {today && today.bonusToday > 0 && (
+            <p class="mt-2 text-sm text-slate-400">
+              +{today.bonusToday} bonus {today.bonusToday === 1 ? "card" : "cards"} today ✨
+            </p>
+          )}
           {canReview && (
             <button
               onClick={onStart}

@@ -68,6 +68,7 @@ export type TodayResponse = {
   newAvailable: number; // unstudied cards left to learn (beyond today's quota)
   practiceAvailable: number; // studied, not-due cards available to practice
   missesAvailable: number; // cards missed today (re-drillable, FSRS untouched)
+  bonusToday: number; // NEW cards learned today as bonus ("learn more"); the "+N bonus" line
 };
 
 // Mastery tiers by FSRS stability. See PLAN.md §5a.
@@ -191,6 +192,7 @@ export type VerbTodayResponse = {
   newAvailable: number; // unstudied verbs left to learn (beyond today's quota)
   practiceAvailable: number; // studied, not-due verbs available to practice
   missesAvailable: number; // verbs missed today (re-drillable, FSRS untouched)
+  bonusToday: number; // NEW verbs learned today as bonus ("learn more"); the "+N bonus" line
 };
 
 // Extra/bonus verb work — mirrors ExtraResponse for words. See EXTRA_WORK.md.

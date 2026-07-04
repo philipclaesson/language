@@ -5,8 +5,16 @@ import { getExtra, getToday, postReview } from "./api";
 
 // `daily`    = the required daily set (due + new), hammer-until-correct.
 // `learn`    = bonus: extra fresh cards, hammer-until-correct (you're learning them).
-// `practice` = bonus: known cards, weakest-first, one-and-done (a miss just moves on).
-export type ReviewMode = "daily" | "learn" | "practice";
+// `practice` = bonus: known cards, weakest-first (a miss reveals + re-drills).
+// `misses`   = bonus: cards missed today, re-drilled (FSRS untouched, stable all day).
+// All modes hammer-until-correct; the mode only decides which cards get pulled.
+export type ReviewMode = "daily" | "learn" | "practice" | "misses";
+
+// The extra-work pull for a bonus mode. `learn` maps to the "new" pool; the others
+// share their name. (Only called for bonus modes, never "daily".)
+export function extraTypeOf(mode: ReviewMode): ExtraType {
+  return mode === "learn" ? "new" : (mode as ExtraType);
+}
 
 // `input` = typing the answer from recall (graded on the server).
 // `drill` = got it wrong; copy the revealed answer to continue. All modes hammer
@@ -35,7 +43,7 @@ export function Review({
   const [requiredTotal, setRequiredTotal] = useState(0);
   const [baseDone, setBaseDone] = useState(0);
   // Availability of the two on-ramps, for the "Done for today" buttons (daily mode).
-  const [avail, setAvail] = useState({ new: 0, practice: 0 });
+  const [avail, setAvail] = useState({ new: 0, practice: 0, misses: 0 });
   const [completed, setCompleted] = useState(0); // cards finished this session
   const startedAt = useRef(0);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -65,12 +73,16 @@ export function Review({
         .then((t) => {
           setRequiredTotal(t.dueTotal + t.newTotal);
           setBaseDone(t.done);
-          setAvail({ new: t.newAvailable, practice: t.practiceAvailable });
+          setAvail({
+            new: t.newAvailable,
+            practice: t.practiceAvailable,
+            misses: t.missesAvailable,
+          });
           start(t.cards, t.dueTotal + t.newTotal > 0);
         })
         .catch(() => setPhase("empty"));
     } else {
-      getExtra(mode === "learn" ? "new" : "practice")
+      getExtra(extraTypeOf(mode))
         .then((r) => start(r.cards, false))
         .catch(() => setPhase("empty"));
     }
@@ -85,6 +97,23 @@ export function Review({
   useEffect(() => {
     if (phase === "input" || phase === "drill") inputRef.current?.focus();
   }, [phase, queue]);
+
+  // Refresh the extra-work counts when the daily set is finished: misses (and the
+  // other pools) are generated *during* the session, so the load-time snapshot is
+  // stale by the time we show the "Done for today" buttons.
+  useEffect(() => {
+    if (phase === "done" && mode === "daily") {
+      getToday()
+        .then((t) =>
+          setAvail({
+            new: t.newAvailable,
+            practice: t.practiceAvailable,
+            misses: t.missesAvailable,
+          }),
+        )
+        .catch(() => {});
+    }
+  }, [phase, mode]);
 
   // Move past the current card. `drop` removes it; otherwise it rotates to the back
   // to come round again. `counted` bumps the finished-cards tally.
@@ -164,7 +193,9 @@ export function Review({
               ? "No new words to learn right now."
               : mode === "practice"
                 ? "Nothing to practice right now."
-                : "Nothing to do right now. Come back later!"}
+                : mode === "misses"
+                  ? "Nothing to fix — you aced today's words."
+                  : "Nothing to do right now. Come back later!"}
           </p>
           <BackButton onDone={onDone} label="Back" />
         </div>
@@ -188,8 +219,10 @@ export function Review({
                   noun="cards"
                   newAvailable={avail.new}
                   practiceAvailable={avail.practice}
+                  missesAvailable={avail.misses}
                   onNew={() => onStartExtra("new")}
                   onPractice={() => onStartExtra("practice")}
+                  onMisses={() => onStartExtra("misses")}
                 />
               </div>
               <button
@@ -205,22 +238,37 @@ export function Review({
               <p class="mt-2 text-slate-600">
                 {mode === "learn"
                   ? `${completed} new ${completed === 1 ? "word" : "words"} learned.`
-                  : `${completed} ${completed === 1 ? "word" : "words"} practiced.`}
+                  : mode === "misses"
+                    ? `${completed} ${completed === 1 ? "word" : "words"} fixed.`
+                    : `${completed} ${completed === 1 ? "word" : "words"} practiced.`}
               </p>
               <button
                 onClick={load}
                 class="mt-6 w-full rounded-xl bg-slate-900 px-5 py-3 font-medium text-white transition hover:bg-slate-700"
               >
-                {mode === "learn" ? `Learn ${EXTRA_NEW} more` : `Practice ${EXTRA_PRACTICE} more`}
-              </button>
-              <button
-                onClick={() => onStartExtra(mode === "learn" ? "practice" : "new")}
-                class="mt-3 w-full rounded-xl border border-slate-200 px-5 py-3 font-medium text-slate-700 transition hover:bg-slate-50"
-              >
                 {mode === "learn"
-                  ? `Practice ${EXTRA_PRACTICE} words 📝`
-                  : `Pick ${EXTRA_NEW} new words ✋`}
+                  ? `Learn ${EXTRA_NEW} more`
+                  : mode === "misses"
+                    ? "Go again"
+                    : `Practice ${EXTRA_PRACTICE} more`}
               </button>
+              {(mode === "learn"
+                ? [{ type: "practice" as const, label: `Practice ${EXTRA_PRACTICE} words 📝` }]
+                : mode === "practice"
+                  ? [{ type: "new" as const, label: `Pick ${EXTRA_NEW} new words ✋` }]
+                  : [
+                      { type: "new" as const, label: `Pick ${EXTRA_NEW} new words ✋` },
+                      { type: "practice" as const, label: `Practice ${EXTRA_PRACTICE} words 📝` },
+                    ]
+              ).map((link) => (
+                  <button
+                    key={link.type}
+                    onClick={() => onStartExtra(link.type)}
+                    class="mt-3 w-full rounded-xl border border-slate-200 px-5 py-3 font-medium text-slate-700 transition hover:bg-slate-50"
+                  >
+                    {link.label}
+                  </button>
+                ))}
               <button
                 onClick={onDone}
                 class="mt-3 text-sm text-slate-500 underline-offset-2 hover:text-slate-900 hover:underline"
@@ -247,7 +295,8 @@ export function Review({
         <div class="mb-2 flex items-center justify-between text-sm text-slate-400">
           {isBonus ? (
             <span>
-              {mode === "learn" ? "Learning" : "Practice"} · +{completed}
+              {mode === "learn" ? "Learning" : mode === "misses" ? "Repeating" : "Practice"} · +
+              {completed}
             </span>
           ) : (
             <span>
@@ -322,22 +371,27 @@ export function Review({
   );
 }
 
-// The two extra-work on-ramps, shown on a "Done for today" screen (and reused on
+// The three extra-work on-ramps, shown on a "Done for today" screen (and reused on
 // the dashboards). Each button hides when its pool is empty. See EXTRA_WORK.md.
+// "Fix misses" re-drills today's wrong answers and reads the live miss count.
 export function ExtraButtons({
   noun,
   newAvailable,
   practiceAvailable,
+  missesAvailable,
   onNew,
   onPractice,
+  onMisses,
 }: {
   noun: "cards" | "verbs";
   newAvailable: number;
   practiceAvailable: number;
+  missesAvailable: number;
   onNew: () => void;
   onPractice: () => void;
+  onMisses: () => void;
 }) {
-  if (newAvailable === 0 && practiceAvailable === 0) return null;
+  if (newAvailable === 0 && practiceAvailable === 0 && missesAvailable === 0) return null;
   return (
     <div class="space-y-2">
       {newAvailable > 0 && (
@@ -353,7 +407,15 @@ export function ExtraButtons({
           onClick={onPractice}
           class="w-full rounded-xl border border-slate-200 px-5 py-3 font-medium text-slate-700 transition hover:bg-slate-50"
         >
-          Repeat {EXTRA_PRACTICE} {noun} 📝
+          Practice {EXTRA_PRACTICE} {noun} 📝
+        </button>
+      )}
+      {missesAvailable > 0 && (
+        <button
+          onClick={onMisses}
+          class="w-full rounded-xl border border-slate-200 px-5 py-3 font-medium text-slate-700 transition hover:bg-slate-50"
+        >
+          Repeat today's {missesAvailable} {missesAvailable === 1 ? "miss" : "misses"} 🧠
         </button>
       )}
     </div>

@@ -67,6 +67,7 @@ export type TodayResponse = {
   // the "Done for today" screen). See EXTRA_WORK.md.
   newAvailable: number; // unstudied cards left to learn (beyond today's quota)
   practiceAvailable: number; // studied, not-due cards available to practice
+  missesAvailable: number; // cards missed today (re-drillable, FSRS untouched)
 };
 
 // Mastery tiers by FSRS stability. See PLAN.md §5a.
@@ -79,13 +80,15 @@ export type ProgressResponse = {
   reviewsToday: number; // graded reviews completed today
 };
 
-// Bonus work beyond the required set: more new cards, or practice of known cards.
-// "new" = learn fresh cards (graded, hammer-until-correct); "practice" = drill
-// studied but not-yet-due cards, weakest-first, one-and-done. See EXTRA_WORK.md.
-// Batch sizes are shared so the server pull and the client's button labels agree.
+// Bonus work beyond the required set: more new cards, practice of known cards, or
+// re-drilling today's misses. "new" = learn fresh cards (graded, hammer-until-
+// correct); "practice" = drill studied but not-yet-due cards, weakest-first;
+// "misses" = re-drill cards whose first graded attempt today was wrong (stable all
+// day, FSRS untouched — re-drills aren't graded). All hammer-until-correct.
+// See EXTRA_WORK.md. Batch sizes are shared so server pulls and button labels agree.
 export const EXTRA_NEW = 5; // "Pick 5 new"
 export const EXTRA_PRACTICE = 10; // "Repeat 10"
-export type ExtraType = "new" | "practice";
+export type ExtraType = "new" | "practice" | "misses";
 export type ExtraResponse = {
   cards: SessionCard[];
 };
@@ -187,6 +190,7 @@ export type VerbTodayResponse = {
   complete: boolean;
   newAvailable: number; // unstudied verbs left to learn (beyond today's quota)
   practiceAvailable: number; // studied, not-due verbs available to practice
+  missesAvailable: number; // verbs missed today (re-drillable, FSRS untouched)
 };
 
 // Extra/bonus verb work — mirrors ExtraResponse for words. See EXTRA_WORK.md.

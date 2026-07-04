@@ -10,6 +10,7 @@ import {
   planToday,
   freshPool,
   practicePool,
+  missesPool,
   type CardToday,
 } from "./srs/day";
 import { summarizeProgress } from "./srs/tiers";
@@ -69,7 +70,12 @@ function loadCardsWithState(userId: string) {
 // as bonus on an earlier day is a returning card, not a fresh introduction.
 async function todayReviewSets(userId: string, dayStart: Date) {
   const todays = await db
-    .select({ cardId: reviews.cardId, rating: reviews.rating, bonus: reviews.bonus })
+    .select({
+      cardId: reviews.cardId,
+      rating: reviews.rating,
+      bonus: reviews.bonus,
+      graded: reviews.graded,
+    })
     .from(reviews)
     .where(and(eq(reviews.userId, userId), gte(reviews.reviewedAt, dayStart)));
   const earlier = await db
@@ -82,6 +88,12 @@ async function todayReviewSets(userId: string, dayStart: Date) {
     reviewedTodayAny: new Set(todays.map((r) => r.cardId)),
     reviewedToday: new Set(nonBonus.map((r) => r.cardId)),
     correctToday: new Set(nonBonus.filter((r) => r.rating >= 3).map((r) => r.cardId)),
+    // Cards whose first graded (non-bonus) attempt today was a miss — the "misses"
+    // pool. graded=true isolates the first-of-day attempt (later re-drills are
+    // graded=false), so this stays stable no matter how much you re-drill.
+    missedToday: new Set(
+      nonBonus.filter((r) => r.graded && r.rating < 3).map((r) => r.cardId),
+    ),
     reviewedBefore: new Set(earlier.map((r) => r.cardId)),
   };
 }
@@ -129,6 +141,9 @@ reviewRoutes.get("/session/today", async (c) => {
     now,
     { limit: Infinity },
   ).length;
+  const missesAvailable = missesPool(
+    cardRows.map((r) => ({ id: r.id, missedToday: sets.missedToday.has(r.id) })),
+  ).length;
 
   const byId = new Map(cardRows.map((r) => [r.id, r]));
   const pending = shuffle(
@@ -147,13 +162,15 @@ reviewRoutes.get("/session/today", async (c) => {
     complete: plan.complete,
     newAvailable,
     practiceAvailable,
+    missesAvailable,
   };
   return c.json(body);
 });
 
 // Extra/bonus work beyond the required set (EXTRA_WORK.md). `new` = fresh cards to
-// learn; `practice` = studied, not-due cards weakest-first. Never leaks answer/
-// article. The client sends these reviews with `bonus: true`.
+// learn; `practice` = studied, not-due cards weakest-first; `misses` = cards missed
+// today, re-drillable (FSRS untouched). Never leaks answer/article. The client sends
+// these reviews with `bonus: true`.
 reviewRoutes.get("/session/extra", async (c) => {
   const userId = c.get("user").id;
   const type = (c.req.query("type") ?? "new") as ExtraType;
@@ -164,26 +181,30 @@ reviewRoutes.get("/session/extra", async (c) => {
   const sets = await todayReviewSets(userId, dayStart);
 
   const ids =
-    type === "practice"
-      ? practicePool(
-          cardRows.map((r) => ({
-            id: r.id,
-            due: r.due,
-            stability: r.stability ?? 0,
-            reviewedToday: sets.reviewedTodayAny.has(r.id),
-          })),
-          now,
+    type === "misses"
+      ? missesPool(
+          cardRows.map((r) => ({ id: r.id, missedToday: sets.missedToday.has(r.id) })),
         )
-      : freshPool(
-          cardRows.map((r) => ({
-            id: r.id,
-            hasState: r.stateId !== null,
-            reviewedToday: sets.reviewedTodayAny.has(r.id),
-          })),
-        );
+      : type === "practice"
+        ? practicePool(
+            cardRows.map((r) => ({
+              id: r.id,
+              due: r.due,
+              stability: r.stability ?? 0,
+              reviewedToday: sets.reviewedTodayAny.has(r.id),
+            })),
+            now,
+          )
+        : freshPool(
+            cardRows.map((r) => ({
+              id: r.id,
+              hasState: r.stateId !== null,
+              reviewedToday: sets.reviewedTodayAny.has(r.id),
+            })),
+          );
 
-  // Order is deliberate — practice is weakest-first, learn-more is frequency
-  // order — so we don't shuffle (unlike the daily set).
+  // Order is deliberate — practice is weakest-first, learn-more/misses are frequency
+  // (introduction) order — so we don't shuffle (unlike the daily set).
   const byId = new Map(cardRows.map((r) => [r.id, r]));
   const cardsOut: SessionCard[] = ids.map((id) => {
     const r = byId.get(id)!;

@@ -10,6 +10,7 @@ import {
   isFirstAttemptOfDay,
   freshPool,
   practicePool,
+  missesPool,
 } from "./srs/day";
 import { summarizeProgress, tierFor } from "./srs/tiers";
 import { requireAuth, type AppEnv } from "./auth";
@@ -85,7 +86,12 @@ function loadVerbsWithState(userId: string) {
 // signals are non-bonus only; `reviewedBefore` is all prior reviews. See EXTRA_WORK.md.
 async function todayVerbReviewSets(userId: string, dayStart: Date) {
   const todays = await db
-    .select({ verbId: verbReviews.verbId, rating: verbReviews.rating, bonus: verbReviews.bonus })
+    .select({
+      verbId: verbReviews.verbId,
+      rating: verbReviews.rating,
+      bonus: verbReviews.bonus,
+      graded: verbReviews.graded,
+    })
     .from(verbReviews)
     .where(and(eq(verbReviews.userId, userId), gte(verbReviews.reviewedAt, dayStart)));
   const earlier = await db
@@ -98,6 +104,11 @@ async function todayVerbReviewSets(userId: string, dayStart: Date) {
     reviewedTodayAny: new Set(todays.map((r) => r.verbId)),
     reviewedToday: new Set(nonBonus.map((r) => r.verbId)),
     correctToday: new Set(nonBonus.filter((r) => r.rating >= 3).map((r) => r.verbId)),
+    // Verbs whose first graded (non-bonus) attempt today was a miss — the "misses"
+    // pool. Stable all day (later re-drills are graded=false). See EXTRA_WORK.md.
+    missedToday: new Set(
+      nonBonus.filter((r) => r.graded && r.rating < 3).map((r) => r.verbId),
+    ),
     reviewedBefore: new Set(earlier.map((r) => r.verbId)),
   };
 }
@@ -158,6 +169,9 @@ verbRoutes.get("/verbs/session/today", async (c) => {
     now,
     { limit: Infinity },
   ).length;
+  const missesAvailable = missesPool(
+    rows.map((r) => ({ id: r.id, missedToday: sets.missedToday.has(r.id) })),
+  ).length;
 
   const byId = new Map(rows.map((r) => [r.id, r]));
   const pending = shuffle(plan.pendingIds.map((id) => sessionVerbOf(byId.get(id)!)));
@@ -171,12 +185,14 @@ verbRoutes.get("/verbs/session/today", async (c) => {
     complete: plan.complete,
     newAvailable,
     practiceAvailable,
+    missesAvailable,
   };
   return c.json(body);
 });
 
 // Extra/bonus verb work (EXTRA_WORK.md). `new` = fresh verbs (frequency order);
-// `practice` = studied, not-due verbs weakest-first. Never leaks the six forms.
+// `practice` = studied, not-due verbs weakest-first; `misses` = verbs missed today,
+// re-drillable (FSRS untouched). Never leaks the six forms.
 verbRoutes.get("/verbs/session/extra", async (c) => {
   const userId = c.get("user").id;
   const type = (c.req.query("type") ?? "new") as ExtraType;
@@ -187,23 +203,25 @@ verbRoutes.get("/verbs/session/extra", async (c) => {
   const sets = await todayVerbReviewSets(userId, dayStart);
 
   const ids =
-    type === "practice"
-      ? practicePool(
-          rows.map((r) => ({
-            id: r.id,
-            due: r.due,
-            stability: r.stability ?? 0,
-            reviewedToday: sets.reviewedTodayAny.has(r.id),
-          })),
-          now,
-        )
-      : freshPool(
-          rows.map((r) => ({
-            id: r.id,
-            hasState: r.stateId !== null,
-            reviewedToday: sets.reviewedTodayAny.has(r.id),
-          })),
-        );
+    type === "misses"
+      ? missesPool(rows.map((r) => ({ id: r.id, missedToday: sets.missedToday.has(r.id) })))
+      : type === "practice"
+        ? practicePool(
+            rows.map((r) => ({
+              id: r.id,
+              due: r.due,
+              stability: r.stability ?? 0,
+              reviewedToday: sets.reviewedTodayAny.has(r.id),
+            })),
+            now,
+          )
+        : freshPool(
+            rows.map((r) => ({
+              id: r.id,
+              hasState: r.stateId !== null,
+              reviewedToday: sets.reviewedTodayAny.has(r.id),
+            })),
+          );
 
   const byId = new Map(rows.map((r) => [r.id, r]));
   const body: VerbExtraResponse = { verbs: ids.map((id) => sessionVerbOf(byId.get(id)!)) };

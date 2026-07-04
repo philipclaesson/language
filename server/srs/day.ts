@@ -186,6 +186,24 @@ export function practicePool(
     .map((c) => c.id);
 }
 
+// A candidate for the "misses" pool: a card, flagged if its first graded (non-bonus)
+// attempt today was a miss.
+export type MissCandidate = { id: string; missedToday: boolean };
+
+/**
+ * The "misses" pool: cards whose first graded attempt today was wrong, in the given
+ * order. Unlike freshPool/practicePool it does NOT exclude cards reviewed today —
+ * the whole point is to re-drill today's work — so the pool is stable all day: bonus
+ * re-drills are graded=false and never clear the miss. FSRS is untouched (the miss
+ * was already graded on the first-of-day attempt). See EXTRA_WORK.md.
+ */
+export function missesPool(cands: MissCandidate[], limit: number = Infinity): string[] {
+  return cands
+    .filter((c) => c.missedToday)
+    .slice(0, limit)
+    .map((c) => c.id);
+}
+
 // One card's daily-relevant facts, gathered by the route from review_state + the
 // reviews log. `reviewedToday` / `correctToday` / `reviewedBeforeToday` count ALL
 // attempts (a re-drill that finally lands counts as correct). Fresh cards must be

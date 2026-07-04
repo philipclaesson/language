@@ -1,10 +1,27 @@
 # Extra work (bonus) — feature spec
 
-> **Status: BUILT (2026-07-02).** Shipped for **both Words and Verbs**. Two buttons
+> **Status: BUILT (2026-07-02).** Shipped for **both Words and Verbs**. Buttons
 > appear on the "Done for today" screen (in-session done phase + the dashboards) and
 > whenever there's no required work left: **"Pick 5 new cards ✋"** (learn) and
 > **"Repeat 10 cards 📝"** (practice). Bonus reviews carry `reviews.bonus` /
 > `verb_reviews.bonus` so they never touch the required daily set.
+>
+> **Third mode added (2026-07-04): "Fix N misses 🎯" (`ExtraType = "misses"`).**
+> Re-drills the cards whose *first graded, non-bonus* attempt today was a miss
+> (`graded && !bonus && rating < 3`) — the words you fumbled and want to hammer until
+> they stick. Hammer-until-correct like `learn`. Key differences from the other two:
+> - **FSRS is untouched, for free.** Every card in the pool already has a graded
+>   first-of-day attempt (the miss), so re-drills are `graded=false` and the schedule
+>   branch is skipped. No new grading logic. The first right/wrong answer is all FSRS sees.
+> - **Stable all day (does NOT exclude `reviewedTodayAny`).** The deliberate inverse
+>   of learn/practice, which shrink as consumed. Bonus re-drills don't clear the miss,
+>   so the pool is identical on every pull until the day rolls over — you can hammer
+>   it as many times as you like.
+> - **Serves all of today's misses** (no cap); the button reads the live count.
+> - Pure helper `missesPool` in `srs/day.ts` (tested); wired symmetrically into
+>   `review-routes.ts`/`verb-routes.ts` (`missedToday` set + `missesAvailable` +
+>   `type=misses` branch) and the client (`ReviewMode`/`ExtraType` "misses",
+>   `ExtraButtons` third button, `extraTypeOf`).
 >
 > **Deviations from the original design below:**
 > - **Practice is hammer-until-correct, NOT one-and-done** (changed 2026-07-02 after

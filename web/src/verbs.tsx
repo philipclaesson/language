@@ -11,7 +11,7 @@ import type {
 } from "../../shared/types";
 import { EXTRA_NEW, EXTRA_PRACTICE, VERB_FORMS, VERB_FORM_LABELS } from "../../shared/types";
 import { getVerbExtra, getVerbList, getVerbProgress, getVerbToday, postVerbReview } from "./api";
-import { ExtraButtons, type ReviewMode } from "./review";
+import { ExtraButtons, extraTypeOf, type ReviewMode } from "./review";
 import { TIERS, TIER_BY_KEY } from "./tiers";
 
 const emptyConj = (): Conjugation => ({ ich: "", du: "", er: "", wir: "", ihr: "", sie: "" });
@@ -108,8 +108,10 @@ export function VerbsHome({
                 noun="verbs"
                 newAvailable={today.newAvailable}
                 practiceAvailable={today.practiceAvailable}
+                missesAvailable={today.missesAvailable}
                 onNew={() => onStartExtra("new")}
                 onPractice={() => onStartExtra("practice")}
+                onMisses={() => onStartExtra("misses")}
               />
             </div>
           )}
@@ -250,7 +252,7 @@ export function VerbReview({
   const [flash, setFlash] = useState<"green" | "red" | null>(null);
   const [requiredTotal, setRequiredTotal] = useState(0);
   const [baseDone, setBaseDone] = useState(0);
-  const [avail, setAvail] = useState({ new: 0, practice: 0 });
+  const [avail, setAvail] = useState({ new: 0, practice: 0, misses: 0 });
   const [completed, setCompleted] = useState(0);
   const startedAt = useRef(0);
   const inputRefs = useRef<Partial<Record<VerbForm, HTMLInputElement | null>>>({});
@@ -278,12 +280,16 @@ export function VerbReview({
         .then((t) => {
           setRequiredTotal(t.dueTotal + t.newTotal);
           setBaseDone(t.done);
-          setAvail({ new: t.newAvailable, practice: t.practiceAvailable });
+          setAvail({
+            new: t.newAvailable,
+            practice: t.practiceAvailable,
+            misses: t.missesAvailable,
+          });
           start(t.verbs, t.dueTotal + t.newTotal > 0);
         })
         .catch(() => setPhase("empty"));
     } else {
-      getVerbExtra(mode === "learn" ? "new" : "practice")
+      getVerbExtra(extraTypeOf(mode))
         .then((r) => start(r.verbs, false))
         .catch(() => setPhase("empty"));
     }
@@ -306,6 +312,23 @@ export function VerbReview({
     const first = editableForms()[0];
     if (first) inputRefs.current[first]?.focus();
   }, [phase, queue]);
+
+  // Refresh the extra-work counts when the daily set is finished: misses (and the
+  // other pools) are generated *during* the session, so the load-time snapshot is
+  // stale by the time we show the "Done for today" buttons.
+  useEffect(() => {
+    if (phase === "done" && mode === "daily") {
+      getVerbToday()
+        .then((t) =>
+          setAvail({
+            new: t.newAvailable,
+            practice: t.practiceAvailable,
+            misses: t.missesAvailable,
+          }),
+        )
+        .catch(() => {});
+    }
+  }, [phase, mode]);
 
   function next(drop: boolean, counted: boolean) {
     const [head, ...rest] = queue;
@@ -397,7 +420,9 @@ export function VerbReview({
               ? "No new verbs to learn right now."
               : mode === "practice"
                 ? "No verbs to practice right now."
-                : "No verbs to do right now. Come back later!"}
+                : mode === "misses"
+                  ? "Nothing to fix — you aced today's verbs."
+                  : "No verbs to do right now. Come back later!"}
           </p>
           <BackButton onDone={onDone} label="Back" />
         </div>
@@ -421,8 +446,10 @@ export function VerbReview({
                   noun="verbs"
                   newAvailable={avail.new}
                   practiceAvailable={avail.practice}
+                  missesAvailable={avail.misses}
                   onNew={() => onStartExtra("new")}
                   onPractice={() => onStartExtra("practice")}
+                  onMisses={() => onStartExtra("misses")}
                 />
               </div>
               <button
@@ -438,22 +465,37 @@ export function VerbReview({
               <p class="mt-2 text-slate-600">
                 {mode === "learn"
                   ? `${completed} new ${completed === 1 ? "verb" : "verbs"} learned.`
-                  : `${completed} ${completed === 1 ? "verb" : "verbs"} practiced.`}
+                  : mode === "misses"
+                    ? `${completed} ${completed === 1 ? "verb" : "verbs"} fixed.`
+                    : `${completed} ${completed === 1 ? "verb" : "verbs"} practiced.`}
               </p>
               <button
                 onClick={load}
                 class="mt-6 w-full rounded-xl bg-slate-900 px-5 py-3 font-medium text-white transition hover:bg-slate-700"
               >
-                {mode === "learn" ? `Learn ${EXTRA_NEW} more` : `Practice ${EXTRA_PRACTICE} more`}
-              </button>
-              <button
-                onClick={() => onStartExtra(mode === "learn" ? "practice" : "new")}
-                class="mt-3 w-full rounded-xl border border-slate-200 px-5 py-3 font-medium text-slate-700 transition hover:bg-slate-50"
-              >
                 {mode === "learn"
-                  ? `Practice ${EXTRA_PRACTICE} verbs 📝`
-                  : `Pick ${EXTRA_NEW} new verbs ✋`}
+                  ? `Learn ${EXTRA_NEW} more`
+                  : mode === "misses"
+                    ? "Go again"
+                    : `Practice ${EXTRA_PRACTICE} more`}
               </button>
+              {(mode === "learn"
+                ? [{ type: "practice" as const, label: `Practice ${EXTRA_PRACTICE} verbs 📝` }]
+                : mode === "practice"
+                  ? [{ type: "new" as const, label: `Pick ${EXTRA_NEW} new verbs ✋` }]
+                  : [
+                      { type: "new" as const, label: `Pick ${EXTRA_NEW} new verbs ✋` },
+                      { type: "practice" as const, label: `Practice ${EXTRA_PRACTICE} verbs 📝` },
+                    ]
+              ).map((link) => (
+                <button
+                  key={link.type}
+                  onClick={() => onStartExtra(link.type)}
+                  class="mt-3 w-full rounded-xl border border-slate-200 px-5 py-3 font-medium text-slate-700 transition hover:bg-slate-50"
+                >
+                  {link.label}
+                </button>
+              ))}
               <button
                 onClick={onDone}
                 class="mt-3 text-sm text-slate-500 underline-offset-2 hover:text-slate-900 hover:underline"
@@ -475,7 +517,8 @@ export function VerbReview({
         <div class="mb-2 flex items-center justify-between text-sm text-slate-400">
           {isBonus ? (
             <span>
-              {mode === "learn" ? "Learning" : "Practice"} · +{completed}
+              {mode === "learn" ? "Learning" : mode === "misses" ? "Repeating" : "Practice"} · +
+              {completed}
             </span>
           ) : (
             <span>

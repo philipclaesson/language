@@ -10,13 +10,30 @@ import { TabBar } from "./footer";
 import { navigate, usePath } from "./router";
 import { TIERS } from "./tiers";
 
-// Map an extra-work route suffix (/review/learn, /review/practice) to a review
-// mode; bare /review is the required daily set.
+// Map an extra-work route suffix (/review/learn, /review/practice, /review/misses)
+// to a review mode; bare /review is the required daily set.
 function modeFromSuffix(suffix: string | undefined): ReviewMode {
-  return suffix === "learn" ? "learn" : suffix === "practice" ? "practice" : "daily";
+  return suffix === "learn"
+    ? "learn"
+    : suffix === "practice"
+      ? "practice"
+      : suffix === "misses"
+        ? "misses"
+        : "daily";
 }
 const extraPath = (base: string, type: ExtraType) =>
-  `${base}/${type === "new" ? "learn" : "practice"}`;
+  `${base}/${type === "new" ? "learn" : type}`;
+
+// Time-of-day German greeting for the home header (☀️ by day, 🌛 at night).
+function greeting(): { text: string; emoji: string } {
+  const h = new Date().getHours();
+  if (h < 5) return { text: "Gute Nacht", emoji: "🌛" };
+  if (h < 11) return { text: "Guten Morgen", emoji: "☀️" };
+  if (h < 13) return { text: "Guten Tag", emoji: "☀️" };
+  if (h < 18) return { text: "Guten Nachmittag", emoji: "☀️" };
+  if (h < 22) return { text: "Guten Abend", emoji: "🌛" };
+  return { text: "Gute Nacht", emoji: "🌛" };
+}
 
 type AuthState =
   | { status: "loading" }
@@ -60,8 +77,8 @@ function Home({ user }: { user: SessionUser }) {
 
   // Full-screen review loops render without the tab bar — their single persistent
   // input keeps the mobile keyboard open, and a nav bar there is a focus hazard.
-  // /review, /review/learn, /review/practice (and the /verbs/review equivalents).
-  const reviewMatch = path.match(/^\/review(?:\/(learn|practice))?$/);
+  // /review, /review/learn, /review/practice, /review/misses (and /verbs/review too).
+  const reviewMatch = path.match(/^\/review(?:\/(learn|practice|misses))?$/);
   if (reviewMatch)
     return (
       <Review
@@ -70,7 +87,7 @@ function Home({ user }: { user: SessionUser }) {
         onStartExtra={(type) => navigate(extraPath("/review", type))}
       />
     );
-  const verbReviewMatch = path.match(/^\/verbs\/review(?:\/(learn|practice))?$/);
+  const verbReviewMatch = path.match(/^\/verbs\/review(?:\/(learn|practice|misses))?$/);
   if (verbReviewMatch)
     return (
       <VerbReview
@@ -158,7 +175,11 @@ function Dashboard({
 
       <main class="mt-10">
         <p class="text-slate-500">
-          Hallo, <span class="font-medium text-slate-900">{user.name || user.email}</span>
+          {greeting().text},{" "}
+          <span class="font-medium text-slate-900">
+            {user.name?.split(" ")[0] || user.email}
+          </span>{" "}
+          {greeting().emoji}
         </p>
 
         <div class="mt-6 rounded-2xl bg-slate-50 p-5 text-center">
@@ -194,8 +215,10 @@ function Dashboard({
                 noun="cards"
                 newAvailable={today.newAvailable}
                 practiceAvailable={today.practiceAvailable}
+                missesAvailable={today.missesAvailable}
                 onNew={() => onStartExtra("new")}
                 onPractice={() => onStartExtra("practice")}
+                onMisses={() => onStartExtra("misses")}
               />
             </div>
           )}

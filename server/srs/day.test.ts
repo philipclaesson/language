@@ -10,6 +10,7 @@ import {
   planToday,
   freshPool,
   practicePool,
+  missesPool,
   type CardToday,
 } from "./day.ts";
 
@@ -274,4 +275,16 @@ test("practicePool: a card due exactly at end-of-day is still practice-eligible"
   const end = endOfDay(NOW, TZ); // due >= end counts as not-due-today
   const cands = [{ id: "edge", due: end, stability: 3, reviewedToday: false }];
   assert.deepEqual(practicePool(cands, NOW, { limit: 10 }), ["edge"]);
+});
+
+test("missesPool: only cards missed today, in order, capped by limit", () => {
+  const cands = [
+    { id: "hit", missedToday: false }, // got it right today → excluded
+    { id: "m1", missedToday: true },
+    { id: "m2", missedToday: true },
+    { id: "m3", missedToday: true },
+  ];
+  assert.deepEqual(missesPool(cands), ["m1", "m2", "m3"]); // all, in order
+  assert.deepEqual(missesPool(cands, 2), ["m1", "m2"]);
+  assert.deepEqual(missesPool([{ id: "hit", missedToday: false }]), []); // nothing missed
 });

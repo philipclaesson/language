@@ -18,7 +18,8 @@ import wordsData from "./words.data.json" with { type: "json" };
 // deck row in drizzle/0005_seed_words.sql.
 export const WORD_DECK_ID = "b7c8e3a0-6d4f-4e2a-9c1b-000000005000";
 const DECK_NAME = "German — Frequency 5000";
-const DECK_DESC = "The ~3,700 most frequent German words, ordered by frequency.";
+const DECK_DESC =
+  "The ~5,000 most frequent German words, ordered by frequency, each with an example sentence.";
 
 const WORDS = wordsData as ParsedWord[];
 

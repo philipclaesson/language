@@ -17,9 +17,11 @@ later without touching the core loop.
   **chat tutor** (chat to build/maintain decks; Claude tool-use, `source='ai_chat'`).
   **Verbs mode** (VERBS.md): a separate tab that drills the six present-tense
   conjugations of a global, frequency-ordered verb catalog on the same daily loop.
-  **Frequency word corpus:** ~3,700 frequency-ranked German words as a single
+  **Frequency word corpus:** ~5,000 frequency-ranked German words as a single
   *global* (ownerless) deck that flows through the normal Words loop, introduced
-  most-frequent-first. Imported from an Anki deck; reaches prod via a data migration.
+  most-frequent-first. Each card carries an **example sentence** (English gloss shown
+  up front for context; German sentence revealed on a miss). Imported from an Anki
+  deck; reaches prod via data migrations.
 - **Live:** https://language.levanto.dev — Cloud Run, **auto-deploys on push to main**.
 - **Next:** Phase 3 (deck management UI), Phase 4 (polish), more AI modules
   (news, voice). See PLAN.md §12.
@@ -54,9 +56,11 @@ TypeScript everywhere. One Cloud Run service serves the SPA and the API.
 - `shared/types.ts` — the client/server contract. **Change types here first.**
 - `drizzle/` — committed SQL migrations.
 - `scripts/gen-words.ts` — one-off, re-runnable generator: reads the source Anki
-  `.apkg` and regenerates `server/db/words.data.json`. (`drizzle/0005_seed_words.sql`
-  is frozen — already applied and predates the `example_*` columns; the sample
-  sentences reach existing/new DBs via the 0007 ALTER + 0008 backfill migrations.)
+  `.apkg` ("English-Deutsch (Sorted by Frequency)") and regenerates
+  `server/db/words.data.json` + `drizzle/0009_replace_words.sql`. Migration lineage:
+  0005 seeded the first (weaker) corpus, 0008 split its sentences into `example_*`;
+  **0009 replaced it** with this higher-quality deck (same global deck row; wipes the
+  old cards + their progress). 0005/0008 are frozen — re-runs only touch 0009.
 
 ## Commands
 

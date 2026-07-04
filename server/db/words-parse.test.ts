@@ -1,100 +1,80 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { cleanHtml, parseRank, parseGermanEntry, parseNote } from "./words-parse.ts";
+import { cleanHtml, parseRank, parsePos, extractAnswer, parseNote } from "./words-parse.ts";
 
-test("cleanHtml drops sup footnotes and img, keeps other tag text", () => {
-  assert.equal(cleanHtml("das Prinzip <sup>[aus prinzip]</sup>"), "das Prinzip");
-  assert.equal(cleanHtml('a <img src="x.png" /> b'), "a b");
-  assert.equal(cleanHtml("I study <b>thereby</b> get"), "I study thereby get");
-});
-
-test("cleanHtml decodes entities and collapses whitespace", () => {
-  assert.equal(cleanHtml("[over]&nbsp;there"), "[over] there");
+test("cleanHtml drops tags, sound refs, entities and collapses whitespace", () => {
+  assert.equal(cleanHtml("a <b>bold</b>  word"), "a bold word");
+  assert.equal(cleanHtml("hallo [sound:x.mp3]"), "hallo");
   assert.equal(cleanHtml("R&amp;D  spread"), "R&D spread");
   assert.equal(cleanHtml("&#39;quote&#39;"), "'quote'");
 });
 
-test("parseRank takes the leading integer of messy ranks", () => {
-  assert.equal(parseRank("129"), 129);
-  assert.equal(parseRank("2500-1"), 2500);
-  assert.equal(parseRank("#3001"), 3001);
-  assert.equal(parseRank("3000.1"), 3000);
+test("parseRank takes the leading integer", () => {
+  assert.equal(parseRank("53"), 53);
   assert.equal(parseRank(""), null);
 });
 
-test("single leading article → gender-tested bare noun", () => {
-  const r = parseGermanEntry("der Teil");
-  assert.equal(r.article, "der");
-  assert.equal(r.answer, "Teil");
-  assert.equal(r.partOfSpeech, "noun");
-  assert.deepEqual(r.answerAlts, []);
+test("noun POS field is the article → gender-tested noun", () => {
+  assert.deepEqual(parsePos("das"), { article: "das", partOfSpeech: "noun" });
+  assert.deepEqual(parsePos("der"), { article: "der", partOfSpeech: "noun" });
 });
 
-test("dual article → noun but no gender test", () => {
-  const r = parseGermanEntry("der, die Jugendliche");
-  assert.equal(r.article, null);
-  assert.equal(r.partOfSpeech, "noun");
-  assert.equal(r.answer, "Jugendliche");
+test("ambiguous / plural-only noun POS → noun but no gender test", () => {
+  assert.deepEqual(parsePos("der, die"), { article: null, partOfSpeech: "noun" });
+  assert.deepEqual(parsePos("die (pl)"), { article: null, partOfSpeech: "noun" });
+  assert.deepEqual(parsePos("der, die, das"), { article: null, partOfSpeech: "noun" });
 });
 
-test("slash article variant collapses to null article", () => {
-  const r = parseGermanEntry("der/die Angehörige");
-  assert.equal(r.article, null);
-  assert.equal(r.partOfSpeech, "noun");
-  assert.equal(r.answer, "Angehörige");
+test("non-noun POS codes map to readable labels", () => {
+  assert.equal(parsePos("verb").partOfSpeech, "verb");
+  assert.equal(parsePos("adj").partOfSpeech, "adjective");
+  assert.equal(parsePos("adv").partOfSpeech, "adverb");
+  assert.equal(parsePos("prep").partOfSpeech, "preposition");
+  assert.equal(parsePos("verb").article, null);
 });
 
-test("comma alternatives become answerAlts", () => {
-  const r = parseGermanEntry("die Universität, Uni");
-  assert.equal(r.article, "die");
-  assert.equal(r.answer, "Universität");
-  assert.deepEqual(r.answerAlts, ["Uni"]);
+test("extractAnswer strips the article and plural marker from nouns", () => {
+  assert.equal(extractAnswer("das Jahr, -e"), "Jahr");
+  assert.equal(extractAnswer("der Mann, -̈er"), "Mann");
+  assert.equal(extractAnswer("Mal"), "Mal");
 });
 
-test("non-noun entry: no article, no part of speech, alternatives kept", () => {
-  const r = parseGermanEntry("darin, drin, drinnen");
-  assert.equal(r.article, null);
-  assert.equal(r.partOfSpeech, null);
-  assert.equal(r.answer, "darin");
-  assert.deepEqual(r.answerAlts, ["drin", "drinnen"]);
+test("extractAnswer reduces a verb to its infinitive", () => {
+  assert.equal(extractAnswer("sein, ist, war, ist gewesen"), "sein");
+  assert.equal(extractAnswer("haben, hat, hatte, hat gehabt"), "haben");
 });
 
-test("form noise (+ pl, parentheticals, stray braces) is stripped", () => {
-  assert.equal(parseGermanEntry("der + pl Versager, die Versagen").answer, "Versager");
-  assert.equal(parseGermanEntry("das BGB (Bürgerliches Gesetzbuch)").answer, "BGB");
-  assert.equal(parseGermanEntry("der PKW { Personenkraftwagen)").answer, "PKW");
-});
-
-test("parseNote maps a full noun note", () => {
+test("parseNote maps a full noun note (sense 1)", () => {
   const w = parseNote({
-    german: "die Seite",
-    english: "side, page",
-    rank: "50",
-    notThisWord: "",
-    germanSentence: "Die andere <b>Seite</b>.",
-    englishSentence: "The other side.",
+    rank: "53",
+    word: "das Jahr, -e",
+    pos1: "das",
+    def1: "year",
+    de1: "Das Jahr hat zwölf Monate.",
+    en1: "The year has twelve months.",
   });
-  assert.equal(w.prompt, "side, page");
-  assert.equal(w.answer, "Seite");
-  assert.equal(w.article, "die");
+  assert.equal(w.prompt, "year");
+  assert.equal(w.answer, "Jahr");
+  assert.equal(w.article, "das");
   assert.equal(w.partOfSpeech, "noun");
-  assert.equal(w.frequencyRank, 50);
-  assert.equal(w.exampleDe, "Die andere Seite.");
-  assert.equal(w.exampleEn, "The other side.");
+  assert.equal(w.frequencyRank, 53);
+  assert.deepEqual(w.answerAlts, []);
+  assert.equal(w.exampleDe, "Das Jahr hat zwölf Monate.");
+  assert.equal(w.exampleEn, "The year has twelve months.");
   assert.equal(w.notes, null);
 });
 
-test("parseNote appends the NotThisWord disambiguation hint to the prompt", () => {
+test("parseNote maps a verb note to its infinitive", () => {
   const w = parseNote({
-    german: "gerade",
-    english: "just, right now",
-    rank: "80",
-    notThisWord: "straight",
-    germanSentence: "",
-    englishSentence: "",
+    rank: "4",
+    word: "sein, ist, war, ist gewesen",
+    pos1: "verb",
+    def1: "to be",
+    de1: "Ich bin müde.",
+    en1: "I am tired.",
   });
-  assert.equal(w.prompt, "just, right now (not: straight)");
-  assert.equal(w.exampleDe, null);
-  assert.equal(w.exampleEn, null);
-  assert.equal(w.notes, null);
+  assert.equal(w.prompt, "to be");
+  assert.equal(w.answer, "sein");
+  assert.equal(w.article, null);
+  assert.equal(w.partOfSpeech, "verb");
 });

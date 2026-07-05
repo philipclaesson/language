@@ -1,7 +1,6 @@
 import { useEffect, useState } from "preact/hooks";
 import type { ExtraType, ProgressResponse, SessionUser, TodayResponse } from "../../shared/types";
-import { getMe, getToday, getProgress, getPushConfig, logout } from "./api";
-import { currentPushState, disablePush, enablePush, needsInstall } from "./push";
+import { getMe, getToday, getProgress, logout } from "./api";
 import { ExtraButtons, Review, type ReviewMode } from "./review";
 import { DeckDetailView, DeckList } from "./decks";
 import { ChatTutor } from "./chat";
@@ -233,8 +232,6 @@ function Dashboard({
           )}
         </div>
 
-        <ReminderToggle />
-
         <MasteryCard progress={progress} />
 
         <h2 class="mt-10 mb-3 text-sm font-medium uppercase tracking-wide text-slate-400">
@@ -242,79 +239,6 @@ function Dashboard({
         </h2>
         <DeckList onOpen={onOpenDeck} />
       </main>
-    </div>
-  );
-}
-
-// Daily-reminder switch. Hidden entirely unless the server has push configured
-// (VAPID keys present). On iPhone it shows install guidance instead of a dead
-// switch, since Web Push there needs the home-screen PWA. See web/src/push.ts.
-type ToggleState = "loading" | "hidden" | "install" | "denied" | "off" | "on";
-
-function ReminderToggle() {
-  const [state, setState] = useState<ToggleState>("loading");
-  const [busy, setBusy] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const config = await getPushConfig();
-        if (cancelled) return;
-        if (!config.enabled) return setState("hidden");
-        if (needsInstall()) return setState("install");
-        const s = await currentPushState();
-        if (cancelled) return;
-        setState(s === "unsupported" ? "hidden" : s);
-      } catch {
-        if (!cancelled) setState("hidden");
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  if (state === "loading" || state === "hidden") return null;
-
-  async function toggle() {
-    setBusy(true);
-    try {
-      const next = state === "on" ? await disablePush() : await enablePush();
-      setState(next === "unsupported" ? "install" : next);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  const subtitle =
-    state === "on"
-      ? "On — a nudge each morning when cards are due."
-      : state === "off"
-        ? "Get a morning nudge when cards are due."
-        : state === "denied"
-          ? "Blocked. Enable notifications for this site in your browser settings."
-          : "On iPhone: tap Share → Add to Home Screen, then open the app here to enable.";
-
-  return (
-    <div class="mt-4 flex items-center justify-between gap-4 rounded-2xl border border-slate-200 px-5 py-4">
-      <div>
-        <p class="font-medium text-slate-900">Daily reminder</p>
-        <p class="mt-0.5 text-sm text-slate-500">{subtitle}</p>
-      </div>
-      {(state === "on" || state === "off") && (
-        <button
-          onClick={toggle}
-          disabled={busy}
-          class={`shrink-0 rounded-xl px-4 py-2 text-sm font-medium transition disabled:opacity-50 ${
-            state === "on"
-              ? "border border-slate-300 text-slate-700 hover:bg-slate-50"
-              : "bg-slate-900 text-white hover:bg-slate-700"
-          }`}
-        >
-          {busy ? "…" : state === "on" ? "Turn off" : "Turn on"}
-        </button>
-      )}
     </div>
   );
 }

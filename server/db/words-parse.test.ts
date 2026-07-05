@@ -44,6 +44,66 @@ test("extractAnswer reduces a verb to its infinitive", () => {
   assert.equal(extractAnswer("haben, hat, hatte, hat gehabt"), "haben");
 });
 
+test("extractAnswer strips parenthetical declension endings", () => {
+  // "(r, s)" is a comma-containing paren group — must be dropped before the comma
+  // split, else it broke to "andere (r" (the reported bug).
+  assert.equal(extractAnswer("andere (r, s)"), "andere");
+  assert.equal(extractAnswer("jede (r, s)"), "jede");
+  assert.equal(extractAnswer("final (er, e, es)"), "final");
+});
+
+test("extractAnswer strips an abbreviation's expansion in parens", () => {
+  assert.equal(extractAnswer("USA (Vereinigte Staaten von Amerika)"), "USA");
+  // The expansion itself contains a comma — previously broke to "DNA (DNS".
+  assert.equal(extractAnswer("DNA (DNS, Desoxyribonukleinsäure)"), "DNA");
+});
+
+test("extractAnswer strips the reflexive marker and principal parts", () => {
+  assert.equal(extractAnswer("befinden (sich), befindet, befand, hat befunden"), "befinden");
+});
+
+test("parseNote gives reflexive verbs a 'sich' citation form + bare alt", () => {
+  const w = parseNote({
+    rank: "464",
+    word: "befinden (sich), befindet, befand, hat befunden",
+    pos1: "verb",
+    def1: "to be",
+    de1: "Wo befindet sich der Bahnhof?",
+    en1: "Where is the train station?",
+  });
+  assert.equal(w.answer, "sich befinden");
+  assert.deepEqual(w.answerAlts, ["befinden"]);
+  assert.equal(w.partOfSpeech, "verb");
+});
+
+test("parseNote cleans a declined pronoun/adjective headword", () => {
+  const w = parseNote({
+    rank: "59",
+    word: "andere (r, s)",
+    pos1: "pron",
+    def1: "other",
+    de1: "Das ist eine andere Frage.",
+    en1: "That is another question.",
+  });
+  assert.equal(w.answer, "andere");
+  assert.deepEqual(w.answerAlts, []);
+  assert.equal(w.partOfSpeech, "pronoun");
+});
+
+test("parseNote cleans an abbreviation headword (comma inside the paren)", () => {
+  const w = parseNote({
+    rank: "1777",
+    word: "DNA (DNS, Desoxyribonukleinsäure)",
+    pos1: "die",
+    def1: "DNA, deoxyribonucleic acid",
+    de1: "Die DNA trägt die Erbinformation.",
+    en1: "DNA carries the genetic information.",
+  });
+  assert.equal(w.answer, "DNA");
+  assert.equal(w.article, "die");
+  assert.equal(w.partOfSpeech, "noun");
+});
+
 test("parseNote maps a full noun note (sense 1)", () => {
   const w = parseNote({
     rank: "53",

@@ -105,24 +105,41 @@ export function parsePos(pos: string): {
   return { article: null, partOfSpeech: POS_LABELS[cleaned] ?? cleaned ?? null };
 }
 
+// Matches the reflexive marker some verb headwords carry, e.g. "befinden (sich)".
+const REFLEXIVE = /\(\s*sich\s*\)/i;
+
 /**
- * Reduce a German headword to the bare answer the learner types. Strips a leading
- * article ("das Jahr, -e" → "Jahr, -e") then takes the first comma-separated form,
- * which drops the plural marker on nouns ("Jahr, -e" → "Jahr") and the principal
- * parts on verbs ("sein, ist, war, ist gewesen" → "sein").
+ * Reduce a German headword to the bare answer the learner types.
+ *
+ * Parenthetical groups in the headword are always *supplementary* — declension
+ * endings ("andere (r, s)"), abbreviation expansions ("USA (Vereinigte Staaten …)",
+ * "DNA (DNS, Desoxyribonukleinsäure)"), or a reflexive marker ("befinden (sich), …").
+ * They are never part of the word being typed, and they may themselves contain commas,
+ * so we strip them FIRST — before the comma-split, which would otherwise break mid-paren
+ * (the "andere (r" / "DNA (DNS" bug).
+ *
+ * Then we strip a leading article ("das Jahr, -e" → "Jahr, -e") and take the first
+ * comma-separated form, which drops the plural marker on nouns ("Jahr, -e" → "Jahr")
+ * and the principal parts on verbs ("sein, ist, war, ist gewesen" → "sein").
  */
 export function extractAnswer(word: string): string {
-  const bare = word.replace(/^(der|die|das)\s+/i, "");
-  return bare.split(",")[0].trim();
+  const noParen = word.replace(/\s*\([^)]*\)/g, "");
+  const bare = noParen.replace(/^(der|die|das)\s+/i, "");
+  return bare.split(",")[0].replace(/\s+/g, " ").trim();
 }
 
 /** Turn one raw Anki note into a clean, `cards`-shaped word (sense 1 only). */
 export function parseNote(raw: RawNote): ParsedWord {
+  const word = cleanHtml(raw.word);
   const { article, partOfSpeech } = parsePos(cleanHtml(raw.pos1));
+  const bare = extractAnswer(word);
+  // Reflexive verbs get their canonical "sich <verb>" citation form as the answer,
+  // with the bare infinitive kept as an accepted alternative so either passes.
+  const reflexive = partOfSpeech === "verb" && REFLEXIVE.test(word);
   return {
     prompt: cleanHtml(raw.def1),
-    answer: extractAnswer(cleanHtml(raw.word)),
-    answerAlts: [],
+    answer: reflexive ? `sich ${bare}` : bare,
+    answerAlts: reflexive ? [bare] : [],
     article,
     partOfSpeech,
     notes: null,

@@ -153,7 +153,7 @@ the route/tool glue isn't.
   whichever pool still has cards. Within a pool, order is `cards.frequency_rank`
   (stock) or `createdAt` (own).
 - **Daily reminders = Web Push, no server cron.** Cloud Run scales to zero, so the
-  `.github/workflows/reminders.yml` schedule (06:00 UTC = 08:00 CEST) POSTs
+  `.github/workflows/reminders.yml` schedule (16:00 UTC = 18:00 CEST) POSTs
   `/api/push/send-reminders` daily; the server computes who has cards/verbs due and
   pushes only to them (never nags on an empty day). Needs three secrets
   (`VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `CRON_SECRET`) — **the feature is a no-op

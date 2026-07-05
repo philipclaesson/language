@@ -112,7 +112,7 @@ push the image to Artifact Registry, and deploy a new revision.
 
 Opt-in push notification each morning when a user has cards/verbs due. No always-on
 server: a **GitHub Actions schedule** (`.github/workflows/reminders.yml`, `cron
-"0 6 * * *"` = 08:00 CEST / 07:00 CET; GitHub cron is UTC and can lag a few minutes)
+"0 16 * * *"` = 18:00 CEST / 17:00 CET; GitHub cron is UTC and can lag a few minutes)
 POSTs `/api/push/send-reminders`, which wakes Cloud Run, computes each subscribed
 user's pending set, and pushes only to those with work left (never nags on an empty
 day). Dead subscriptions (404/410) are pruned at send time.

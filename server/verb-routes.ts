@@ -129,12 +129,14 @@ function sessionVerbOf(r: {
   infinitive: string;
   english: string;
   regularity: string;
+  stability: number | null;
 }): SessionVerb {
   return {
     id: r.id,
     infinitive: r.infinitive,
     english: r.english,
     regularity: r.regularity as VerbRegularity,
+    tier: tierFor(r.stability),
   };
 }
 

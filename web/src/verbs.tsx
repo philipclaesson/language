@@ -11,7 +11,7 @@ import type {
 } from "../../shared/types";
 import { EXTRA_NEW, EXTRA_PRACTICE, VERB_FORMS, VERB_FORM_LABELS } from "../../shared/types";
 import { getVerbExtra, getVerbList, getVerbProgress, getVerbToday, postVerbReview } from "./api";
-import { ExtraButtons, extraTypeOf, type ReviewMode } from "./review";
+import { ExtraButtons, extraTypeOf, TierChip, type ReviewMode } from "./review";
 import { TIERS, TIER_BY_KEY } from "./tiers";
 
 const emptyConj = (): Conjugation => ({ ich: "", du: "", er: "", wir: "", ihr: "", sie: "" });
@@ -96,7 +96,7 @@ export function VerbsHome({
           </div>
           {today && today.bonusToday > 0 && (
             <p class="mt-2 text-sm text-slate-400">
-              +{today.bonusToday} bonus {today.bonusToday === 1 ? "verb" : "verbs"} today ✨
+              +{today.bonusToday} extra {today.bonusToday === 1 ? "verb" : "verbs"} today ✨
             </p>
           )}
           {canReview && (
@@ -547,6 +547,7 @@ export function VerbReview({
 
         <div class="flex items-center justify-center gap-2">
           {current && <RegularityTag regularity={current.regularity} />}
+          {current && <TierChip tier={current.tier} />}
         </div>
         <h2 class="mt-2 text-center text-3xl font-semibold tracking-tight text-slate-900">
           {current?.infinitive}

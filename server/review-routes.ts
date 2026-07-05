@@ -13,7 +13,7 @@ import {
   missesPool,
   type CardToday,
 } from "./srs/day";
-import { summarizeProgress } from "./srs/tiers";
+import { summarizeProgress, tierFor } from "./srs/tiers";
 import { requireAuth, type AppEnv } from "./auth";
 import type {
   ExtraResponse,
@@ -161,7 +161,13 @@ reviewRoutes.get("/session/today", async (c) => {
   const pending = shuffle(
     plan.pendingIds.map((id) => {
       const r = byId.get(id)!;
-      return { id: r.id, prompt: r.prompt, partOfSpeech: r.partOfSpeech, exampleEn: r.exampleEn };
+      return {
+        id: r.id,
+        prompt: r.prompt,
+        partOfSpeech: r.partOfSpeech,
+        exampleEn: r.exampleEn,
+        tier: tierFor(r.stability),
+      };
     }),
   );
 
@@ -221,7 +227,13 @@ reviewRoutes.get("/session/extra", async (c) => {
   const byId = new Map(cardRows.map((r) => [r.id, r]));
   const cardsOut: SessionCard[] = ids.map((id) => {
     const r = byId.get(id)!;
-    return { id: r.id, prompt: r.prompt, partOfSpeech: r.partOfSpeech, exampleEn: r.exampleEn };
+    return {
+      id: r.id,
+      prompt: r.prompt,
+      partOfSpeech: r.partOfSpeech,
+      exampleEn: r.exampleEn,
+      tier: tierFor(r.stability),
+    };
   });
 
   const body: ExtraResponse = { cards: cardsOut };

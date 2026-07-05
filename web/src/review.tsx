@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "preact/hooks";
-import type { ExtraType, ReviewResult, SessionCard } from "../../shared/types";
+import type { ExtraType, MasteryTier, ReviewResult, SessionCard } from "../../shared/types";
 import { EXTRA_NEW, EXTRA_PRACTICE } from "../../shared/types";
 import { getExtra, getToday, postReview } from "./api";
+import { TIER_BY_KEY } from "./tiers";
 
 // `daily`    = the required daily set (due + new), hammer-until-correct.
 // `learn`    = bonus: extra fresh cards, hammer-until-correct (you're learning them).
@@ -317,9 +318,12 @@ export function Review({
         )}
         {isBonus && <div class="mb-6" />}
 
-        <p class="text-center text-sm uppercase tracking-wide text-slate-400">
-          {current?.partOfSpeech ?? "translate"}
-        </p>
+        <div class="flex items-center justify-center gap-2">
+          <span class="text-sm uppercase tracking-wide text-slate-400">
+            {current?.partOfSpeech ?? "translate"}
+          </span>
+          {current && <TierChip tier={current.tier} />}
+        </div>
         <h2 class="mt-2 text-center text-3xl font-semibold tracking-tight text-slate-900">
           {current?.prompt}
         </h2>
@@ -420,6 +424,14 @@ export function ExtraButtons({
       )}
     </div>
   );
+}
+
+// A mastery-tier dot shown in the review header, so you know how well you know the
+// current card at a glance. Just the colour (label is the hover tooltip) to keep the
+// drilling view uncluttered. Colours match the dashboard (tiers.ts).
+export function TierChip({ tier }: { tier: MasteryTier }) {
+  const t = TIER_BY_KEY[tier];
+  return <span class={`h-2.5 w-2.5 rounded-full ${t.dot}`} title={t.label} />;
 }
 
 function BackButton({ onDone, label }: { onDone: () => void; label: string }) {

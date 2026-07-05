@@ -22,6 +22,9 @@ export type SessionCard = {
   // prompts are ambiguous — "well" → wohl). Safe pre-answer: it's English and never
   // reveals the German answer or its article. Null for cards without an example.
   exampleEn: string | null;
+  // Stability-derived mastery tier (New/Learning/Familiar/Mastered). Safe pre-answer:
+  // it's memory metadata, not the answer. Shown as a small dot in the review header.
+  tier: MasteryTier;
 };
 
 export type ReviewRequest = {
@@ -162,6 +165,8 @@ export type SessionVerb = {
   infinitive: string; // "gehen"
   english: string; // "to go"
   regularity: VerbRegularity;
+  // Mastery tier (see SessionCard.tier). Safe pre-answer — not the conjugated forms.
+  tier: MasteryTier;
 };
 
 export type VerbReviewRequest = {

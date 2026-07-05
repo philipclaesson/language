@@ -40,7 +40,7 @@ function shuffle<T>(arr: T[]): T[] {
 // Every owned card + this user's schedule state (left join → null = unstudied),
 // in new-card introduction order (most-frequent first; personal cards before the
 // corpus; createdAt breaks ties). Shared by /session/today and /session/extra.
-function loadCardsWithState(userId: string) {
+export function loadCardsWithState(userId: string) {
   return db
     .select({
       id: cards.id,
@@ -68,7 +68,7 @@ function loadCardsWithState(userId: string) {
 // are NON-BONUS only, so bonus work can't expand the required set / un-complete the
 // day (EXTRA_WORK.md). `reviewedBefore` counts ALL prior reviews — a card learned
 // as bonus on an earlier day is a returning card, not a fresh introduction.
-async function todayReviewSets(userId: string, dayStart: Date) {
+export async function todayReviewSets(userId: string, dayStart: Date) {
   const todays = await db
     .select({
       cardId: reviews.cardId,

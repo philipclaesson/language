@@ -16,6 +16,8 @@ import type {
   FreundSuggestedCard,
   MeResponse,
   ProgressResponse,
+  PushConfigResponse,
+  PushSubscriptionInput,
   ReviewRequest,
   ReviewResult,
   StatsResponse,
@@ -113,4 +115,22 @@ export function postFreundReview(messages: FreundMessage[]) {
 export function postFreundCards(cards: FreundSuggestedCard[]) {
   const req: FreundSaveRequest = { cards };
   return api<FreundSaveResponse>("/freund/cards", { method: "POST", body: JSON.stringify(req) });
+}
+
+export function getPushConfig() {
+  return api<PushConfigResponse>("/push/config");
+}
+
+export function subscribePush(sub: PushSubscriptionInput) {
+  return api<{ ok: boolean }>("/push/subscribe", {
+    method: "POST",
+    body: JSON.stringify(sub),
+  });
+}
+
+export function unsubscribePush(endpoint: string) {
+  return api<{ ok: boolean }>("/push/unsubscribe", {
+    method: "POST",
+    body: JSON.stringify({ endpoint }),
+  });
 }

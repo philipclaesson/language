@@ -3,8 +3,9 @@
 Plain-markdown record of everything we provisioned (no IaC). Update this file
 when infra changes. Secret *values* are never stored here — only names.
 
-Last updated: 2026-07-02 (added the global frequency word corpus: nullable
-`decks.owner_id` + `cards.frequency_rank`, seeded via a data migration).
+Last updated: 2026-07-05 (added Web Push daily reminders: `push_subscriptions`
+table, `VAPID_*`/`CRON_SECRET` secrets, and the `reminders.yml` scheduled workflow —
+see **Web Push** below).
 
 ## Summary
 
@@ -32,11 +33,13 @@ Last updated: 2026-07-02 (added the global frequency word corpus: nullable
   gates everything itself via Google login + the email allowlist.
 - Runtime service account: the default compute SA
   `639264903663-compute@developer.gserviceaccount.com`.
-- **Env var:** `BASE_URL=https://language.levanto.dev`
+- **Env var:** `BASE_URL=https://language.levanto.dev`,
+  `VAPID_SUBJECT=mailto:philip.claesson@sanalabs.com`
   (also `NODE_ENV=production`, `PORT=8080` baked into the Docker image).
 - **Secrets** (mounted as env vars, all `:latest`): `DATABASE_URL`,
   `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `SESSION_SECRET`, `ALLOWED_EMAILS`,
-  `ANTHROPIC_API_KEY`.
+  `ANTHROPIC_API_KEY`, `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `CRON_SECRET`
+  (the last three power daily reminders — see **Web Push** below).
 
 ### Secret Manager
 Secrets (values not shown): `DATABASE_URL`, `GOOGLE_CLIENT_ID`,
@@ -105,6 +108,48 @@ push the image to Artifact Registry, and deploy a new revision.
 - App-level allowlist: `ALLOWED_EMAILS` secret (currently the two personal Gmail
   accounts). The Google client secret is the `GOOGLE_CLIENT_SECRET` secret.
 
+## Web Push — daily training reminders
+
+Opt-in push notification each morning when a user has cards/verbs due. No always-on
+server: a **GitHub Actions schedule** (`.github/workflows/reminders.yml`, `cron
+"0 16 * * *"` = 18:00 CEST / 17:00 CET; GitHub cron is UTC and can lag a few minutes)
+POSTs `/api/push/send-reminders`, which wakes Cloud Run, computes each subscribed
+user's pending set, and pushes only to those with work left (never nags on an empty
+day). Dead subscriptions (404/410) are pruned at send time.
+
+**Pieces:** `server/push-routes.ts` (routes) + `server/push/*` (send wrapper, due
+counts, message) + `web/src/push.ts` + `web/public/{sw.js,manifest.webmanifest,
+icon.svg}`. Uses the `web-push` library (VAPID). The whole feature is gated on the
+VAPID pair being present — with it unset, the endpoint returns 503 and the client
+hides the toggle, so local dev / PR CI run fine without any of these.
+
+**One-time setup (required for it to actually send):**
+
+1. **Generate a VAPID pair** (once, reused forever):
+   ```sh
+   npx web-push generate-vapid-keys   # prints publicKey / privateKey (base64url)
+   ```
+2. **Generate a cron secret:** `openssl rand -hex 32`.
+3. **Create the three secrets** in Secret Manager (project `language-499814`):
+   ```sh
+   printf '%s' "<publicKey>"  | gcloud secrets create VAPID_PUBLIC_KEY  --data-file=- --project=language-499814
+   printf '%s' "<privateKey>" | gcloud secrets create VAPID_PRIVATE_KEY --data-file=- --project=language-499814
+   printf '%s' "<cronSecret>" | gcloud secrets create CRON_SECRET       --data-file=- --project=language-499814
+   ```
+   (The runtime SA already has project-wide `secretAccessor`.) They're wired into the
+   deploy's `--set-secrets` in `.github/workflows/deploy.yml`; the next push to main
+   picks them up.
+4. **Add the GitHub repo secret `CRON_SECRET`** (same value as step 2) so the
+   reminders workflow can authenticate: repo → Settings → Secrets and variables →
+   Actions → New repository secret.
+5. **Trigger a test run:** Actions → *Daily reminders* → *Run workflow*. With no
+   subscribers yet it's a no-op; enable the "Daily reminder" toggle in the app first
+   (on iPhone: Share → *Add to Home Screen*, open the installed app, then toggle on —
+   iOS only delivers Web Push to an installed PWA).
+
+**Rotating keys:** add a new secret version and redeploy. Rotating the VAPID pair
+invalidates every existing subscription — users must toggle reminders off/on again.
+
 ## Domain — levanto.dev
 
 - `language.levanto.dev` is the public URL.
@@ -150,6 +195,10 @@ WIF setup (project `language-499814`):
   `GCP_DEPLOY_SA` (the deploy SA email).
 
 Manual CLI deploys still work too (see below) — useful for hotfixes.
+
+A second workflow, `.github/workflows/reminders.yml`, runs on a daily `schedule`
+(and `workflow_dispatch`) and just curls `/api/push/send-reminders` with the
+`CRON_SECRET` repo secret — no GCP auth needed. See **Web Push** above.
 
 ## Common operations
 

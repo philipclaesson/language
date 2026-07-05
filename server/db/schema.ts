@@ -82,6 +82,24 @@ export const reviewState = pgTable(
   (t) => [unique("review_state_user_card").on(t.userId, t.cardId)],
 );
 
+// Web Push subscriptions for the daily training reminder (push-routes.ts). One
+// row per browser/device the user enabled reminders on; `endpoint` is the push
+// service URL and is globally unique (the natural key). A user can have several
+// (phone + laptop). Rows are pruned when the push service reports the sub is gone
+// (404/410) at send time. No owner-scoping subtlety here — always the user's own.
+export const pushSubscriptions = pgTable("push_subscriptions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  endpoint: text("endpoint").notNull().unique(),
+  // The two keys from the browser PushSubscription (`getKey('p256dh')` / `'auth'`),
+  // base64url-encoded — web-push needs both to encrypt the payload.
+  p256dh: text("p256dh").notNull(),
+  auth: text("auth").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 // ---- Verbs mode (VERBS.md) ----
 // A GLOBAL, shared catalog of verbs to drill (no owner) — reference data, ordered
 // by frequency. This departs from the personal-libraries model of decks/cards on

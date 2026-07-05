@@ -10,6 +10,7 @@ import { verbRoutes } from "./verb-routes";
 import { chatRoutes } from "./chat-routes";
 import { freundRoutes } from "./freund-routes";
 import { statsRoutes } from "./stats-routes";
+import { pushRoutes } from "./push-routes";
 
 const app = new Hono<AppEnv>();
 
@@ -17,6 +18,11 @@ const app = new Hono<AppEnv>();
 const api = new Hono<AppEnv>();
 api.route("/auth", authRoutes);
 api.get("/me", requireAuth, (c) => c.json({ user: c.get("user") }));
+// Mounted before the auth-guarded routers below: reviewRoutes/verbRoutes register a
+// `use("*", requireAuth)` catch-all at /*, which would otherwise intercept the
+// public (cron-secret-authed) /push/send-reminders. pushRoutes guards its own
+// user routes inline, so order-first is safe.
+api.route("/", pushRoutes); // /push/config, /push/subscribe, /push/unsubscribe, /push/send-reminders
 api.route("/", reviewRoutes); // /session/today, /reviews, /progress
 api.route("/", deckRoutes); // /decks, /decks/:id
 api.route("/", verbRoutes); // /verbs/session/today, /verbs/reviews, /verbs/progress

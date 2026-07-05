@@ -1,0 +1,24 @@
+name: Daily reminders
+
+# Pokes the app's reminder endpoint once a day; the server decides who has cards
+# due and sends the Web Push (see server/push-routes.ts). Cloud Run scales to
+# zero, so this scheduled curl is what wakes it. Auth is a shared secret.
+#
+# NOTE: GitHub cron is UTC and can be delayed a few minutes under load (it only
+# ever fires late, never early). 16:00 UTC is 18:00 CEST (summer) / 17:00 CET
+# (winter) — the app's timezone is Europe/Berlin. Set to land inside an 18:00–19:00
+# afternoon window; adjust the hour here if you want a different local send time.
+on:
+  schedule:
+    - cron: "0 16 * * *"
+  workflow_dispatch: # lets you fire a reminder manually to test
+
+jobs:
+  remind:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger daily reminders
+        run: |
+          curl -fsS -X POST "https://language.levanto.dev/api/push/send-reminders" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            --retry 4 --retry-delay 5 --retry-all-errors

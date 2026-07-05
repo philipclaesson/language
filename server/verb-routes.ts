@@ -61,7 +61,7 @@ function conjugationOf(v: {
 
 // Whole global verb catalog + this user's schedule state (left join → null =
 // unstudied), in frequency order. Shared by /verbs/session/today and .../extra.
-function loadVerbsWithState(userId: string) {
+export function loadVerbsWithState(userId: string) {
   return db
     .select({
       id: verbs.id,
@@ -84,7 +84,7 @@ function loadVerbsWithState(userId: string) {
 // Verb attempts split around the start of today (mirrors todayReviewSets for
 // words). `reviewedTodayAny` = bonus + non-bonus (pool exclusion); the required-set
 // signals are non-bonus only; `reviewedBefore` is all prior reviews. See EXTRA_WORK.md.
-async function todayVerbReviewSets(userId: string, dayStart: Date) {
+export async function todayVerbReviewSets(userId: string, dayStart: Date) {
   const todays = await db
     .select({
       verbId: verbReviews.verbId,

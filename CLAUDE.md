@@ -22,6 +22,10 @@ later without touching the core loop.
   most-frequent-first. Each card carries an **example sentence** (English gloss shown
   up front for context; German sentence revealed on a miss). Imported from an Anki
   deck; reaches prod via data migrations.
+  **Freund** (FREUND.md): a conversation partner — chat in German, get corrected
+  inline (the correction replaces your message via a server-computed word diff), and
+  bank your misses as cards in a single shared "Freund cards" deck. Per-message turn
+  on Haiku; end-of-convo card review on Opus. Additive like the tutor; no schema change.
 - **Live:** https://language.levanto.dev — Cloud Run, **auto-deploys on push to main**.
 - **Next:** Phase 3 (deck management UI), Phase 4 (polish), more AI modules
   (news, voice). See PLAN.md §12.
@@ -33,11 +37,12 @@ TypeScript everywhere. One Cloud Run service serves the SPA and the API.
 - `web/` — Preact + Vite + Tailwind SPA.
   - `app.tsx` auth gating + routing · `review.tsx` the review loop ·
     `decks.tsx` deck list + detail · `chat.tsx` the AI tutor chat ·
-    `verbs.tsx` verbs dashboard + six-field conjugation loop · `footer.tsx` the
-    bottom tab bar (Tutor · Words · Verbs) · `api.ts` typed fetch client ·
-    `router.ts` tiny History-API router (no dep).
-  - Routes: `/` dashboard, `/review`, `/chat`, `/decks/:id`, `/verbs`,
-    `/verbs/review`. The tab bar shows on the tab roots (`/`, `/chat`, `/verbs`);
+    `verbs.tsx` verbs dashboard + six-field conjugation loop ·
+    `freund.tsx` the Freund conversation partner (chat + end-of-convo card review) ·
+    `footer.tsx` the bottom tab bar (Tutor · Freund · Words · Verbs · Stats) ·
+    `api.ts` typed fetch client · `router.ts` tiny History-API router (no dep).
+  - Routes: `/` dashboard, `/review`, `/chat`, `/freund`, `/decks/:id`, `/verbs`,
+    `/verbs/review`. The tab bar shows on the tab roots (`/`, `/chat`, `/freund`, `/verbs`);
     the review loops render full-screen without it. The server serves `index.html`
     for any non-API path, so deep links / refresh / back all work.
 - `server/` — Hono on Node.
@@ -46,7 +51,11 @@ TypeScript everywhere. One Cloud Run service serves the SPA and the API.
     `deck-routes.ts` `/decks` + `/decks/:id` · `verb-routes.ts` `/verbs/session/today`
     + `/verbs/reviews` + `/verbs/progress` · `chat-routes.ts` `/chat` (AI tutor:
     Claude tool-use loop + deck/card tools) · `chat/cards.ts` pure card-input
-    normalizer (+ `cards.test.ts`) · `srs/check.ts` pure answer matcher
+    normalizer (+ `cards.test.ts`) · `freund-routes.ts` `/freund/*` (conversation
+    partner: per-message correction on Haiku, end-of-convo card review on Opus) ·
+    `freund/agent.ts` models + tool schemas + prompts · `freund/diff.ts` pure
+    word-diff (+ `diff.test.ts`) · `freund/seed.ts` today's-vocab seeder ·
+    `freund/eval.ts` opt-in prompt eval · `srs/check.ts` pure answer matcher
     (+ `check.test.ts`) · `srs/scheduler.ts` FSRS wrapper · `srs/day.ts` daily-loop
     logic · `verbs/check.ts` conjugation matcher + `verbs/plan.ts` verb day-planner
     (both pure, tested) · `db/schema.ts` Drizzle schema · `db/seed.ts` starter deck ·
@@ -67,6 +76,8 @@ TypeScript everywhere. One Cloud Run service serves the SPA and the API.
 - `npm run dev` — Vite (:5173) + Hono (:8787) with hot reload. Open :5173.
 - `npm run check` — typecheck + test + build. **Run before every commit.**
 - `npm test` — `node:test` unit tests.
+- `npm run eval:freund` — opt-in, network-hitting eval of Freund's correction
+  behavior (coverage guard against dropped content). **Not** part of `npm run check`.
 - `npm run db:generate` / `npm run db:migrate` — after editing `schema.ts`.
   `db:migrate` targets whatever `DATABASE_URL` is in `.env` — the Neon **dev**
   branch locally. **Prod migrations run in CI on push to main** (the `migrate`
@@ -143,6 +154,16 @@ the route/tool glue isn't.
   `pickFresh`, keyed off `CardToday.stock` = an ownerless deck), spilling into
   whichever pool still has cards. Within a pool, order is `cards.frequency_rank`
   (stock) or `createdAt` (own).
+- **Freund** seeds its system prompt server-side with today's words/verbs *including*
+  their German answers (`freund/seed.ts`) — fine because it never leaves the server
+  (unlike `/session/today`, which must never send answers). Two model-shaped rules:
+  the correction must rewrite the **whole** message (the model returns the full
+  corrected text and the server diffs it — a past "one sentence" prompt dropped the
+  correct sentences; guarded now by `npm run eval:freund`), and the end-of-convo
+  review **flattens the transcript into one user message** because the 4.x+ models
+  reject a request ending on an assistant turn (it reads as a prefill). Both AI calls
+  use a **forced tool call**, not structured outputs; models are pinned in
+  `freund/agent.ts` (`CHAT_MODEL` Haiku, `REVIEW_MODEL` Opus).
 - Cloud Run is in **europe-west1** (domain mappings aren't supported in west3).
 - The `pg` SSL deprecation warning in logs is harmless.
 - `Date.now()`/`Math.random()` are fine in server code (the ban is only in

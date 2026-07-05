@@ -4,6 +4,7 @@ import { getMe, getToday, getProgress, logout } from "./api";
 import { ExtraButtons, Review, type ReviewMode } from "./review";
 import { DeckDetailView, DeckList } from "./decks";
 import { ChatTutor } from "./chat";
+import { Freund } from "./freund";
 import { VerbsHome, VerbReview, VerbAllView } from "./verbs";
 import { Stats } from "./stats";
 import { TabBar } from "./footer";
@@ -105,6 +106,8 @@ function Home({ user }: { user: SessionUser }) {
   const content =
     path === "/chat" ? (
       <ChatTutor />
+    ) : path === "/freund" ? (
+      <Freund />
     ) : path === "/stats" ? (
       <Stats />
     ) : path === "/verbs" ? (

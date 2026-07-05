@@ -9,6 +9,7 @@ type Tab = { label: string; icon: string; path: string; isActive: (p: string) =>
 
 const TABS: Tab[] = [
   { label: "Tutor", icon: "💬", path: "/chat", isActive: (p) => p === "/chat" },
+  { label: "Freund", icon: "🗣️", path: "/freund", isActive: (p) => p.startsWith("/freund") },
   // Words owns the home dashboard, its review loop, and deck screens.
   {
     label: "Words",

@@ -6,6 +6,14 @@ import type {
   DeckSummary,
   ExtraResponse,
   ExtraType,
+  FreundMessage,
+  FreundRequest,
+  FreundResponse,
+  FreundReviewRequest,
+  FreundReviewResponse,
+  FreundSaveRequest,
+  FreundSaveResponse,
+  FreundSuggestedCard,
   MeResponse,
   ProgressResponse,
   ReviewRequest,
@@ -90,4 +98,19 @@ export function getVerbExtra(type: ExtraType) {
 export function postChat(messages: ChatMessage[]) {
   const req: ChatRequest = { messages };
   return api<ChatResponse>("/chat", { method: "POST", body: JSON.stringify(req) });
+}
+
+export function postFreundMessage(messages: FreundMessage[]) {
+  const req: FreundRequest = { messages };
+  return api<FreundResponse>("/freund/message", { method: "POST", body: JSON.stringify(req) });
+}
+
+export function postFreundReview(messages: FreundMessage[]) {
+  const req: FreundReviewRequest = { messages };
+  return api<FreundReviewResponse>("/freund/review", { method: "POST", body: JSON.stringify(req) });
+}
+
+export function postFreundCards(cards: FreundSuggestedCard[]) {
+  const req: FreundSaveRequest = { cards };
+  return api<FreundSaveResponse>("/freund/cards", { method: "POST", body: JSON.stringify(req) });
 }

@@ -242,3 +242,54 @@ export type ChatResponse = {
   reply: string;
   actions: ChatAction[];
 };
+
+// ---- Freund: German conversation partner (FREUND.md) ----
+
+// One turn of a Freund conversation. Like the tutor chat, the client holds the
+// whole history and replays it each request; the server is stateless. `content`
+// is the user's message for a user turn, or Freund's German reply for an
+// assistant turn — the corrections/explanations are display-only metadata and are
+// NOT part of the replayed history (the model re-derives them from the messages).
+export type FreundRole = "user" | "assistant";
+export type FreundMessage = { role: FreundRole; content: string };
+
+// A word-level diff of the learner's last message against its corrected form,
+// computed server-side (server/freund/diff.ts) so the model never has to emit diff
+// markup. Rendered as a single line: `keep` normal, `del` struck through, `ins`
+// emphasized. Segments are word-runs; the client joins them with single spaces.
+export type CorrectionOp = "keep" | "del" | "ins";
+export type CorrectionSegment = { text: string; op: CorrectionOp };
+
+export type FreundRequest = { messages: FreundMessage[] };
+
+// Freund's response to one user message: a German reply (always), an optional
+// English note on mistakes (null → no issues, don't render the bubble), and an
+// optional correction diff (null → the message was already correct / not German).
+export type FreundResponse = {
+  reply: string;
+  explanation: string | null;
+  correction: CorrectionSegment[] | null;
+};
+
+// A flashcard Freund proposes at the end of a conversation, already normalized to
+// the card convention (bare noun in `answer`, gender in `article`). The learner
+// accepts/rejects these; accepted ones are POSTed back to be saved. Mirrors the
+// tutor's card fields.
+export type FreundSuggestedCard = {
+  prompt: string; // English
+  answer: string; // bare German (compose with article for nouns)
+  article: string | null;
+  partOfSpeech: string | null;
+  answerAlts: string[];
+  notes: string | null;
+  exampleEn: string | null;
+  exampleDe: string | null;
+};
+
+export type FreundReviewRequest = { messages: FreundMessage[] };
+export type FreundReviewResponse = { cards: FreundSuggestedCard[] };
+
+// Save the learner's accepted subset into the single, shared "Freund cards" deck
+// (created on first use; reused across all conversations).
+export type FreundSaveRequest = { cards: FreundSuggestedCard[] };
+export type FreundSaveResponse = { added: number; deckId: string; deckName: string };

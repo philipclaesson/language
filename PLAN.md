@@ -36,6 +36,17 @@
   (`srs/day.ts` `pickFresh`), stock ordered by `cards.frequency_rank`.
   Seeded by data migration `0005_seed_words.sql`, regenerable via
   `scripts/gen-words.ts`; cleaning rules in `db/words-parse.ts` (tested).
+- ✅ **Freund (conversation partner) — built:** a separate tab (`/freund`) where you
+  chat in German and get gently corrected as you go. Each message returns three
+  things (one forced-tool call on **Haiku 4.5**): a German reply that keeps the
+  conversation going, an optional English note on grammar/gender/word-order mistakes,
+  and the corrected message — the correction **replaces your message in place** via a
+  server-computed word diff (`server/freund/diff.ts`, pure + tested). The system
+  prompt is seeded server-side with today's words/verbs so Freund reinforces them.
+  "End conversation" runs an **Opus 4.8** review of the transcript and proposes cards
+  for what you missed; you accept/reject them into a single shared **"Freund cards"**
+  deck (`source='freund'`). Additive like the tutor — no schema change, no new tables.
+  Stateless (client replays the history). Full spec in **FREUND.md**.
 - ⏭️ **Next:** Phase 3 (deck UI) → Phase 4 (polish) → more AI modules.
   (Bonus work — "learn more" / "practice" — and a **Stats** tab with streaks +
   activity heatmap both **shipped 2026-07-02**; see **EXTRA_WORK.md**.)
@@ -544,4 +555,11 @@ chat → AI modules → news → voice.
     Cards drill the six present-tense forms at once and pass only if all six match.
     New verbs introduced 5/day at a fixed 3-irregular : 2-regular mix (irregular =
     present-tense deviation). Reuses the §5a daily loop wholesale. See VERBS.md.
+13. **Freund → correction diff computed, not modelled.** The chat model returns only
+    the corrected full message; the server computes the word-level diff. The
+    correction must reproduce the *whole* message (an early "one sentence" prompt made
+    it drop correct sentences — guarded now by `npm run eval:freund`, an opt-in
+    coverage eval kept out of `npm test`). Both AI calls use a forced tool call, not
+    structured outputs. The review call flattens the transcript into one user message
+    (the 4.x+ models reject a conversation ending on an assistant turn). See FREUND.md.
 ```

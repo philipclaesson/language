@@ -242,3 +242,23 @@ export type ChatResponse = {
   reply: string;
   actions: ChatAction[];
 };
+
+// ---- Web Push (daily training reminder) ----
+
+// Told to the client so it can decide whether to offer the toggle. `publicKey` is
+// the VAPID application server key the browser needs to create a subscription;
+// null (and enabled=false) when the server has no VAPID pair configured.
+export type PushConfigResponse = {
+  enabled: boolean;
+  publicKey: string | null;
+};
+
+// A browser PushSubscription serialized for the server (the shape of
+// `subscription.toJSON()`), sent to POST /push/subscribe.
+export type PushSubscriptionInput = {
+  endpoint: string;
+  keys: {
+    p256dh: string;
+    auth: string;
+  };
+};

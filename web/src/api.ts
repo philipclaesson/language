@@ -8,6 +8,8 @@ import type {
   ExtraType,
   MeResponse,
   ProgressResponse,
+  PushConfigResponse,
+  PushSubscriptionInput,
   ReviewRequest,
   ReviewResult,
   StatsResponse,
@@ -90,4 +92,22 @@ export function getVerbExtra(type: ExtraType) {
 export function postChat(messages: ChatMessage[]) {
   const req: ChatRequest = { messages };
   return api<ChatResponse>("/chat", { method: "POST", body: JSON.stringify(req) });
+}
+
+export function getPushConfig() {
+  return api<PushConfigResponse>("/push/config");
+}
+
+export function subscribePush(sub: PushSubscriptionInput) {
+  return api<{ ok: boolean }>("/push/subscribe", {
+    method: "POST",
+    body: JSON.stringify(sub),
+  });
+}
+
+export function unsubscribePush(endpoint: string) {
+  return api<{ ok: boolean }>("/push/unsubscribe", {
+    method: "POST",
+    body: JSON.stringify({ endpoint }),
+  });
 }

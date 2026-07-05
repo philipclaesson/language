@@ -21,7 +21,9 @@ later without touching the core loop.
   *global* (ownerless) deck that flows through the normal Words loop, introduced
   most-frequent-first. Each card carries an **example sentence** (English gloss shown
   up front for context; German sentence revealed on a miss). Imported from an Anki
-  deck; reaches prod via data migrations.
+  deck; reaches prod via data migrations. **Daily reminders:** opt-in Web Push
+  ("Daily reminder" toggle on the dashboard) fired by a GitHub Actions cron that
+  nudges you each morning only when you have cards/verbs due (see Gotchas + INFRA.md).
 - **Live:** https://language.levanto.dev — Cloud Run, **auto-deploys on push to main**.
 - **Next:** Phase 3 (deck management UI), Phase 4 (polish), more AI modules
   (news, voice). See PLAN.md §12.
@@ -35,7 +37,10 @@ TypeScript everywhere. One Cloud Run service serves the SPA and the API.
     `decks.tsx` deck list + detail · `chat.tsx` the AI tutor chat ·
     `verbs.tsx` verbs dashboard + six-field conjugation loop · `footer.tsx` the
     bottom tab bar (Tutor · Words · Verbs) · `api.ts` typed fetch client ·
-    `router.ts` tiny History-API router (no dep).
+    `router.ts` tiny History-API router (no dep) · `push.ts` Web Push client
+    (service-worker registration + subscribe/unsubscribe). `public/sw.js` the push
+    service worker; `public/manifest.webmanifest` + `public/icon.svg` the PWA
+    manifest/icon (needed for iOS "Add to Home Screen").
   - Routes: `/` dashboard, `/review`, `/chat`, `/decks/:id`, `/verbs`,
     `/verbs/review`. The tab bar shows on the tab roots (`/`, `/chat`, `/verbs`);
     the review loops render full-screen without it. The server serves `index.html`
@@ -52,7 +57,11 @@ TypeScript everywhere. One Cloud Run service serves the SPA and the API.
     (both pure, tested) · `db/schema.ts` Drizzle schema · `db/seed.ts` starter deck ·
     `db/verbs.ts` the global verb catalog · `db/words.ts` loads the global word
     corpus + `db/words-parse.ts` pure Anki-note cleaner (+ `words-parse.test.ts`) ·
-    `env.ts` env validation.
+    `push-routes.ts` Web Push (`/push/config` + `/push/subscribe` +
+    `/push/unsubscribe` for users; `/push/send-reminders` for the daily cron) ·
+    `push/send.ts` web-push wrapper · `push/reminders.ts` per-user "due today"
+    counts (reuses the session-route helpers) · `push/message.ts` pure reminder
+    copy (+ `message.test.ts`) · `env.ts` env validation.
 - `shared/types.ts` — the client/server contract. **Change types here first.**
 - `drizzle/` — committed SQL migrations.
 - `scripts/gen-words.ts` — one-off, re-runnable generator: reads the source Anki
@@ -143,6 +152,18 @@ the route/tool glue isn't.
   `pickFresh`, keyed off `CardToday.stock` = an ownerless deck), spilling into
   whichever pool still has cards. Within a pool, order is `cards.frequency_rank`
   (stock) or `createdAt` (own).
+- **Daily reminders = Web Push, no server cron.** Cloud Run scales to zero, so the
+  `.github/workflows/reminders.yml` schedule (06:00 UTC = 08:00 CEST) POSTs
+  `/api/push/send-reminders` daily; the server computes who has cards/verbs due and
+  pushes only to them (never nags on an empty day). Needs three secrets
+  (`VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `CRON_SECRET`) — **the feature is a no-op
+  until they're set** (`pushEnabled()` gates it, and the client hides the toggle).
+  See INFRA.md > Web Push. iOS only delivers push to a home-screen-installed PWA
+  (hence the manifest); the toggle shows install guidance there.
+- **`pushRoutes` is mounted before `reviewRoutes`/`verbRoutes` in `index.ts`** on
+  purpose: those routers register a `use("*", requireAuth)` catch-all at `/*`, which
+  would otherwise 401 the cron-secret-authed (cookie-less) `/push/send-reminders`.
+  A public `/api` route must be mounted ahead of them.
 - Cloud Run is in **europe-west1** (domain mappings aren't supported in west3).
 - The `pg` SSL deprecation warning in logs is harmless.
 - `Date.now()`/`Math.random()` are fine in server code (the ban is only in

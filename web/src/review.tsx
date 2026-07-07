@@ -139,6 +139,9 @@ export function Review({
 
   async function grade() {
     if (!current || phase !== "input" || submitting) return;
+    // Ignore a blank submission (e.g. hitting Enter on an empty field): it isn't a
+    // recall attempt, so it shouldn't be graded as a miss.
+    if (typed.trim() === "") return;
     setSubmitting(true);
     try {
       const r = await postReview({

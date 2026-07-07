@@ -356,6 +356,9 @@ export function VerbReview({
 
   async function grade() {
     if (!current || phase !== "input" || submitting) return;
+    // Ignore a fully-blank submission (e.g. hitting Enter with no forms filled): it
+    // isn't a recall attempt, so it shouldn't be graded as a miss.
+    if (VERB_FORMS.every((f) => typed[f].trim() === "")) return;
     setSubmitting(true);
     try {
       const r = await postVerbReview({

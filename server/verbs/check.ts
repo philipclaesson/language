@@ -1,9 +1,9 @@
 // Verb conjugation matching (VERBS.md). All-or-nothing: a card passes only if all
-// six present-tense forms match. Reuses the exact normalization from srs/check.ts
-// (trim, collapse whitespace, case-fold, umlaut/ß tolerance) so verbs and words
-// judge typing identically.
+// six present-tense forms match. Reuses the shared normalization
+// (shared/normalize.ts: trim, collapse whitespace, case-fold, strip trailing
+// punctuation, umlaut/ß tolerance) so verbs and words judge typing identically.
 
-import { normalize } from "../srs/check";
+import { normalizeAnswer } from "../../shared/normalize";
 import { VERB_FORMS, type Conjugation, type VerbForm } from "../../shared/types";
 
 export type ConjugationCheckOptions = {
@@ -26,8 +26,8 @@ export function checkConjugation(
   const perForm = {} as Record<VerbForm, boolean>;
   let correct = true;
   for (const form of VERB_FORMS) {
-    const want = normalize(expected[form] ?? "", tolerant);
-    const got = normalize(typed[form] ?? "", tolerant);
+    const want = normalizeAnswer(expected[form] ?? "", tolerant);
+    const got = normalizeAnswer(typed[form] ?? "", tolerant);
     // A non-empty match is required; an empty expected form (shouldn't happen for
     // a seeded verb) never counts as correct.
     const ok = got.length > 0 && got === want;

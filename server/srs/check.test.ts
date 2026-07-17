@@ -45,6 +45,12 @@ test("strict mode rejects ue for ü", () => {
   assert.equal(checkAnswer(tuer, "die Tuer", { umlautTolerant: false }).correct, false);
 });
 
+test("trailing period/comma is ignored", () => {
+  assert.equal(checkAnswer(hund, "der Hund.").correct, true);
+  assert.equal(checkAnswer(hund, "der Hund, ").correct, true);
+  assert.equal(checkAnswer(gehen, "gehen.").correct, true);
+});
+
 test("answerAlts are accepted", () => {
   const card = { answer: "Auto", article: "das", partOfSpeech: "noun", answerAlts: ["der Wagen"] };
   assert.equal(checkAnswer(card, "der Wagen").correct, true);

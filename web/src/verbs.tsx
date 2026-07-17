@@ -10,25 +10,12 @@ import type {
   VerbTodayResponse,
 } from "../../shared/types";
 import { EXTRA_NEW, EXTRA_PRACTICE, VERB_FORMS, VERB_FORM_LABELS } from "../../shared/types";
+import { normalizeAnswer } from "../../shared/normalize";
 import { getVerbExtra, getVerbList, getVerbProgress, getVerbToday, postVerbReview } from "./api";
 import { ExtraButtons, extraTypeOf, TierChip, type ReviewMode } from "./review";
 import { TIERS, TIER_BY_KEY } from "./tiers";
 
 const emptyConj = (): Conjugation => ({ ich: "", du: "", er: "", wir: "", ihr: "", sie: "" });
-
-// Client-side normalization mirroring the server's (srs/check.ts) umlaut/ß
-// tolerance, used only to decide when the drill's re-typed forms are correct.
-function norm(s: string): string {
-  return s
-    .normalize("NFC")
-    .trim()
-    .toLowerCase()
-    .replace(/\s+/g, " ")
-    .replace(/ä/g, "ae")
-    .replace(/ö/g, "oe")
-    .replace(/ü/g, "ue")
-    .replace(/ß/g, "ss");
-}
 
 function RegularityTag({ regularity }: { regularity: string }) {
   const irregular = regularity === "irregular";
@@ -391,7 +378,9 @@ export function VerbReview({
   // Drill: continue once every previously-wrong row matches the revealed form.
   function drillSubmit() {
     if (!result) return;
-    const allFixed = editableForms().every((f) => norm(typed[f]) === norm(result.expected[f]));
+    const allFixed = editableForms().every(
+      (f) => normalizeAnswer(typed[f]) === normalizeAnswer(result.expected[f]),
+    );
     if (allFixed) next(false, false); // rotate to back, come again
     else {
       setFlash("red");

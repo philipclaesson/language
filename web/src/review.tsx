@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "preact/hooks";
 import type { ExtraType, MasteryTier, ReviewResult, SessionCard } from "../../shared/types";
 import { EXTRA_NEW, EXTRA_PRACTICE } from "../../shared/types";
+import { normalizeAnswer } from "../../shared/normalize";
 import { getExtra, getToday, postReview } from "./api";
 import { TIER_BY_KEY } from "./tiers";
 
@@ -169,8 +170,11 @@ export function Review({
     }
   }
 
+  // The drill re-type is judged with the same shared normalizer the server uses
+  // to grade the first attempt (case-fold, umlaut/ß tolerance, trailing-punct
+  // strip), so "type it to continue" never rejects an answer the server accepted.
   function matchesExpected(value: string) {
-    return !!result && value.trim() === result.expected.trim();
+    return !!result && normalizeAnswer(value) === normalizeAnswer(result.expected);
   }
 
   function onSubmit(e: Event) {

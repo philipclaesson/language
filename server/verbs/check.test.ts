@@ -49,6 +49,11 @@ test("case and surrounding whitespace ignored", () => {
   assert.equal(checkConjugation(gehen, typed).correct, true);
 });
 
+test("trailing punctuation on a form is ignored", () => {
+  const typed = { ...gehen, ich: "gehe.", sie: "gehen," };
+  assert.equal(checkConjugation(gehen, typed).correct, true);
+});
+
 test("strict mode rejects ae for ä", () => {
   const expected: Conjugation = { ...gehen, du: "gähst" };
   const typed = { ...gehen, du: "gaehst" };

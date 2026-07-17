@@ -73,6 +73,11 @@ TypeScript everywhere. One Cloud Run service serves the SPA and the API.
     counts (reuses the session-route helpers) · `push/message.ts` pure reminder
     copy (+ `message.test.ts`) · `env.ts` env validation.
 - `shared/types.ts` — the client/server contract. **Change types here first.**
+- `shared/normalize.ts` — the single answer normalizer (case-fold, whitespace,
+  umlaut/ß tolerance, trailing-punct strip; + `normalize.test.ts`). Imported by
+  `srs/check.ts`, `verbs/check.ts`, and the client-side drill re-type in
+  `review.tsx`/`verbs.tsx` so **every** answer check — first attempt or re-type,
+  word or verb, client or server — judges typing identically.
 - `drizzle/` — committed SQL migrations.
 - `scripts/gen-words.ts` — one-off, re-runnable generator: reads the source Anki
   `.apkg` ("English-Deutsch (Sorted by Frequency)") and regenerates

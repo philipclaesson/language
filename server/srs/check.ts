@@ -1,6 +1,8 @@
 // German answer matching. This is the highest-bug-risk piece of the app, so it
 // lives in one pure, well-tested function.
 
+import { normalizeAnswer } from "../../shared/normalize";
+
 export type CheckCard = {
   answer: string; // for nouns: the bare noun (e.g. "Hund"); otherwise the full word
   answerAlts?: string[];
@@ -19,19 +21,10 @@ export type CheckResult = {
   expected: string; // full canonical answer shown to the user afterwards
 };
 
-// Exported so the verb conjugation matcher (server/verbs/check.ts) shares the
-// exact same normalization (trim, collapse whitespace, case-fold, umlaut/ß tolerance).
-export function normalize(s: string, tolerant: boolean): string {
-  let t = s.normalize("NFC").trim().toLowerCase().replace(/\s+/g, " ");
-  if (tolerant) {
-    t = t
-      .replace(/ä/g, "ae")
-      .replace(/ö/g, "oe")
-      .replace(/ü/g, "ue")
-      .replace(/ß/g, "ss");
-  }
-  return t;
-}
+// The single normalization implementation lives in shared/normalize.ts, so the
+// server (words + verbs) and the client-side drill re-type all judge typing
+// identically. Aliased here for the local call sites below.
+const normalize = normalizeAnswer;
 
 /** The full canonical answer, with article for nouns: "der Hund". */
 export function fullAnswer(card: CheckCard): string {

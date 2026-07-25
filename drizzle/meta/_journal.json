@@ -85,6 +85,13 @@
       "when": 1783271237431,
       "tag": "0011_fix_word_answers",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1785000000000,
+      "tag": "0012_fix_weiter_example",
+      "breakpoints": true
     }
   ]
 }

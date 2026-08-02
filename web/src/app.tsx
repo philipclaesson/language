@@ -2,6 +2,7 @@ import { useEffect, useState } from "preact/hooks";
 import type { ExtraType, ProgressResponse, SessionUser, TodayResponse } from "../../shared/types";
 import { getMe, getToday, getProgress, logout } from "./api";
 import { ExtraButtons, Review, type ReviewMode } from "./review";
+import { MatchMisses } from "./pairs";
 import { DeckDetailView, DeckList } from "./decks";
 import { ChatTutor } from "./chat";
 import { Freund } from "./freund";
@@ -86,8 +87,11 @@ function Home({ user }: { user: SessionUser }) {
         mode={modeFromSuffix(reviewMatch[1])}
         onDone={() => navigate("/")}
         onStartExtra={(type) => navigate(extraPath("/review", type))}
+        onStartPairs={() => navigate("/review/pairs")}
       />
     );
+  // Match-the-pairs over today's misses — full-screen like the review loops.
+  if (path === "/review/pairs") return <MatchMisses onExit={() => navigate("/")} />;
   const verbReviewMatch = path.match(/^\/verbs\/review(?:\/(learn|practice|misses))?$/);
   if (verbReviewMatch)
     return (
@@ -122,6 +126,7 @@ function Home({ user }: { user: SessionUser }) {
         onStart={() => navigate("/review")}
         onOpenDeck={(id) => navigate(`/decks/${id}`)}
         onStartExtra={(type) => navigate(extraPath("/review", type))}
+        onStartPairs={() => navigate("/review/pairs")}
       />
     );
 
@@ -138,11 +143,13 @@ function Dashboard({
   onStart,
   onOpenDeck,
   onStartExtra,
+  onStartPairs,
 }: {
   user: SessionUser;
   onStart: () => void;
   onOpenDeck: (id: string) => void;
   onStartExtra: (type: ExtraType) => void;
+  onStartPairs: () => void;
 }) {
   const [today, setToday] = useState<TodayResponse | null>(null);
   const [progress, setProgress] = useState<ProgressResponse | null>(null);
@@ -227,6 +234,7 @@ function Dashboard({
                 onNew={() => onStartExtra("new")}
                 onPractice={() => onStartExtra("practice")}
                 onMisses={() => onStartExtra("misses")}
+                onPairs={onStartPairs}
               />
             </div>
           )}

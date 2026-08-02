@@ -97,6 +97,16 @@ export type ExtraResponse = {
   cards: SessionCard[];
 };
 
+// ---- Match-the-pairs game (bonus re-drill of today's misses) ----
+
+// One tile pair for the match game: the English prompt and the FULL canonical
+// German ("der Hund"). Unlike SessionCard this carries the answer, so it may only
+// be built from cards whose answer the user has already seen today — currently
+// the misses pool (the answer was revealed on the miss). The game is a pure
+// client component over MatchPair[], so other sources can feed it later.
+export type MatchPair = { id: string; en: string; de: string };
+export type MatchPairsResponse = { pairs: MatchPair[] };
+
 // ---- Stats (motivation only; all derived ad-hoc, nothing stored) ----
 
 // One day cell in the activity heatmap. `count` = cards done that day (graded

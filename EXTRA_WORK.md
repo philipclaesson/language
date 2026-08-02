@@ -25,6 +25,19 @@
 >   `type=misses` branch) and the client (`ReviewMode`/`ExtraType` "misses",
 >   `ExtraButtons` third button, `extraTypeOf`).
 >
+> **Match-the-pairs game added (2026-08-02): "Match today's misses 🧩" (words only).**
+> A timed Duolingo-style connect-the-pairs game over the same misses pool, for when
+> re-typing many misses feels like a chore. Six pairs on the board (English left,
+> German right, independently shuffled); a correct match clears the pair, every 3
+> clears pull the next 3 from the queue; ends with time + error count. Entirely
+> client-side — no reviews are posted, FSRS untouched (the plain re-drill already is
+> too). Shown next to "Repeat today's misses" when there are ≥2 misses. Pieces:
+> `GET /session/pairs?type=misses` (returns `{id, en, de}` — safe to carry the German
+> because a missed card's answer was already revealed today), `web/src/pairs-game.ts`
+> (pure board/refill rules, tested), `web/src/pairs.tsx` (`MatchGame` takes any
+> `MatchPair[]` for reuse elsewhere; `MatchMisses` wires it to the pool), route
+> `/review/pairs`.
+>
 > **Deviations from the original design below:**
 > - **Practice is hammer-until-correct, NOT one-and-done** (changed 2026-07-02 after
 >   using it). A missed practice card reveals the answer, you re-type it, and it

@@ -1,8 +1,8 @@
 import { Hono } from "hono";
-import { and, asc, eq, gte, isNull, lt, or, sql } from "drizzle-orm";
+import { and, asc, eq, gte, inArray, isNull, lt, or, sql } from "drizzle-orm";
 import { db } from "./db/client";
 import { cards, decks, reviewState, reviews } from "./db/schema";
-import { checkAnswer } from "./srs/check";
+import { checkAnswer, fullAnswer } from "./srs/check";
 import { scheduleNext, type StoredSrs } from "./srs/scheduler";
 import {
   startOfDay,
@@ -18,6 +18,7 @@ import { requireAuth, type AppEnv } from "./auth";
 import type {
   ExtraResponse,
   ExtraType,
+  MatchPairsResponse,
   ProgressResponse,
   ReviewRequest,
   ReviewResult,
@@ -237,6 +238,46 @@ reviewRoutes.get("/session/extra", async (c) => {
   });
 
   const body: ExtraResponse = { cards: cardsOut };
+  return c.json(body);
+});
+
+// Prompt/answer pairs for the match game (web/src/pairs.tsx). Serves only the
+// misses pool: a missed card's answer was already revealed today (in the drill
+// panel), so sending `de` here doesn't undermine the /session/today no-answer
+// rule. Extend to other pools only if that stays true.
+reviewRoutes.get("/session/pairs", async (c) => {
+  const userId = c.get("user").id;
+  const type = c.req.query("type") ?? "misses";
+  if (type !== "misses") return c.json({ error: "unsupported type" }, 400);
+
+  const sets = await todayReviewSets(userId, startOfDay(new Date()));
+  const ids = [...sets.missedToday];
+
+  const rows = ids.length
+    ? await db
+        .select({
+          id: cards.id,
+          prompt: cards.prompt,
+          answer: cards.answer,
+          article: cards.article,
+        })
+        .from(cards)
+        .innerJoin(decks, eq(decks.id, cards.deckId))
+        .where(
+          and(
+            inArray(cards.id, ids),
+            or(eq(decks.ownerId, userId), isNull(decks.ownerId)),
+          ),
+        )
+    : [];
+
+  const body: MatchPairsResponse = {
+    pairs: rows.map((r) => ({
+      id: r.id,
+      en: r.prompt,
+      de: fullAnswer({ answer: r.answer, article: r.article }),
+    })),
+  };
   return c.json(body);
 });
 

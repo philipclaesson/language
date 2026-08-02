@@ -39,6 +39,9 @@ TypeScript everywhere. One Cloud Run service serves the SPA and the API.
 
 - `web/` — Preact + Vite + Tailwind SPA.
   - `app.tsx` auth gating + routing · `review.tsx` the review loop ·
+    `pairs.tsx` match-the-pairs game (a fun way to re-drill today's misses;
+    `MatchGame` takes any `MatchPair[]` so other card sources can feed it later) +
+    `pairs-game.ts` pure board/refill logic (+ `pairs-game.test.ts`) ·
     `decks.tsx` deck list + detail · `chat.tsx` the AI tutor chat ·
     `verbs.tsx` verbs dashboard + six-field conjugation loop ·
     `freund.tsx` the Freund conversation partner (chat + end-of-convo card review) ·
@@ -47,13 +50,16 @@ TypeScript everywhere. One Cloud Run service serves the SPA and the API.
     `push.ts` Web Push client (service-worker registration + subscribe/unsubscribe).
     `public/sw.js` the push service worker; `public/manifest.webmanifest` +
     `public/icon.svg` the PWA manifest/icon (needed for iOS "Add to Home Screen").
-  - Routes: `/` dashboard, `/review`, `/chat`, `/freund`, `/decks/:id`, `/verbs`,
+  - Routes: `/` dashboard, `/review`, `/review/pairs` (match game), `/chat`,
+    `/freund`, `/decks/:id`, `/verbs`,
     `/verbs/review`. The tab bar shows on the tab roots (`/`, `/chat`, `/freund`, `/verbs`);
-    the review loops render full-screen without it. The server serves `index.html`
+    the review loops (and the match game) render full-screen without it. The server serves `index.html`
     for any non-API path, so deep links / refresh / back all work.
 - `server/` — Hono on Node.
   - `index.ts` wiring + static serving · `auth.ts` Google OAuth + JWT session +
-    `requireAuth` · `review-routes.ts` `/session/today` + `/reviews` ·
+    `requireAuth` · `review-routes.ts` `/session/today` + `/reviews` +
+    `/session/pairs` (match-game pairs; misses only — their answers were already
+    revealed today, so returning `de` is safe) ·
     `deck-routes.ts` `/decks` + `/decks/:id` · `verb-routes.ts` `/verbs/session/today`
     + `/verbs/reviews` + `/verbs/progress` · `chat-routes.ts` `/chat` (AI tutor:
     Claude tool-use loop + deck/card tools) · `chat/cards.ts` pure card-input

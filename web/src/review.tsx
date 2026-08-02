@@ -27,10 +27,12 @@ export function Review({
   mode = "daily",
   onDone,
   onStartExtra,
+  onStartPairs,
 }: {
   mode?: ReviewMode;
   onDone: () => void;
   onStartExtra: (type: ExtraType) => void;
+  onStartPairs?: () => void;
 }) {
   // `queue` holds the cards still needing a correct typing. We always show queue[0];
   // a correct answer drops it, a wrong one (hammer modes) rotates it to the back so
@@ -231,6 +233,7 @@ export function Review({
                   onNew={() => onStartExtra("new")}
                   onPractice={() => onStartExtra("practice")}
                   onMisses={() => onStartExtra("misses")}
+                  onPairs={onStartPairs}
                 />
               </div>
               <button
@@ -382,9 +385,11 @@ export function Review({
   );
 }
 
-// The three extra-work on-ramps, shown on a "Done for today" screen (and reused on
+// The extra-work on-ramps, shown on a "Done for today" screen (and reused on
 // the dashboards). Each button hides when its pool is empty. See EXTRA_WORK.md.
 // "Fix misses" re-drills today's wrong answers and reads the live miss count.
+// `onPairs` (words only) adds the match-the-pairs game over the same misses pool;
+// it needs at least two pairs to be a game.
 export function ExtraButtons({
   noun,
   newAvailable,
@@ -393,6 +398,7 @@ export function ExtraButtons({
   onNew,
   onPractice,
   onMisses,
+  onPairs,
 }: {
   noun: "cards" | "verbs";
   newAvailable: number;
@@ -401,6 +407,7 @@ export function ExtraButtons({
   onNew: () => void;
   onPractice: () => void;
   onMisses: () => void;
+  onPairs?: () => void;
 }) {
   if (newAvailable === 0 && practiceAvailable === 0 && missesAvailable === 0) return null;
   return (
@@ -427,6 +434,14 @@ export function ExtraButtons({
           class="w-full rounded-xl border border-slate-200 px-5 py-3 font-medium text-slate-700 transition hover:bg-slate-50"
         >
           Repeat today's {missesAvailable} {missesAvailable === 1 ? "miss" : "misses"} 🧠
+        </button>
+      )}
+      {missesAvailable > 1 && onPairs && (
+        <button
+          onClick={onPairs}
+          class="w-full rounded-xl border border-slate-200 px-5 py-3 font-medium text-slate-700 transition hover:bg-slate-50"
+        >
+          Match today's misses 🧩
         </button>
       )}
     </div>

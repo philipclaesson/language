@@ -14,6 +14,7 @@ import type {
   FreundSaveRequest,
   FreundSaveResponse,
   FreundSuggestedCard,
+  MatchPairsResponse,
   MeResponse,
   ProgressResponse,
   PushConfigResponse,
@@ -67,6 +68,10 @@ export function postReview(req: ReviewRequest) {
 
 export function getExtra(type: ExtraType) {
   return api<ExtraResponse>(`/session/extra?type=${type}`);
+}
+
+export function getMatchPairs() {
+  return api<MatchPairsResponse>("/session/pairs?type=misses");
 }
 
 export function getDecks() {

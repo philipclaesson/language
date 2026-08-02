@@ -270,7 +270,15 @@ export type FreundMessage = { role: FreundRole; content: string };
 export type CorrectionOp = "keep" | "del" | "ins";
 export type CorrectionSegment = { text: string; op: CorrectionOp };
 
-export type FreundRequest = { messages: FreundMessage[] };
+// `scenario` is set when the conversation was kicked off with a random scenario
+// (/freund/start) — the client replays it every turn (the server is stateless) so
+// Freund stays in character.
+export type FreundRequest = { messages: FreundMessage[]; scenario?: string | null };
+
+// Random-scenario kickoff: the server picks a scenario and Freund writes the
+// opening message. The client shows `scenario` above the chat and echoes it back
+// in every FreundRequest of the conversation.
+export type FreundStartResponse = { scenario: string; reply: string };
 
 // Freund's response to one user message: a German reply (always), an optional
 // English note on mistakes (null → no issues, don't render the bubble), and an

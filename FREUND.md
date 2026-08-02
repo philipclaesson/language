@@ -8,6 +8,15 @@ as an additive AI module (like the tutor) — the core SRS loop is untouched.
 
 - New tab **Freund 🗣️** (`/freund`), a chat like the tutor. The learner writes in
   German; Freund replies.
+- **Random scenario kickoff** (`POST /freund/start`): a 🎲 button on the empty state
+  picks a random role-play scenario from a server-side list (`SCENARIOS` in
+  `freund/agent.ts`) and Freund writes the opening message in character (forced
+  `open` tool on Haiku). The scenario is shown as a banner and the client replays it
+  with every `/freund/message` (`FreundRequest.scenario`) so Freund stays in the
+  scene. Because the history then starts on an assistant turn — which the API
+  rejects (the first message must be `user`) — the server re-prepends the same
+  synthetic kickoff user turn on every later request (`KICKOFF` in
+  `freund-routes.ts`).
 - **Every message** produces three things (`POST /freund/message`, one forced
   `respond` tool call on **Haiku 4.5** for low latency):
   1. `explanation` — a short English note on the mistakes (yellow bubble). Null → no

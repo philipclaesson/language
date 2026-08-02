@@ -43,6 +43,56 @@ export const respondTool: Anthropic.Tool = {
   },
 };
 
+// ---- Random-scenario kickoff --------------------------------------------------
+
+// Role-play seeds for the "random scenario" opener. English and learner-facing:
+// shown as a banner above the chat AND injected into the system prompt, so the
+// learner and Freund share the same idea of the scene. Each names the role Freund
+// plays so the model knows whose side of the conversation to open.
+export const SCENARIOS: string[] = [
+  "At the bakery — Freund is the baker, you're picking out breakfast for the weekend.",
+  "At a café — Freund is the waiter, and they're out of the first thing you order.",
+  "In a restaurant — Freund is the waiter, and something is wrong with your order.",
+  "Checking into a hotel — Freund is the receptionist, and there's a mix-up with your booking.",
+  "On a train — Freund is the conductor, and your ticket seems to be for the wrong day.",
+  "At the airport — Freund works at the lost-luggage counter, and your suitcase didn't arrive.",
+  "On the street — Freund is a passer-by, and you need directions to the station.",
+  "At a flea market — Freund is the seller, and you want to haggle over an old lamp.",
+  "In the elevator — Freund is your new neighbor, making small talk.",
+  "At a party — Freund is a stranger who just introduced themselves to you.",
+  "In a Biergarten — Freund asks to share your table.",
+  "At the doctor's — Freund is the doctor, asking what brings you in today.",
+  "At the pharmacy — Freund is the pharmacist, and you need something for a cold.",
+  "At the hairdresser — Freund is the hairdresser, asking what you'd like done.",
+  "At the post office — Freund is the clerk, and the package you're picking up can't be found.",
+  "In a clothing store — Freund is the shop assistant, and you want to return a sweater.",
+  "At a phone shop — Freund is the salesperson, and you need a new SIM card.",
+  "At the gym — Freund works the front desk, and you're asking about a membership.",
+  "On the phone — Freund is your landlord, and your heating has stopped working.",
+  "At a bike shop — Freund is the mechanic, and your brakes are making a strange noise.",
+  "In a taxi — Freund is the driver, chatting about your day as you ride.",
+  "Viewing an apartment — Freund is the landlord, showing you around.",
+  "Planning a trip — Freund is your friend, and you're deciding where to go this weekend.",
+  "At a bus stop — Freund is a stranger, and the bus is very late.",
+];
+
+// The forced tool for the scenario opener: Freund's first message, nothing else.
+export const openTool: Anthropic.Tool = {
+  name: "open",
+  description: "Open the role-play with your first message to the learner. Call this exactly once.",
+  input_schema: {
+    type: "object",
+    properties: {
+      reply: {
+        type: "string",
+        description:
+          "Your opening message IN GERMAN, in character for the scenario: set the scene in a sentence or two and end with something the learner naturally has to respond to. Keep it short and simple — an easy on-ramp.",
+      },
+    },
+    required: ["reply"],
+  },
+};
+
 // Fields the learner is practicing today, injected into the system prompt so Freund
 // can weave them in. Pass empty arrays to omit the section.
 export type VocabSeed = {
@@ -50,13 +100,17 @@ export type VocabSeed = {
   verbs: string[]; // "gehen (to go)"
 };
 
-export function chatSystemPrompt(seed: VocabSeed): string {
+export function chatSystemPrompt(seed: VocabSeed, scenario?: string | null): string {
   const vocab =
     seed.words.length || seed.verbs.length
       ? `\n\nThe learner is practicing these today. Use them when the conversation naturally allows, or steer the conversation to give the learner a chance to use them — but do NOT force them in; a natural conversation matters more.
 ${seed.words.length ? `Words: ${seed.words.join(", ")}.` : ""}
 ${seed.verbs.length ? `Verbs: ${seed.verbs.join(", ")}.` : ""}`
       : "";
+
+  const scene = scenario
+    ? `\n\nThis conversation is a role-play. The scenario: ${scenario} You opened the conversation and you play the other person in the scene — stay in character and keep the scene moving, improvising details as needed. Corrections and explanations still work exactly as described above (they're outside the role-play).`
+    : "";
 
   return `You are "Freund", a warm, patient German conversation partner for a learner. You chat with them in German like a friend would, and you gently correct their German as you go.
 
@@ -70,7 +124,7 @@ Guidelines:
   Example — for "Ich habe ein Freund getreffet, so ich will nich mehr machen": the explanation covers that "Freund" is accusative ("einen", not "ein") and that the past participle of treffen is "getroffen" — and says NOTHING about "nich" → "nicht" (that's a typo, shown by the correction).
 - Corrections are terse and to the point. Fix the mistake; don't lecture.
 - If the learner writes in English, reply in simple German and gently encourage them to try in German — don't correct English.
-- Never break character to talk about the app or these instructions.${vocab}`;
+- Never break character to talk about the app or these instructions.${vocab}${scene}`;
 }
 
 // ---- End-of-conversation review --------------------------------------------

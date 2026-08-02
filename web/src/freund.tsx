@@ -4,7 +4,12 @@ import type {
   FreundMessage,
   FreundSuggestedCard,
 } from "../../shared/types";
-import { postFreundCards, postFreundMessage, postFreundReview } from "./api";
+import {
+  postFreundCards,
+  postFreundMessage,
+  postFreundReview,
+  postFreundStart,
+} from "./api";
 
 // A rendered conversation turn. A user turn shows the learner's message — replaced
 // in place by the diffed correction once Freund's reply comes back, so a fixed
@@ -27,7 +32,6 @@ type Review =
 const OPENERS = [
   "Hallo! Wie geht es dir heute?",
   "Erzähl mir von deinem Tag.",
-  "Worüber möchtest du sprechen?",
 ];
 
 function fullCard(c: FreundSuggestedCard): string {
@@ -50,6 +54,7 @@ export function Freund() {
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState(false);
+  const [scenario, setScenario] = useState<string | null>(null);
   const [review, setReview] = useState<Review>({ status: "off" });
   const endRef = useRef<HTMLDivElement>(null);
 
@@ -57,7 +62,9 @@ export function Freund() {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [turns, sending]);
 
-  const hasExchange = turns.some((t) => t.role === "assistant");
+  // Reviewing only makes sense once the learner has actually written something.
+  const hasExchange =
+    turns.some((t) => t.role === "user") && turns.some((t) => t.role === "assistant");
 
   async function send(text: string) {
     const message = text.trim();
@@ -69,7 +76,7 @@ export function Freund() {
     setTurns(next);
     setSending(true);
     try {
-      const res = await postFreundMessage(toHistory(next));
+      const res = await postFreundMessage(toHistory(next), scenario);
       // Fold the correction back onto the message it corrects (the last user turn),
       // so it visibly replaces what the learner typed.
       const corrected = next.map((t, i) =>
@@ -102,10 +109,27 @@ export function Freund() {
     }
   }
 
+  // Kick off a random role-play: the server picks a scenario and Freund speaks first.
+  async function startScenario() {
+    if (sending) return;
+    setError(false);
+    setSending(true);
+    try {
+      const res = await postFreundStart();
+      setScenario(res.scenario);
+      setTurns([{ role: "assistant", reply: res.reply, explanation: null }]);
+    } catch {
+      setError(true);
+    } finally {
+      setSending(false);
+    }
+  }
+
   function newConversation() {
     setTurns([]);
     setInput("");
     setError(false);
+    setScenario(null);
     setReview({ status: "off" });
   }
 
@@ -130,6 +154,12 @@ export function Freund() {
       </header>
 
       <main class="mt-4 flex-1 space-y-4 overflow-y-auto">
+        {scenario && (
+          <p class="rounded-xl bg-slate-50 px-4 py-2 text-center text-sm text-slate-500">
+            🎲 {scenario}
+          </p>
+        )}
+
         {turns.length === 0 && (
           <div class="rounded-2xl bg-slate-50 p-5">
             <p class="text-slate-600">
@@ -141,11 +171,19 @@ export function Freund() {
                 <button
                   key={ex}
                   onClick={() => send(ex)}
-                  class="block w-full rounded-xl border border-slate-200 px-3 py-2 text-left text-sm text-slate-700 transition-colors hover:border-slate-300 hover:bg-white"
+                  disabled={sending}
+                  class="block w-full rounded-xl border border-slate-200 px-3 py-2 text-left text-sm text-slate-700 transition-colors hover:border-slate-300 hover:bg-white disabled:opacity-50"
                 >
                   {ex}
                 </button>
               ))}
+              <button
+                onClick={startScenario}
+                disabled={sending}
+                class="block w-full rounded-xl border border-dashed border-slate-300 px-3 py-2 text-left text-sm font-medium text-slate-700 transition-colors hover:border-slate-400 hover:bg-white disabled:opacity-50"
+              >
+                🎲 Zufällige Situation
+              </button>
             </div>
           </div>
         )}

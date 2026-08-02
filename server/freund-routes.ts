@@ -11,7 +11,9 @@ import { todaysVocab } from "./freund/seed";
 import {
   CHAT_MODEL,
   REVIEW_MODEL,
+  SCENARIOS,
   chatSystemPrompt,
+  openTool,
   respondTool,
   reviewSystemPrompt,
   suggestCardsTool,
@@ -24,6 +26,7 @@ import type {
   FreundReviewResponse,
   FreundSaveRequest,
   FreundSaveResponse,
+  FreundStartResponse,
   FreundSuggestedCard,
 } from "../shared/types";
 
@@ -40,6 +43,12 @@ function str(v: unknown): string | undefined {
   return t.length ? t : undefined;
 }
 
+// The synthetic user turn behind a scenario kickoff: the API requires the messages
+// array to both start and (for us) end on a user turn, so Freund's opener is
+// elicited by this stage direction — and re-prepended on every later turn of a
+// scenario conversation, whose visible history starts with Freund.
+const KICKOFF = "(Start the role-play now with your opening message.)";
+
 // Map the client history into Anthropic messages, dropping empties. Returns null
 // if the history is empty or doesn't end on a user turn (nothing to respond to).
 function toMessages(history: FreundMessage[]): Anthropic.MessageParam[] | null {
@@ -47,6 +56,7 @@ function toMessages(history: FreundMessage[]): Anthropic.MessageParam[] | null {
     .filter((m) => m && typeof m.content === "string" && m.content.trim())
     .map((m) => ({ role: m.role === "assistant" ? "assistant" : "user", content: m.content }));
   if (messages.length === 0 || messages[messages.length - 1].role !== "user") return null;
+  if (messages[0].role === "assistant") messages.unshift({ role: "user", content: KICKOFF });
   return messages;
 }
 
@@ -93,6 +103,27 @@ function toSuggested(c: NormalizedCard): FreundSuggestedCard {
 export const freundRoutes = new Hono<AppEnv>();
 freundRoutes.use("*", requireAuth);
 
+// Random-scenario kickoff: pick a scenario and have Freund open the conversation
+// in character. The client shows the scenario and replays it with every
+// /freund/message so Freund stays in the scene (the server is stateless).
+freundRoutes.post("/freund/start", async (c) => {
+  const userId = c.get("user").id;
+  const scenario = SCENARIOS[Math.floor(Math.random() * SCENARIOS.length)];
+
+  const res = await anthropic.messages.create({
+    model: CHAT_MODEL,
+    max_tokens: 512,
+    system: chatSystemPrompt(await todaysVocab(userId), scenario),
+    tools: [openTool],
+    tool_choice: { type: "tool", name: "open" },
+    messages: [{ role: "user", content: KICKOFF }],
+  });
+
+  const reply = str(toolInput(res, "open")?.reply) ?? "Hallo! Wie geht es dir?";
+  const body: FreundStartResponse = { scenario, reply };
+  return c.json(body);
+});
+
 // One conversational turn: Freund replies in German and, if the learner's last
 // message had mistakes, corrects + explains them. Stateless (client replays the
 // history), seeded with today's practice vocab.
@@ -104,7 +135,7 @@ freundRoutes.post("/freund/message", async (c) => {
   const messages = toMessages(history);
   if (!messages) return c.json({ error: "expected a history ending in a user message" }, 400);
 
-  const system = chatSystemPrompt(await todaysVocab(userId));
+  const system = chatSystemPrompt(await todaysVocab(userId), str(payload.scenario));
 
   const res = await anthropic.messages.create({
     model: CHAT_MODEL,

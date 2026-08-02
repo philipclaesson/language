@@ -13,6 +13,7 @@ import type {
   FreundReviewResponse,
   FreundSaveRequest,
   FreundSaveResponse,
+  FreundStartResponse,
   FreundSuggestedCard,
   MatchPairsResponse,
   MeResponse,
@@ -107,8 +108,12 @@ export function postChat(messages: ChatMessage[]) {
   return api<ChatResponse>("/chat", { method: "POST", body: JSON.stringify(req) });
 }
 
-export function postFreundMessage(messages: FreundMessage[]) {
-  const req: FreundRequest = { messages };
+export function postFreundStart() {
+  return api<FreundStartResponse>("/freund/start", { method: "POST" });
+}
+
+export function postFreundMessage(messages: FreundMessage[], scenario: string | null) {
+  const req: FreundRequest = { messages, scenario };
   return api<FreundResponse>("/freund/message", { method: "POST", body: JSON.stringify(req) });
 }
 

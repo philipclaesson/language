@@ -42,6 +42,8 @@ TypeScript everywhere. One Cloud Run service serves the SPA and the API.
     `pairs.tsx` match-the-pairs game (a fun way to re-drill today's misses;
     `MatchGame` takes any `MatchPair[]` so other card sources can feed it later) +
     `pairs-game.ts` pure board/refill logic (+ `pairs-game.test.ts`) ·
+    `games.tsx` the games corner (menu behind the 🔥 on Stats + the Article Mania
+    der/die/das game; shared high-score table UI) ·
     `decks.tsx` deck list + detail · `chat.tsx` the AI tutor chat ·
     `verbs.tsx` verbs dashboard + six-field conjugation loop ·
     `freund.tsx` the Freund conversation partner (chat + end-of-convo card review) ·
@@ -52,11 +54,17 @@ TypeScript everywhere. One Cloud Run service serves the SPA and the API.
     `public/icon.svg` the PWA manifest/icon (needed for iOS "Add to Home Screen").
   - Routes: `/` dashboard, `/review`, `/review/pairs` (match game), `/chat`,
     `/freund`, `/decks/:id`, `/verbs`,
-    `/verbs/review`. The tab bar shows on the tab roots (`/`, `/chat`, `/freund`, `/verbs`);
+    `/verbs/review`, `/games` (game menu, reached via the 🔥 on `/stats`),
+    `/games/article-mania`, `/games/pairs` (match game, exits back to the menu).
+    The tab bar shows on the tab roots (`/`, `/chat`, `/freund`, `/verbs`);
     the review loops (and the match game) render full-screen without it. The server serves `index.html`
     for any non-API path, so deep links / refresh / back all work.
 - `server/` — Hono on Node.
-  - `index.ts` wiring + static serving · `auth.ts` Google OAuth + JWT session +
+  - `index.ts` wiring + static serving · `game-routes.ts` `/games/article-mania/round`
+    + `/games/scores` (one shared `game_scores` high-score table for all games;
+    ranking logic in `games/scores.ts`, pure + tested. Article Mania's round payload
+    carries the articles on purpose — client-graded game, see `ArticleNoun` in
+    `shared/types.ts`) · `auth.ts` Google OAuth + JWT session +
     `requireAuth` · `review-routes.ts` `/session/today` + `/reviews` +
     `/session/pairs` (match-game pairs; misses only — their answers were already
     revealed today, so returning `de` is safe) ·

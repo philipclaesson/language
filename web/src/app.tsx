@@ -3,6 +3,7 @@ import type { ExtraType, ProgressResponse, SessionUser, TodayResponse } from "..
 import { getMe, getToday, getProgress, logout } from "./api";
 import { ExtraButtons, Review, type ReviewMode } from "./review";
 import { MatchMisses } from "./pairs";
+import { GamesMenu, ArticleMania } from "./games";
 import { DeckDetailView, DeckList } from "./decks";
 import { ChatTutor } from "./chat";
 import { Freund } from "./freund";
@@ -92,6 +93,11 @@ function Home({ user }: { user: SessionUser }) {
     );
   // Match-the-pairs over today's misses — full-screen like the review loops.
   if (path === "/review/pairs") return <MatchMisses onExit={() => navigate("/")} />;
+  // The games corner (easter egg behind the 🔥 on Stats) — menu + games, full-screen.
+  if (path === "/games") return <GamesMenu onBack={() => navigate("/stats")} onOpen={navigate} />;
+  if (path === "/games/article-mania")
+    return <ArticleMania onExit={() => navigate("/games")} />;
+  if (path === "/games/pairs") return <MatchMisses onExit={() => navigate("/games")} />;
   const verbReviewMatch = path.match(/^\/verbs\/review(?:\/(learn|practice|misses))?$/);
   if (verbReviewMatch)
     return (

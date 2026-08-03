@@ -107,6 +107,47 @@ export type ExtraResponse = {
 export type MatchPair = { id: string; en: string; de: string };
 export type MatchPairsResponse = { pairs: MatchPair[] };
 
+// ---- Games (the 🔥 menu on Stats; shared high-score table) ----
+
+// One shared high-score table serves every game, keyed by a `game` id string.
+// Only games with a comparable integer score persist entries — the match game
+// (time + errors over a variable pair count) is menu-only for now.
+export type GameId = "article-mania";
+
+export type GermanArticle = "der" | "die" | "das";
+export const GERMAN_ARTICLES: GermanArticle[] = ["der", "die", "das"];
+
+// One noun in an Article Mania round. Unlike SessionCard this DOES carry the
+// article: the game grades client-side for instant tap feedback, and the correct
+// article is flashed on screen right after every guess anyway. The strict
+// no-answers rule exists to protect the SRS loop's graded measurements
+// (/session/today) — this is a bonus game whose score is self-reported either
+// way, so peeking at the payload only spoils your own fun.
+export type ArticleNoun = {
+  id: string;
+  noun: string; // bare German noun, e.g. "Jahr"
+  article: GermanArticle;
+};
+export type ArticleRoundResponse = { nouns: ArticleNoun[] };
+
+export type HighScoreEntry = {
+  id: string;
+  game: GameId;
+  player: string; // display name (or email local-part)
+  score: number; // meaning is per-game; Article Mania stores percent 0–100
+  createdAt: string; // ISO timestamp
+};
+export type HighScoresResponse = { entries: HighScoreEntry[] };
+
+export type SubmitScoreRequest = { game: GameId; score: number };
+// POST returns everything the results screen needs in one shot: the saved entry,
+// its overall rank (1-based), and the top table to render (highlight by entry.id).
+export type SubmitScoreResponse = {
+  entry: HighScoreEntry;
+  rank: number;
+  top: HighScoreEntry[];
+};
+
 // ---- Stats (motivation only; all derived ad-hoc, nothing stored) ----
 
 // One day cell in the activity heatmap. `count` = cards done that day (graded

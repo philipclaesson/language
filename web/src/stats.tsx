@@ -2,6 +2,7 @@ import { useEffect, useState } from "preact/hooks";
 import type { HeatmapCell, StatsResponse } from "../../shared/types";
 import { getStats, getPushConfig } from "./api";
 import { currentPushState, disablePush, enablePush, needsInstall } from "./push";
+import { navigate } from "./router";
 import { TIERS } from "./tiers";
 
 const WEEKDAYS = ["M", "T", "W", "T", "F", "S", "S"];
@@ -138,7 +139,18 @@ function StatCard({ value, label, accent }: { value: number; label: string; acce
       <div class="flex items-baseline gap-1">
         <span class="text-3xl font-semibold tracking-tight">{value}</span>
         <span class="text-sm font-normal opacity-70">{value === 1 ? "day" : "days"}</span>
-        {value > 0 && accent && <span class="ml-0.5 text-xl">🔥</span>}
+        {/* The 🔥 doubles as the door to the games corner (hehe). Always tappable
+            on the streak card — just dimmed while the streak is cold. */}
+        {accent && (
+          <button
+            onClick={() => navigate("/games")}
+            aria-label="Games"
+            title="Games"
+            class={`ml-0.5 text-xl transition hover:scale-125 ${value === 0 ? "opacity-40 grayscale" : ""}`}
+          >
+            🔥
+          </button>
+        )}
       </div>
       <p class={`mt-1 text-xs ${accent ? "text-blue-100" : "text-slate-500"}`}>{label}</p>
     </div>

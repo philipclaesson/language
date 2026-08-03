@@ -1,4 +1,5 @@
 import type {
+  ArticleRoundResponse,
   ChatMessage,
   ChatRequest,
   ChatResponse,
@@ -15,6 +16,8 @@ import type {
   FreundSaveResponse,
   FreundStartResponse,
   FreundSuggestedCard,
+  GameId,
+  HighScoresResponse,
   MatchPairsResponse,
   MeResponse,
   ProgressResponse,
@@ -23,6 +26,8 @@ import type {
   ReviewRequest,
   ReviewResult,
   StatsResponse,
+  SubmitScoreRequest,
+  SubmitScoreResponse,
   TodayResponse,
   VerbExtraResponse,
   VerbListItem,
@@ -73,6 +78,19 @@ export function getExtra(type: ExtraType) {
 
 export function getMatchPairs() {
   return api<MatchPairsResponse>("/session/pairs?type=misses");
+}
+
+export function getArticleRound() {
+  return api<ArticleRoundResponse>("/games/article-mania/round");
+}
+
+export function getHighScores(game: GameId) {
+  return api<HighScoresResponse>(`/games/scores?game=${game}`);
+}
+
+export function submitScore(game: GameId, score: number) {
+  const req: SubmitScoreRequest = { game, score };
+  return api<SubmitScoreResponse>("/games/scores", { method: "POST", body: JSON.stringify(req) });
 }
 
 export function getDecks() {

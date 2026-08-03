@@ -10,6 +10,7 @@ import { verbRoutes } from "./verb-routes";
 import { chatRoutes } from "./chat-routes";
 import { freundRoutes } from "./freund-routes";
 import { statsRoutes } from "./stats-routes";
+import { gameRoutes } from "./game-routes";
 import { pushRoutes } from "./push-routes";
 
 const app = new Hono<AppEnv>();
@@ -29,6 +30,7 @@ api.route("/", verbRoutes); // /verbs/session/today, /verbs/reviews, /verbs/prog
 api.route("/", chatRoutes); // /chat
 api.route("/", freundRoutes); // /freund/message, /freund/review, /freund/cards
 api.route("/", statsRoutes); // /stats
+api.route("/", gameRoutes); // /games/article-mania/round, /games/scores
 
 app.route("/api", api);
 

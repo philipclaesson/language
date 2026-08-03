@@ -82,6 +82,20 @@ export const reviewState = pgTable(
   (t) => [unique("review_state_user_card").on(t.userId, t.cardId)],
 );
 
+// One shared high-score table for all games (game-routes.ts): `game` is the game
+// id ('article-mania', …), `score` an integer whose meaning is per-game (Article
+// Mania stores percent 0–100). Append-only; rankings are derived at read time
+// (score desc, earlier submission wins ties).
+export const gameScores = pgTable("game_scores", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  game: text("game").notNull(),
+  score: integer("score").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 // Web Push subscriptions for the daily training reminder (push-routes.ts). One
 // row per browser/device the user enabled reminders on; `endpoint` is the push
 // service URL and is globally unique (the natural key). A user can have several

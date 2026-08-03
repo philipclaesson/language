@@ -43,7 +43,7 @@ export function GamesMenu({
         <GameCard
           emoji="🎭"
           title="Article Mania"
-          subtitle="der, die or das? 50 nouns, three buttons, no mercy."
+          subtitle="der, die or das? 25 nouns, three buttons, no mercy."
           onPlay={() => onOpen("/games/article-mania")}
         />
         <GameCard
@@ -329,6 +329,9 @@ export function ArticleMania({ onExit }: { onExit: () => void }) {
         <p class="text-center text-4xl font-semibold tracking-tight text-slate-900">
           {current.noun}
         </p>
+        {/* English gloss for context — word mode in reverse (safe: it never hints
+            at the gender, which is the thing being tested). */}
+        <p class="mt-2 text-center text-slate-500">{current.en}</p>
         <p class="mt-3 h-6 text-center text-sm">
           {picked === null ? (
             <span class="text-slate-400">der, die or das?</span>
@@ -361,7 +364,7 @@ export function ArticleMania({ onExit }: { onExit: () => void }) {
   );
 }
 
-const ROUND_HINT = 50; // shown while the round is still loading
+const ROUND_HINT = 25; // shown while the round is still loading
 
 // Idle: neutral. During feedback: the correct article flashes green; a wrong
 // pick flashes red next to it.

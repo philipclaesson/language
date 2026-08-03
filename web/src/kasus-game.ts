@@ -46,7 +46,7 @@ export function solveSentence(item: KasusItem): string {
   return item.sentence.replace("___", article);
 }
 
-export const KASUS_ROUND_SIZE = 25;
+export const KASUS_ROUND_SIZE = 15;
 
 // A fresh random round. Plain sample of the whole bank — with ~90 items across
 // five categories the mix comes out varied on its own.

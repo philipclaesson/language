@@ -126,6 +126,7 @@ export const GERMAN_ARTICLES: GermanArticle[] = ["der", "die", "das"];
 export type ArticleNoun = {
   id: string;
   noun: string; // bare German noun, e.g. "Jahr"
+  en: string; // English gloss, shown under the noun (word mode in reverse)
   article: GermanArticle;
 };
 export type ArticleRoundResponse = { nouns: ArticleNoun[] };

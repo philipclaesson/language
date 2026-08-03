@@ -21,7 +21,7 @@ gameRoutes.use("*", requireAuth);
 // Games that persist to the shared high-score table. Article Mania stores
 // percent (0–100); add future games here with their own score range.
 const KNOWN_GAMES: GameId[] = ["article-mania"];
-const ROUND_SIZE = 50;
+const ROUND_SIZE = 25;
 
 // A round of Article Mania: random nouns (with their articles) from the global
 // frequency corpus. The payload carries the article on purpose — see the
@@ -29,7 +29,7 @@ const ROUND_SIZE = 50;
 // for /session/today.
 gameRoutes.get("/games/article-mania/round", async (c) => {
   const rows = await db
-    .select({ id: cards.id, noun: cards.answer, article: cards.article })
+    .select({ id: cards.id, noun: cards.answer, en: cards.prompt, article: cards.article })
     .from(cards)
     .innerJoin(decks, eq(decks.id, cards.deckId))
     .where(
@@ -46,6 +46,7 @@ gameRoutes.get("/games/article-mania/round", async (c) => {
     nouns: rows.map((r) => ({
       id: r.id,
       noun: r.noun,
+      en: r.en,
       article: r.article as GermanArticle,
     })),
   };

@@ -12,6 +12,7 @@ import {
   KASUS_CATEGORY_LABELS,
   KASUS_LABELS,
   KASUS_OPTIONS,
+  KASUS_ROUND_SIZE,
   kasusRound,
   solveSentence,
   type Kasus,
@@ -51,7 +52,7 @@ const SCORED_GAMES: {
     id: "kasus-krieg",
     emoji: "⚔️",
     title: "Kasus Krieg",
-    subtitle: "Nominativ, Akkusativ or Dativ? 25 sentences — name the case.",
+    subtitle: "Nominativ, Akkusativ or Dativ? 15 sentences — name the case.",
     path: "/games/kasus-krieg",
   },
   {
@@ -451,13 +452,12 @@ function choiceClass<T extends string>(choice: T, picked: T | null, correct: T):
 
 // ---- Kasus Krieg ----
 
-// Name the case of the blanked article in 25 curated sentences (bank + rules in
-// kasus-game.ts — fully client-side, no round endpoint). Every answer flashes
-// the ONE rule that decides the case; the results screen breaks your round down
-// by rule family so you see which decision you're weak on.
-
-const KASUS_RIGHT_DELAY = 900; // rule shows even on a hit — give it a beat
-const KASUS_WRONG_DELAY = 2400; // rule + solved sentence need reading time
+// Name the case of the blanked article in curated sentences (bank + rules in
+// kasus-game.ts — fully client-side, no round endpoint). Every answer shows
+// the ONE rule that decides the case and waits for a "Next" tap — the rule is
+// the lesson, so it advances at reading speed, not on a timer. The results
+// screen breaks your round down by rule family so you see which decision
+// you're weak on.
 
 type KasusAnswer = { item: KasusItem; right: boolean };
 
@@ -490,17 +490,16 @@ export function KasusKrieg({ onExit }: { onExit: () => void }) {
   }
 
   function pick(kasus: Kasus) {
-    if (picked !== null || round.length === 0) return; // locked during feedback
-    const item = round[idx];
-    const right = kasus === item.kasus;
-    const all = [...answers, { item, right }];
+    if (picked !== null || round.length === 0) return; // already answered — waiting on Next
     setPicked(kasus);
-    setAnswers(all);
-    setTimeout(() => {
-      setPicked(null);
-      if (idx + 1 >= round.length) finish(all);
-      else setIdx(idx + 1);
-    }, right ? KASUS_RIGHT_DELAY : KASUS_WRONG_DELAY);
+    setAnswers([...answers, { item: round[idx], right: kasus === round[idx].kasus }]);
+  }
+
+  function next() {
+    if (picked === null) return;
+    setPicked(null);
+    if (idx + 1 >= round.length) finish(answers);
+    else setIdx(idx + 1);
   }
 
   if (phase === "ready") {
@@ -510,8 +509,8 @@ export function KasusKrieg({ onExit }: { onExit: () => void }) {
           <p class="text-3xl">⚔️</p>
           <p class="mt-3 text-2xl font-semibold text-slate-900">Kasus Krieg</p>
           <p class="mt-2 text-slate-600">
-            25 sentences with the article blanked out — name the case. Every answer
-            shows the rule that decides it.
+            {KASUS_ROUND_SIZE} sentences with the article blanked out — name the case.
+            Every answer shows the rule that decides it.
           </p>
           <button
             onClick={start}
@@ -625,6 +624,17 @@ export function KasusKrieg({ onExit }: { onExit: () => void }) {
             </button>
           ))}
         </div>
+
+        {/* Advance only on tap — reading the rule is the whole point. The button
+            keeps its slot (invisible pre-answer) so the layout never jumps. */}
+        <button
+          onClick={next}
+          class={`mt-4 w-full rounded-xl bg-slate-900 px-5 py-3 font-medium text-white transition hover:bg-slate-700 ${
+            picked === null ? "invisible" : ""
+          }`}
+        >
+          {idx + 1 >= round.length ? "See results" : "Next"}
+        </button>
       </div>
     </Shell>
   );

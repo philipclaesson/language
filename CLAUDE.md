@@ -42,8 +42,10 @@ TypeScript everywhere. One Cloud Run service serves the SPA and the API.
     `pairs.tsx` match-the-pairs game (a fun way to re-drill today's misses;
     `MatchGame` takes any `MatchPair[]` so other card sources can feed it later) +
     `pairs-game.ts` pure board/refill logic (+ `pairs-game.test.ts`) ·
-    `games.tsx` the games corner (menu behind the 🔥 on Stats + the Article Mania
-    der/die/das game; shared high-score table UI) ·
+    `games.tsx` the games corner (menu behind the 🔥 on Stats; Article Mania
+    der/die/das, Kasus Krieg case-naming, Präposition Power 60s prep blitz;
+    shared high-score table UI) + `kasus-game.ts`/`preps-game.ts` their curated,
+    client-side question banks (pure + tested — no round endpoints) ·
     `decks.tsx` deck list + detail · `chat.tsx` the AI tutor chat ·
     `verbs.tsx` verbs dashboard + six-field conjugation loop ·
     `freund.tsx` the Freund conversation partner (chat + end-of-convo card review) ·
@@ -55,7 +57,8 @@ TypeScript everywhere. One Cloud Run service serves the SPA and the API.
   - Routes: `/` dashboard, `/review`, `/review/pairs` (match game), `/chat`,
     `/freund`, `/decks/:id`, `/verbs`,
     `/verbs/review`, `/games` (game menu, reached via the 🔥 on `/stats`),
-    `/games/article-mania`, `/games/pairs` (match game, exits back to the menu).
+    `/games/article-mania`, `/games/kasus-krieg`, `/games/praeposition-power`,
+    `/games/pairs` (match game, exits back to the menu).
     The tab bar shows on the tab roots (`/`, `/chat`, `/freund`, `/verbs`);
     the review loops (and the match game) render full-screen without it. The server serves `index.html`
     for any non-API path, so deep links / refresh / back all work.

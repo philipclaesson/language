@@ -18,9 +18,17 @@ import { GERMAN_ARTICLES } from "../shared/types";
 export const gameRoutes = new Hono<AppEnv>();
 gameRoutes.use("*", requireAuth);
 
-// Games that persist to the shared high-score table. Article Mania stores
-// percent (0–100); add future games here with their own score range.
-const KNOWN_GAMES: GameId[] = ["article-mania"];
+// Games that persist to the shared high-score table, with each game's maximum
+// believable score (percent games cap at 100; Präposition Power is a 60-second
+// count — 300 would mean 5 sorts/second, safely above any human).
+// Kasus Krieg + Präposition Power are fully client-side (static curated banks
+// in web/src/kasus-game.ts + preps-game.ts) — they only touch these score routes.
+const SCORE_LIMITS: Record<GameId, number> = {
+  "article-mania": 100,
+  "kasus-krieg": 100,
+  "praeposition-power": 300,
+};
+const KNOWN_GAMES = Object.keys(SCORE_LIMITS) as GameId[];
 const ROUND_SIZE = 25;
 
 // A round of Article Mania: random nouns (with their articles) from the global
@@ -105,9 +113,8 @@ gameRoutes.get("/games/scores", async (c) => {
 gameRoutes.post("/games/scores", async (c) => {
   const { game, score } = (await c.req.json()) as SubmitScoreRequest;
   if (!KNOWN_GAMES.includes(game)) return c.json({ error: "unknown game" }, 400);
-  // Article Mania scores are percent; keep future games honest about range too.
-  if (!Number.isInteger(score) || score < 0 || score > 100)
-    return c.json({ error: "score must be an integer 0–100" }, 400);
+  if (!Number.isInteger(score) || score < 0 || score > SCORE_LIMITS[game])
+    return c.json({ error: `score must be an integer 0–${SCORE_LIMITS[game]}` }, 400);
 
   const [saved] = await db
     .insert(gameScores)

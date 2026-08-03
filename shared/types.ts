@@ -112,7 +112,9 @@ export type MatchPairsResponse = { pairs: MatchPair[] };
 // One shared high-score table serves every game, keyed by a `game` id string.
 // Only games with a comparable integer score persist entries — the match game
 // (time + errors over a variable pair count) is menu-only for now.
-export type GameId = "article-mania";
+// Scores: article-mania + kasus-krieg store percent (0–100); praeposition-power
+// stores correct sorts in 60 seconds (a count, no % suffix).
+export type GameId = "article-mania" | "kasus-krieg" | "praeposition-power";
 
 export type GermanArticle = "der" | "die" | "das";
 export const GERMAN_ARTICLES: GermanArticle[] = ["der", "die", "das"];

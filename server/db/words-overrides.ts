@@ -1,0 +1,144 @@
+// Hand-fixes ("overrides") for the frequency word corpus, applied on top of the
+// Anki source. Some cards need edits the source deck doesn't have — a duplicate
+// prompt disambiguated, an example sentence that doesn't demonstrate its word.
+// Editing words.data.json directly would be lost on the next regeneration, so the
+// fixes live HERE, keyed by frequency_rank (the corpus's stable card key, also how
+// the backfill migrations address cards in prod), and are applied by both scripts:
+//   - scripts/apply-overrides.ts — the day-to-day tool: patches the committed
+//     words.data.json in place (no .apkg needed) and emits the next backfill
+//     migration for the ranks that changed, preserving review progress;
+//   - scripts/gen-words.ts — the full regen from the source .apkg applies the
+//     table last, so regenerating never loses a fix.
+//
+// Workflow for a new fix:
+//   1. add an entry to WORD_OVERRIDES below (one entry per rank; amend to stack fixes)
+//   2. npx tsx scripts/apply-overrides.ts --name=<short_snake_case_name>
+//   3. review the generated drizzle/00NN_<name>.sql, `npm run check`, commit all of it
+// The test in words-overrides.test.ts fails if this table and words.data.json
+// drift — i.e. if step 2 was skipped.
+//
+// History: 0011 fixed parser-mangled answers (a words-parse.ts fix — regen-safe, so
+// not repeated here); 0012 (weiter) and 0014 (befinden) were the first content
+// overrides, hand-written before this table existed. They're seeded below so a
+// regeneration keeps them; their migrations already ran, so they emit no new SQL.
+
+import type { ParsedWord } from "./words-parse";
+
+// Fixed id of the global corpus deck. MUST match server/db/words.ts,
+// scripts/gen-words.ts, and the deck row in drizzle/0005_seed_words.sql.
+export const WORD_DECK_ID = "b7c8e3a0-6d4f-4e2a-9c1b-000000005000";
+
+// The card fields an override may change. frequencyRank is the KEY (it is how the
+// card is found, in data.json and in prod alike), so it can never be overridden.
+export type OverrideFields = Partial<Omit<ParsedWord, "frequencyRank">>;
+
+export type WordOverride = {
+  rank: number; // frequency_rank of the card to fix
+  reason: string; // one line on why — copied into the generated migration
+  set: OverrideFields;
+};
+
+export const WORD_OVERRIDES: WordOverride[] = [
+  {
+    rank: 221,
+    reason:
+      'the "weiter" example used "weitere" (the rank-182 card), never the word itself — replaced with a sentence in the adverbial "onwards" sense (first shipped as 0012)',
+    set: {
+      exampleEn: "We’re tired, but we walk a little further.",
+      exampleDe: "Wir sind müde, aber wir gehen noch ein bisschen weiter.",
+    },
+  },
+  {
+    rank: 464,
+    reason:
+      'prompt "to be" was an exact duplicate of the rank-4 card "sein"; "sich befinden" means to be located/situated, and the gloss now says "is located" to match (first shipped as 0014)',
+    set: {
+      prompt: "to be located, to be situated",
+      exampleEn: "The restaurant is located near the railway station.",
+    },
+  },
+];
+
+/**
+ * Apply the override table to a parsed corpus. Returns a new array (input rows are
+ * never mutated; overridden rows are replaced). Throws on a duplicate rank in the
+ * table or on an override whose rank matches no word — both mean the table is
+ * stale (e.g. the source deck changed underneath it) and must fail loudly rather
+ * than silently skip a fix.
+ */
+export function applyOverrides(
+  words: ParsedWord[],
+  overrides: WordOverride[] = WORD_OVERRIDES,
+): ParsedWord[] {
+  const byRank = new Map<number, WordOverride>();
+  for (const o of overrides) {
+    if (byRank.has(o.rank)) throw new Error(`duplicate override for rank ${o.rank}`);
+    byRank.set(o.rank, o);
+  }
+  const applied = new Set<number>();
+  const out = words.map((w) => {
+    const o = w.frequencyRank === null ? undefined : byRank.get(w.frequencyRank);
+    if (!o) return w;
+    applied.add(o.rank);
+    const patch = Object.fromEntries(
+      Object.entries(o.set).filter(([, v]) => v !== undefined),
+    );
+    return { ...w, ...patch };
+  });
+  for (const o of overrides) {
+    if (!applied.has(o.rank)) throw new Error(`override for rank ${o.rank} matched no word`);
+  }
+  return out;
+}
+
+// --- SQL literals + backfill emission -----------------------------------------
+// Pure string builders shared by scripts/gen-words.ts (the full corpus INSERT) and
+// scripts/apply-overrides.ts (the per-fix backfill UPDATEs). They live here, not in
+// the scripts, so the rules are unit-tested.
+
+export function sqlStr(s: string): string {
+  return `'${s.replace(/'/g, "''")}'`;
+}
+export function sqlNullable(s: string | null): string {
+  return s === null ? "NULL" : sqlStr(s);
+}
+export function sqlArray(items: string[]): string {
+  return items.length === 0
+    ? "ARRAY[]::text[]"
+    : `ARRAY[${items.map(sqlStr).join(", ")}]::text[]`;
+}
+
+// cards column for each overridable field.
+const FIELD_COLUMNS: Record<keyof OverrideFields, string> = {
+  prompt: "prompt",
+  answer: "answer",
+  answerAlts: "answer_alts",
+  article: "article",
+  partOfSpeech: "part_of_speech",
+  notes: "notes",
+  exampleEn: "example_en",
+  exampleDe: "example_de",
+};
+
+function sqlValue(v: string | string[] | null): string {
+  if (v === null) return "NULL";
+  if (Array.isArray(v)) return sqlArray(v);
+  return sqlStr(v);
+}
+
+/**
+ * One idempotent, progress-preserving UPDATE for an override: sets only the fields
+ * the override sets, keyed on (deck_id, frequency_rank) — same shape as the
+ * hand-written backfills 0011/0012/0014.
+ */
+export function overrideUpdateSql(o: WordOverride): string {
+  const entries = (Object.entries(o.set) as [keyof OverrideFields, string | string[] | null][])
+    .filter(([, v]) => v !== undefined);
+  if (entries.length === 0) throw new Error(`override for rank ${o.rank} sets no fields`);
+  const sets = entries.map(([field, v]) => `"${FIELD_COLUMNS[field]}" = ${sqlValue(v)}`);
+  return (
+    `-- rank ${o.rank}: ${o.reason}\n` +
+    `UPDATE "cards" SET ${sets.join(", ")}\n` +
+    `WHERE "deck_id" = '${WORD_DECK_ID}'::uuid AND "frequency_rank" = ${o.rank};\n`
+  );
+}

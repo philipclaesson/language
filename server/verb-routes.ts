@@ -312,7 +312,9 @@ verbRoutes.post("/verbs/reviews", async (c) => {
         }
       : null;
 
-    const next = scheduleNext(prev, result.correct, now);
+    // Verbs stay all-or-nothing for now: no near-miss grade (a card is six forms,
+    // so "one letter off" needs its own rule — see PLAN.md §5).
+    const next = scheduleNext(prev, result.correct ? "pass" : "fail", now);
     await db
       .insert(verbReviewState)
       .values({ userId, verbId, ...next })

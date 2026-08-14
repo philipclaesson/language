@@ -215,10 +215,30 @@ Notes:
   session loop, not in FSRS — see §5a. Short-term steps would also leak
   minute-scale due times into a daily product and force a card to be answered
   twice to graduate.)
-- **Binary grading.** Our UI is pass/fail only, so we map:
-  - Correct → FSRS `Good` (3)
-  - Incorrect → FSRS `Again` (1)
-  - (We never expose Hard/Easy.)
+- **Three grades: pass / near / fail.** You still only ever *type an answer* — we
+  derive the grade from how the typing missed (`server/srs/check.ts`):
+  - Exact → `pass` → FSRS `Good` (3)
+  - **Near miss** → `near` → FSRS `Hard` (2)
+  - Wrong → `fail` → FSRS `Again` (1)
+  - (`Easy` is never used — we can tell that an answer was right, never that it
+    was *easy*.)
+
+  A **near miss** means you knew the word and got exactly one thing wrong:
+  a missing article (`Hund`), a wrong article (`die Hund`), or a single-letter
+  slip (`laufeb`, `bezeihungsweise` — Damerau-Levenshtein distance 1, only on
+  answers of ≥5 letters, measured on the noun without its article). There's **one
+  error budget**: a wrong article *plus* a typo is a plain fail. Short words get no
+  typo leniency at all, because at 4 letters one edit is usually a different German
+  word (Hund/Hand, Bein/Wein).
+
+  Why bother: on a familiar card (stability 12d) a `fail` resets stability to ~1.5d
+  and counts a lapse, while a `near` keeps it (12d → 27d instead of 38d) and only
+  raises difficulty. Losing a word's entire history over `die` vs `der` was the
+  wrong price. Near misses are **not** free, though — see the completion gate in
+  §5a: they don't satisfy the day.
+
+  Verbs are still all-or-nothing (a verb card is six forms at once, so "one letter
+  off" needs its own rule there).
 - **One graded review per card per day.** The *first* attempt of the day on a
   card is the one that drives FSRS; same-day re-drills are training only (§5a).
   After a graded answer, persist `review_state`, append to `reviews`.
@@ -261,7 +281,12 @@ The rule that makes a day *finishable* and *worth a streak*:
   - **Correct** → FSRS `Good`; the card is satisfied for the day and scheduled out.
   - **Wrong** → FSRS `Again` (the card lapses; its real due moves to soon); the
     card is **not** satisfied and stays in the session.
-- A card you got wrong is **re-shown until you type it correctly**. Those re-drill
+  - **Near miss** (§5) → FSRS `Hard`; the schedule barely dents, but the card is
+    **not** satisfied either — it stays in the session until you type it exactly.
+    So leniency applies to the *schedule* only; today's work is unchanged. The
+    single mechanism: only `reviews.rating >= 3` counts as done today, and a near
+    miss logs 2.
+- A card you got wrong **or near-missed** is **re-shown until you type it correctly**. Those re-drill
   attempts are *training only* — logged to `reviews` but they do **not** re-grade
   the card (the first-attempt lapse already counted). Getting it right on the 4th
   try doesn't launder an `Again` into a `Good`.

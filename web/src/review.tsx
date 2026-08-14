@@ -1,5 +1,11 @@
 import { useEffect, useRef, useState } from "preact/hooks";
-import type { ExtraType, MasteryTier, ReviewResult, SessionCard } from "../../shared/types";
+import type {
+  ExtraType,
+  MasteryTier,
+  MissReason,
+  ReviewResult,
+  SessionCard,
+} from "../../shared/types";
 import { EXTRA_NEW, EXTRA_PRACTICE } from "../../shared/types";
 import { normalizeAnswer } from "../../shared/normalize";
 import { getExtra, getToday, postReview } from "./api";
@@ -17,6 +23,16 @@ export type ReviewMode = "daily" | "learn" | "practice" | "misses";
 export function extraTypeOf(mode: ReviewMode): ExtraType {
   return mode === "learn" ? "new" : (mode as ExtraType);
 }
+
+// Drill-panel headline per miss reason. The first three are near misses (softer
+// FSRS grade — see server/srs/check.ts); "wrong" is a plain miss. The re-drill is
+// the same either way: you type the answer to move on.
+const MISS_COPY: Record<MissReason, string> = {
+  missing_article: "Almost — don't forget the article",
+  wrong_article: "Almost — wrong article",
+  typo: "So close — one letter off",
+  wrong: "Not quite",
+};
 
 // `input` = typing the answer from recall (graded on the server).
 // `drill` = got it wrong; copy the revealed answer to continue. All modes hammer
@@ -157,9 +173,10 @@ export function Review({
         setFlash("green");
         setTimeout(() => next(true, true), 160);
       } else {
-        // Wrong (all modes, incl. practice): reveal the answer and make them type
-        // it to continue; the card rotates to the back to come round again. The
-        // miss was already graded on this first-of-day attempt (FSRS Again).
+        // Not an exact match (all modes, incl. practice): reveal the answer and make
+        // them type it to continue; the card rotates to the back to come round again.
+        // Near misses land here too — they were graded more gently on this
+        // first-of-day attempt (FSRS Hard, not Again), but still owe a correct typing.
         setResult(r);
         setFlash("red");
         setTyped("");
@@ -357,16 +374,16 @@ export function Review({
 
           {phase === "drill" && result && (
             <div class="mt-4 rounded-xl bg-amber-50 px-4 py-3 text-center text-amber-900 ring-1 ring-amber-200">
-              <p class="font-medium">
-                {result.reason === "missing_article"
-                  ? "Almost — don't forget the article"
-                  : "Not quite"}
-              </p>
+              <p class="font-medium">{MISS_COPY[result.reason ?? "wrong"]}</p>
               <p class="mt-1 text-lg font-semibold">{result.expected}</p>
               {result.exampleDe && (
                 <p class="mt-2 text-sm italic text-amber-800">“{result.exampleDe}”</p>
               )}
-              <p class="mt-1 text-xs opacity-70">Type it to continue — you'll see it again later.</p>
+              <p class="mt-1 text-xs opacity-70">
+                {result.grade === "near"
+                  ? "Type it to continue — a near miss, so it barely dents the schedule."
+                  : "Type it to continue — you'll see it again later."}
+              </p>
             </div>
           )}
 

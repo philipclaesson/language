@@ -3,7 +3,7 @@ import { and, asc, eq, gte, inArray, isNull, lt, or, sql } from "drizzle-orm";
 import { db } from "./db/client";
 import { cards, decks, reviewState, reviews } from "./db/schema";
 import { checkAnswer, fullAnswer } from "./srs/check";
-import { scheduleNext, type StoredSrs } from "./srs/scheduler";
+import { ratingFor, scheduleNext, type StoredSrs } from "./srs/scheduler";
 import {
   startOfDay,
   isFirstAttemptOfDay,
@@ -89,6 +89,9 @@ export async function todayReviewSets(userId: string, dayStart: Date) {
   return {
     reviewedTodayAny: new Set(todays.map((r) => r.cardId)),
     reviewedToday: new Set(nonBonus.map((r) => r.cardId)),
+    // rating >= 3 = an exact typing. A near miss (2) knows the word but got the
+    // article or a letter wrong: it takes a gentler FSRS grade, yet still owes a
+    // correct typing today, so it counts as neither done nor un-missed.
     correctToday: new Set(nonBonus.filter((r) => r.rating >= 3).map((r) => r.cardId)),
     // Every card whose first graded attempt today was a miss — the "misses" pool.
     // Includes bonus/extra cards (e.g. new cards learned today that you flunked), not
@@ -336,7 +339,7 @@ reviewRoutes.post("/reviews", async (c) => {
         }
       : null;
 
-    const next = scheduleNext(prev, result.correct, now);
+    const next = scheduleNext(prev, result.grade, now);
     await db
       .insert(reviewState)
       .values({ userId, cardId, ...next })
@@ -354,7 +357,9 @@ reviewRoutes.post("/reviews", async (c) => {
   await db.insert(reviews).values({
     userId,
     cardId,
-    rating: result.correct ? 3 : 1,
+    // 3 = pass, 2 = near miss, 1 = fail. Only >= 3 satisfies the day, so a near
+    // miss stays pending and lands in the misses pool — see todayReviewSets.
+    rating: ratingFor(result.grade),
     graded,
     bonus: bonus ?? false,
     typedAnswer: typedAnswer ?? null,
@@ -364,6 +369,7 @@ reviewRoutes.post("/reviews", async (c) => {
   const body: ReviewResult = {
     correct: result.correct,
     expected: result.expected,
+    grade: result.grade,
     reason: result.reason,
     nextDue: nextDue.toISOString(),
     graded,

@@ -190,7 +190,10 @@ export const reviews = pgTable("reviews", {
   cardId: uuid("card_id")
     .notNull()
     .references(() => cards.id, { onDelete: "cascade" }),
-  rating: integer("rating").notNull(), // 1 = fail, 3 = pass
+  // FSRS's own rating scale: 1 = fail (Again), 2 = near miss (Hard — right word,
+  // wrong article or one letter off; see srs/check.ts), 3 = pass (Good). Only
+  // >= 3 satisfies the day. Rows written before near misses shipped are 1 or 3.
+  rating: integer("rating").notNull(),
   // Whether this attempt drove the FSRS schedule. The first attempt of the day on
   // a card is graded; later same-day attempts are training-only re-drills logged
   // with graded=false, so they don't pollute the optimizer's view. See PLAN.md §5a.

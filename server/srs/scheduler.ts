@@ -1,4 +1,14 @@
-import { fsrs, createEmptyCard, Rating, State, type Card as FsrsCard } from "ts-fsrs";
+import {
+  fsrs,
+  createEmptyCard,
+  Rating,
+  State,
+  type Card as FsrsCard,
+  // FSRS's own rating-minus-Manual union. Named to keep it apart from *our* Grade
+  // (the pass/near/fail vocabulary the rest of the app speaks).
+  type Grade as FsrsGrade,
+} from "ts-fsrs";
+import type { Grade } from "../../shared/types";
 
 // Day-grained FSRS: no intra-day learning steps. The "drill until correct"
 // behaviour is a session-completion gate (see PLAN.md §5a), not FSRS steps.
@@ -54,13 +64,40 @@ function fromFsrs(c: FsrsCard): StoredSrs {
   };
 }
 
+// Our three grades map onto three of the four FSRS ratings (Easy is never
+// exposed — we have no way to know an answer was *easy*, only that it was right).
+//
+// The one that earns its keep is `near` -> Hard: FSRS treats Hard as a successful
+// recall, so the card keeps its stability (the gain is damped, not reversed) and
+// counts no lapse; only its difficulty ticks up. That's the honest reading of
+// "wrote die instead of der": you knew the word. A `fail` (Again) instead RESETS
+// stability and counts a lapse. Measured on a familiar card (stability 12d, D 5):
+//   pass -> due in 38d, stability 37.6, D 4.99
+//   near -> due in 27d, stability 27.4, D 6.67, no lapse
+//   fail -> due in  2d, stability  1.5, D 8.34, +1 lapse
+// See PLAN.md §5 / srs/check.ts for what counts as near.
+const RATING_BY_GRADE: Record<Grade, FsrsGrade> = {
+  pass: Rating.Good,
+  near: Rating.Hard,
+  fail: Rating.Again,
+};
+
+// What we write to `reviews.rating` (FSRS's own 1-4 scale, so a future optimizer
+// run over the log reads it directly). The daily loop keys off this: **rating >= 3
+// means "satisfied the day"**, so a near miss (2) still has to be re-drilled.
+const RATING_VALUE: Record<Grade, number> = { pass: 3, near: 2, fail: 1 };
+
+/** The `reviews.rating` value to log for a grade. */
+export function ratingFor(grade: Grade): number {
+  return RATING_VALUE[grade];
+}
+
 /**
- * Advance a card's schedule. Binary grading: pass -> Good, fail -> Again.
+ * Advance a card's schedule: pass -> Good, near -> Hard, fail -> Again.
  * `prev` is null for a card being reviewed for the very first time.
  */
-export function scheduleNext(prev: StoredSrs | null, pass: boolean, now: Date): StoredSrs {
+export function scheduleNext(prev: StoredSrs | null, grade: Grade, now: Date): StoredSrs {
   const card = prev ? toFsrs(prev) : createEmptyCard(now);
-  const grade = pass ? Rating.Good : Rating.Again;
-  const { card: next } = scheduler.next(card, now, grade);
+  const { card: next } = scheduler.next(card, now, RATING_BY_GRADE[grade]);
   return fromFsrs(next);
 }

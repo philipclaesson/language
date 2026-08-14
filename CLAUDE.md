@@ -79,7 +79,9 @@ TypeScript everywhere. One Cloud Run service serves the SPA and the API.
     `freund/agent.ts` models + tool schemas + prompts · `freund/diff.ts` pure
     word-diff (+ `diff.test.ts`) · `freund/seed.ts` today's-vocab seeder ·
     `freund/eval.ts` opt-in prompt eval · `srs/check.ts` pure answer matcher
-    (+ `check.test.ts`) · `srs/scheduler.ts` FSRS wrapper · `srs/day.ts` daily-loop
+    (+ `check.test.ts`; grades pass/near/fail — see Gotchas) · `srs/distance.ts`
+    pure Damerau-Levenshtein for the near-miss typo rule (+ `distance.test.ts`) ·
+    `srs/scheduler.ts` FSRS wrapper · `srs/day.ts` daily-loop
     logic · `verbs/check.ts` conjugation matcher + `verbs/plan.ts` verb day-planner
     (both pure, tested) · `db/schema.ts` Drizzle schema · `db/seed.ts` starter deck ·
     `db/verbs.ts` the global verb catalog · `db/words.ts` loads the global word
@@ -172,6 +174,15 @@ the route/tool glue isn't.
   context and rendered under the prompt; `cards.example_de` (German sentence, which
   contains the answer word) is withheld until after answering and returned in the
   `/reviews` result, shown only in the drill panel on a miss.
+- **Grading is three-valued: `pass` / `near` / `fail`** (PLAN.md §5), mapped to FSRS
+  `Good`/`Hard`/`Again` in `srs/scheduler.ts` and logged as `reviews.rating` 3/2/1.
+  A **near miss** = knew the word, one thing off: missing article, wrong article, or a
+  one-edit typo on a ≥5-letter answer (`srs/check.ts`, one error budget — article
+  error *plus* typo is a fail). Two invariants hold the design up: **`rating >= 3` is
+  the only thing that satisfies the day** (so a near miss still gets re-drilled and
+  still joins the misses pool — leniency applies to the schedule, never to today's
+  work), and `check.ts` stays the *only* place that decides what "close" means.
+  Verbs are still binary (six forms at once needs its own rule).
 - **Verbs are a global catalog**, not per-user decks: the `verbs` table has no
   owner (edited in one place, seeded to both DB branches by a data migration);
   only `verb_review_state`/`verb_reviews` are per-user. The core loop, FSRS

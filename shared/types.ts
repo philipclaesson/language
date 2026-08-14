@@ -36,10 +36,26 @@ export type ReviewRequest = {
   bonus?: boolean;
 };
 
+// How an answer is graded, in the three steps FSRS actually understands.
+//   pass = exact (Good)
+//   near = a near miss — right word, one thing off: wrong/missing article, or a
+//          single-letter slip. Softer FSRS grade (Hard: no lapse, stability kept
+//          but its gain damped) yet it does NOT satisfy the day — see
+//          server/srs/check.ts and PLAN.md §5a.
+//   fail = wrong (Again)
+export type Grade = "pass" | "near" | "fail";
+
+// Why an answer wasn't an exact match. The first three are near misses; "wrong"
+// is a plain fail.
+export type MissReason = "missing_article" | "wrong_article" | "typo" | "wrong";
+
 export type ReviewResult = {
-  correct: boolean;
+  correct: boolean; // exact match — i.e. grade === "pass"
   expected: string; // full canonical answer, e.g. "der Hund"
-  reason?: "missing_article" | "wrong";
+  // The FSRS-facing verdict. "near" still needs a re-drill (correct is false), it
+  // just costs less on the schedule than a plain "fail".
+  grade: Grade;
+  reason?: MissReason;
   nextDue: string; // ISO timestamp
   // Whether this attempt drove the FSRS schedule. The first attempt of the day
   // on a card is graded; all later same-day attempts are training-only re-drills

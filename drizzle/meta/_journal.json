@@ -120,6 +120,13 @@
       "when": 1786801007604,
       "tag": "0016_add_swedish_glosses",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1786802414536,
+      "tag": "0017_more_swedish_glosses",
+      "breakpoints": true
     }
   ]
 }

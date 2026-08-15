@@ -177,7 +177,10 @@ export type SubmitScoreResponse = {
 // One day cell in the activity heatmap. `count` = cards done that day (graded
 // first-of-day reviews, words + verbs combined). `future` days (after today) are
 // rendered blank. Cells span whole Monday-first weeks, oldest first.
-export type HeatmapCell = { date: string; count: number; future: boolean };
+// `level` is the intensity bucket (0 = empty, 1–4 = light→dark), computed relative
+// to the user's own daily volume so a normal day and a grind day look different
+// (absolute count thresholds saturated once daily volume routinely cleared them).
+export type HeatmapCell = { date: string; count: number; level: number; future: boolean };
 
 export type StatsResponse = {
   heatmap: HeatmapCell[]; // weeks * 7 cells, oldest first (chunk by 7 for rows)

@@ -6,6 +6,8 @@ import {
   localDateString,
   computeStreaks,
   buildHeatmap,
+  computeLevelThresholds,
+  levelFor,
   sumLastWeek,
 } from "./stats.ts";
 
@@ -84,6 +86,38 @@ test("buildHeatmap: whole Monday-first weeks, today's week last, future blanked"
   assert.equal(cells.find((c) => c.date === "2026-07-03")!.future, true);
   assert.equal(cells[41].date, "2026-07-05");
   assert.equal(cells[41].future, true);
+});
+
+test("levels: relative buckets spread a varied history across 1–4", () => {
+  const counts = [2, 4, 8, 40]; // e.g. a light day … a big grind day
+  const th = computeLevelThresholds(counts);
+  assert.equal(levelFor(0, th), 0, "empty day");
+  assert.equal(levelFor(2, th), 1, "smallest active day is lightest");
+  assert.equal(levelFor(40, th), 4, "biggest day is darkest");
+  // The whole point: the top day no longer shares a shade with a middling one.
+  assert.notEqual(levelFor(40, th), levelFor(4, th));
+});
+
+test("levels: a uniform history reads mid-scale, not all-faint", () => {
+  const th = computeLevelThresholds([30, 30, 30]);
+  assert.equal(levelFor(30, th), 2);
+});
+
+test("levels: no history buckets any future count as non-empty", () => {
+  const th = computeLevelThresholds([]);
+  assert.equal(levelFor(0, th), 0);
+  assert.equal(levelFor(5, th), 4);
+});
+
+test("buildHeatmap stamps a relative level on each cell", () => {
+  const counts = new Map([
+    ["2026-07-02", 40], // today — a big day
+    ["2026-06-29", 2], // a light day
+  ]);
+  const cells = buildHeatmap(counts, "2026-07-02", 6);
+  assert.equal(cells.find((c) => c.date === "2026-07-02")!.level, 4);
+  assert.equal(cells.find((c) => c.date === "2026-06-29")!.level, 1);
+  assert.equal(cells.find((c) => c.date === "2026-06-30")!.level, 0, "empty day");
 });
 
 test("sumLastWeek totals today + the previous six days only", () => {

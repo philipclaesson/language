@@ -7,16 +7,14 @@ import { TIERS } from "./tiers";
 
 const WEEKDAYS = ["M", "T", "W", "T", "F", "S", "S"];
 
-// Blue intensity by cards-done that day, tuned to a typical day's volume
-// (due + up to 10 new + any bonus). Empty days are faint grey; future days blank.
+// Blue intensity by the server's relative level (0 = empty … 4 = a big day for you),
+// calibrated to the user's own volume so a good day and a grind day differ. Empty
+// days are faint grey; future days blank.
 function cellClass(cell: HeatmapCell): string {
   if (cell.future) return "bg-transparent";
-  const n = cell.count;
-  if (n === 0) return "bg-slate-100";
-  if (n <= 5) return "bg-blue-200";
-  if (n <= 12) return "bg-blue-400";
-  if (n <= 24) return "bg-blue-600";
-  return "bg-blue-800";
+  return ["bg-slate-100", "bg-blue-200", "bg-blue-400", "bg-blue-600", "bg-blue-800"][
+    cell.level
+  ];
 }
 
 export function Stats() {

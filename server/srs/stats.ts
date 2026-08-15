@@ -57,21 +57,63 @@ export function computeStreaks(
 }
 
 /**
+ * Intensity thresholds (three cut points → four non-empty levels) derived from the
+ * user's own daily counts, so the ramp self-calibrates instead of pinning to the
+ * darkest shade once volume routinely clears fixed thresholds. Quartiles of the
+ * non-zero counts; degenerate inputs (no data, or one distinct value) collapse to a
+ * mid-scale so a uniform history doesn't read as all-faint. See `levelFor`.
+ */
+export function computeLevelThresholds(counts: number[]): [number, number, number] {
+  const nz = counts.filter((c) => c > 0).sort((a, b) => a - b);
+  if (nz.length === 0) return [0, 0, 0];
+  const min = nz[0];
+  const max = nz[nz.length - 1];
+  if (min === max) return [min - 1, min, max]; // one distinct value → level 2
+  const q = (p: number) => nz[Math.min(nz.length - 1, Math.floor(p * nz.length))];
+  let [t1, t2, t3] = [q(0.25), q(0.5), q(0.75)];
+  // With few days the 75th-percentile point can be the max itself, which would trap
+  // your biggest days at level 3. Keep the top cut below max so max always reaches 4,
+  // then re-settle the lower cuts to stay monotonic.
+  if (t3 >= max) t3 = max - 1;
+  if (t2 > t3) t2 = t3;
+  if (t1 > t2) t1 = t2;
+  return [t1, t2, t3];
+}
+
+/** Bucket a day's count into 0 (empty) or 1–4 (light→dark) against `thresholds`. */
+export function levelFor(count: number, [t1, t2, t3]: [number, number, number]): number {
+  if (count <= 0) return 0;
+  if (count <= t1) return 1;
+  if (count <= t2) return 2;
+  if (count <= t3) return 3;
+  return 4;
+}
+
+/**
  * Build the heatmap grid: `weeks` whole Monday-first weeks ending in the week that
  * contains `today`. Returns weeks*7 cells, oldest first, so the client chunks by 7
  * into one row per week. Days after `today` are flagged `future` (rendered blank).
+ * `level` is relative to the user's whole history (all of `counts`), not the visible
+ * window, so scrolling the window wouldn't reshuffle shades.
  */
 export function buildHeatmap(
   counts: Map<string, number>,
   today: string,
   weeks: number,
 ): HeatmapCell[] {
+  const thresholds = computeLevelThresholds([...counts.values()]);
   // Start on the Monday of the earliest week in the window.
   const start = addDays(today, -(mondayIndex(today) + (weeks - 1) * 7));
   const cells: HeatmapCell[] = [];
   for (let i = 0; i < weeks * 7; i++) {
     const date = addDays(start, i);
-    cells.push({ date, count: counts.get(date) ?? 0, future: date > today });
+    const count = counts.get(date) ?? 0;
+    cells.push({
+      date,
+      count,
+      level: levelFor(count, thresholds),
+      future: date > today,
+    });
   }
   return cells;
 }

@@ -14,8 +14,10 @@
 // discarded) and reloads the same global deck. Re-running this script overwrites both
 // artifacts; bump the migration number below if you regenerate after 0009 is applied.
 //
-// The per-note cleaning rules live in server/db/words-parse.ts (tested). This script
-// is just I/O: unpack, decompress, read SQLite, parse, sort, emit.
+// The per-note cleaning rules live in server/db/words-parse.ts (tested). Hand-fixes
+// to individual cards live in server/db/words-overrides.ts (also tested) and are
+// applied LAST, so regenerating never loses them — see that module for the workflow.
+// This script is just I/O: unpack, decompress, read SQLite, parse, sort, override, emit.
 //
 // Usage (node:sqlite is behind a flag on Node 22.11; zstd binary must be on PATH):
 //   NODE_OPTIONS=--experimental-sqlite npx tsx scripts/gen-words.ts [path-to.apkg]
@@ -26,10 +28,14 @@ import { existsSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir, homedir } from "node:os";
 import { join } from "node:path";
 import { parseNote, type ParsedWord, type RawNote } from "../server/db/words-parse.ts";
+import {
+  WORD_DECK_ID,
+  applyOverrides,
+  sqlStr,
+  sqlNullable,
+  sqlArray,
+} from "../server/db/words-overrides.ts";
 
-// The global corpus deck's fixed id — shared with server/db/words.ts and the seed
-// migrations so the seed script and every migration target the same deck row.
-const WORD_DECK_ID = "b7c8e3a0-6d4f-4e2a-9c1b-000000005000";
 const DECK_NAME = "German — Frequency 5000";
 const DECK_DESC =
   "The ~5,000 most frequent German words, ordered by frequency, each with an example sentence.";
@@ -64,18 +70,6 @@ function collectionPath(input: string): string {
   return join(dir, "collection.anki2");
 }
 
-function sqlStr(s: string): string {
-  return `'${s.replace(/'/g, "''")}'`;
-}
-function sqlNullable(s: string | null): string {
-  return s === null ? "NULL" : sqlStr(s);
-}
-function sqlArray(items: string[]): string {
-  return items.length === 0
-    ? "ARRAY[]::text[]"
-    : `ARRAY[${items.map(sqlStr).join(", ")}]::text[]`;
-}
-
 const input =
   process.argv[2] ??
   join(homedir(), "Downloads", "English-Deutsch (Sorted by Frequency)-20260704133724.apkg");
@@ -103,17 +97,21 @@ const rows = db
   .all(model.id) as { flds: string }[];
 db.close();
 
-const words: ParsedWord[] = [];
+const parsed: ParsedWord[] = [];
 for (const { flds } of rows) {
   const parts = flds.split("\x1f");
   const raw = Object.fromEntries(FIELDS.map((f, i) => [f, parts[i] ?? ""])) as unknown as RawNote;
   const w = parseNote(raw);
   if (!w.prompt || !w.answer) continue; // skip anything that cleaned to nothing
-  words.push(w);
+  parsed.push(w);
 }
 
 // Frequency order (nulls last), stable — this is the new-card introduction order.
-words.sort((a, b) => (a.frequencyRank ?? Infinity) - (b.frequencyRank ?? Infinity));
+parsed.sort((a, b) => (a.frequencyRank ?? Infinity) - (b.frequencyRank ?? Infinity));
+
+// Hand-fixes last, so they survive regeneration. Throws if the table went stale
+// (a rank no longer exists) — resolve the override, don't ship a silently-dropped fix.
+const words = applyOverrides(parsed);
 
 const nouns = words.filter((w) => w.partOfSpeech === "noun").length;
 const gendered = words.filter((w) => w.article).length;

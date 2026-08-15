@@ -85,7 +85,9 @@ TypeScript everywhere. One Cloud Run service serves the SPA and the API.
     logic · `verbs/check.ts` conjugation matcher + `verbs/plan.ts` verb day-planner
     (both pure, tested) · `db/schema.ts` Drizzle schema · `db/seed.ts` starter deck ·
     `db/verbs.ts` the global verb catalog · `db/words.ts` loads the global word
-    corpus + `db/words-parse.ts` pure Anki-note cleaner (+ `words-parse.test.ts`) ·
+    corpus + `db/words-parse.ts` pure Anki-note cleaner (+ `words-parse.test.ts`) +
+    `db/words-overrides.ts` hand-fix table for individual corpus cards
+    (+ `words-overrides.test.ts`; see Gotchas > corpus overrides) ·
     `push-routes.ts` Web Push (`/push/config` + `/push/subscribe` +
     `/push/unsubscribe` for users; `/push/send-reminders` for the daily cron) ·
     `push/send.ts` web-push wrapper · `push/reminders.ts` per-user "due today"
@@ -104,6 +106,11 @@ TypeScript everywhere. One Cloud Run service serves the SPA and the API.
   0005 seeded the first (weaker) corpus, 0008 split its sentences into `example_*`;
   **0009 replaced it** with this higher-quality deck (same global deck row; wipes the
   old cards + their progress). 0005/0008 are frozen — re-runs only touch 0009.
+  Applies `server/db/words-overrides.ts` last, so regenerating keeps every hand-fix.
+- `scripts/apply-overrides.ts` — the day-to-day corpus fixer (no `.apkg` needed):
+  re-applies the override table to the committed `words.data.json` and emits the
+  next numbered backfill migration (+ journal entry) for whatever changed.
+  See Gotchas > corpus overrides for the workflow.
 
 ## Commands
 
@@ -204,7 +211,16 @@ the route/tool glue isn't.
   `pickFresh`, keyed off `CardToday.stock` = an ownerless deck), spilling into
   whichever pool still has cards. Within a pool, order is `cards.frequency_rank`
   (stock) or `createdAt` (own).
-- **Freund** seeds its system prompt server-side with today's words/verbs *including*
+- **Corpus overrides: never hand-edit a frequency-corpus card** — not in
+  `words.data.json` (a regen would revert it) and not via ad-hoc SQL (dev seeds
+  would drift). Instead: add an entry to `server/db/words-overrides.ts` (keyed by
+  `frequency_rank`, with a one-line reason), run
+  `npx tsx scripts/apply-overrides.ts --name=<snake_case>`, review the generated
+  `drizzle/00NN_*.sql` (in-place idempotent UPDATEs — progress preserved), then
+  `npm run check` and commit everything together. A drift-guard test fails if the
+  table and `words.data.json` disagree. Both generator scripts apply the table, so
+  fixes survive a full regen from the `.apkg`. (Parser-level bugs still belong in
+  `words-parse.ts`, not the table — see 0011 vs 0012/0014 for the precedent.) with today's words/verbs *including*
   their German answers (`freund/seed.ts`) — fine because it never leaves the server
   (unlike `/session/today`, which must never send answers). Two model-shaped rules:
   the correction must rewrite the **whole** message (the model returns the full

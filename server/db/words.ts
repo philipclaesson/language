@@ -12,11 +12,12 @@ import { eq } from "drizzle-orm";
 import { db } from "./client";
 import { cards, decks } from "./schema";
 import type { ParsedWord } from "./words-parse";
+import { WORD_DECK_ID } from "./words-overrides";
 import wordsData from "./words.data.json" with { type: "json" };
 
-// Fixed id of the global corpus deck. MUST match scripts/gen-words.ts and the
-// deck row in drizzle/0005_seed_words.sql.
-export const WORD_DECK_ID = "b7c8e3a0-6d4f-4e2a-9c1b-000000005000";
+// Fixed id of the global corpus deck — defined in words-overrides.ts (the one copy
+// in code; the drizzle data migrations hard-code it and MUST match).
+export { WORD_DECK_ID };
 const DECK_NAME = "German — Frequency 5000";
 const DECK_DESC =
   "The ~5,000 most frequent German words, ordered by frequency, each with an example sentence.";

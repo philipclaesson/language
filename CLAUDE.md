@@ -166,6 +166,13 @@ the route/tool glue isn't.
 
 - **Vite pinned to v6.** v8 needs Node ≥22.12 (local dev is 22.11). Don't bump
   Vite without bumping Node.
+- **Corporate VPNs (Zscaler) blackhole TCP 5432**, so local dev can't reach Neon
+  directly. `DATABASE_WEBSOCKET=1` in `.env` (local only, never prod) switches
+  both the server (`db/client.ts`, Neon WebSocket driver over 443) and
+  `db:migrate` (`scripts/migrate.ts` dispatches to drizzle-orm's programmatic
+  migrator — same journal/bookkeeping as drizzle-kit) to Neon's WebSocket proxy.
+  Seed scripts go through `db/client.ts`, so the flag covers them too;
+  `db:studio` (drizzle-kit) still needs a network that allows 5432.
 - `/session/today` must **never** send the answer or the article to the client
   (the article reveals a noun's gender — the thing being tested). Likewise
   `/verbs/session/today` must never send the six conjugated forms — they are the

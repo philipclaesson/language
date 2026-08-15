@@ -15,6 +15,9 @@ export const env = {
   // Cloud Run injects PORT (8080). Dev server uses 8787 (Vite proxies /api here).
   port: Number(process.env.PORT) || 8787,
   databaseUrl: required("DATABASE_URL"),
+  // Local-dev escape hatch: connect to Neon over WebSockets (port 443) instead
+  // of TCP 5432, for networks/VPNs that block 5432. Never set in prod.
+  databaseWebsocket: process.env.DATABASE_WEBSOCKET === "1",
   googleClientId: required("GOOGLE_CLIENT_ID"),
   googleClientSecret: required("GOOGLE_CLIENT_SECRET"),
   sessionSecret: required("SESSION_SECRET"),

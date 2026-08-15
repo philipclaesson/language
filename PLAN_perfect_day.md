@@ -1,12 +1,12 @@
 # Perfect days — feature spec
 
-> **Status: DESIGNED, not built.** A motivation layer on top of the existing Stats
-> tab. Two independently-shippable pieces: (1) recalibrate the activity heatmap so a
-> good day and a grind day look different, and (2) add the **perfect day** concept —
-> a day where you finished *all* your words, *all* your verbs, and chatted with Freund
-> at least once — surfaced as a per-cell ring on the grid and a 30-day percentage.
-> A third piece (a 16:00 Freund nudge) rides on the same new table and is specced in
-> **the notification hook** below but deferred.
+> **Status: BUILT (2026-08-15).** A motivation layer on top of the existing Stats
+> tab. Three pieces, all shipped: (1) recalibrated the activity heatmap so a good day
+> and a grind day look different; (2) the **perfect day** concept — a day where you
+> finished *all* your words, *all* your verbs, and chatted with Freund at least once —
+> surfaced as a per-cell emerald ring on the grid and a 30-day percentage; and (3) a
+> daily **Freund push nudge** that rides on the same new table (see **the notification
+> hook** below).
 
 ## Why this exists
 
@@ -143,17 +143,19 @@ the lenient streak, mastery, and analytics.
   full-width card beneath them.
 - Extend the legend / cell tooltip to mention perfect days.
 
-## The notification hook (deferred — designed, not built)
+## The notification hook — BUILT (2026-08-15)
 
-The same `daily_progress.freund_count` powers a future **16:00 Freund nudge**: extend
-`push/reminders.ts` + the reminders cron to also push "you haven't chatted with Freund
-today" when `freund_count = 0`. The push payload carries a URL that deep-links into a
-Freund scenario (a random-scenario kickoff already exists in `freund-routes.ts`);
-`web/public/sw.js`'s `notificationclick` handler routes to it (e.g.
-`/freund?scenario=…`). Note the current reminders cron fires at **16:00 UTC = 18:00
-CEST** — a true local 16:00 means shifting the schedule or adding a second one.
-Deferred so the schema ships with the perfect-days work and the nudge lands later
-without new tables. See CLAUDE.md > Gotchas (Web Push) and INFRA.md.
+The `daily_progress.freund_count` powers a daily **Freund nudge**: a second cron
+(`.github/workflows/freund-nudge.yml`, `cron "0 14 * * *"` ≈ 16:00 CEST — earlier than
+the 16:00-UTC review reminder so they don't stack) POSTs `/push/send-freund-nudge`,
+which pushes a role-play invitation only to users with `freund_count = 0` today. Each
+user gets a random scenario; the payload's URL deep-links straight into it
+(`/freund?scenario=…`), and the Freund page auto-starts that exact scenario on mount
+(`/freund/start` now accepts an optional scenario, validated against `SCENARIOS`). The
+nudge carries its own notification `tag` so it doesn't collapse with the review
+reminder (`web/public/sw.js` now reads `data.tag`). Reuses the existing push
+subscriptions + `CRON_SECRET` — no new secret, no new table. Pure copy in
+`push/message.ts` `freundNudge` (tested). See INFRA.md > Web Push.
 
 ## Build plan (two commits, independently shippable)
 

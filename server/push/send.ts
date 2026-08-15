@@ -22,8 +22,10 @@ function ensureConfigured() {
   configured = true;
 }
 
-// What the service worker's `push` handler reads (see web/public/sw.js).
-export type PushPayload = { title: string; body: string; url?: string };
+// What the service worker's `push` handler reads (see web/public/sw.js). `tag`
+// controls which notifications collapse into one — distinct tags (the review
+// reminder vs the Freund nudge) coexist instead of clobbering each other.
+export type PushPayload = { title: string; body: string; url?: string; tag?: string };
 
 export type StoredSubscription = { endpoint: string; p256dh: string; auth: string };
 

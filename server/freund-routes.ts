@@ -27,6 +27,7 @@ import type {
   FreundReviewResponse,
   FreundSaveRequest,
   FreundSaveResponse,
+  FreundStartRequest,
   FreundStartResponse,
   FreundSuggestedCard,
 } from "../shared/types";
@@ -109,7 +110,15 @@ freundRoutes.use("*", requireAuth);
 // /freund/message so Freund stays in the scene (the server is stateless).
 freundRoutes.post("/freund/start", async (c) => {
   const userId = c.get("user").id;
-  const scenario = SCENARIOS[Math.floor(Math.random() * SCENARIOS.length)];
+  // A caller (e.g. the push nudge deep-link) may request a specific scenario; only
+  // honor it if it's one of ours, else pick at random. Guards against a crafted
+  // ?scenario= being injected into the system prompt.
+  const payload = (await c.req.json().catch(() => ({}))) as FreundStartRequest;
+  const requested = str(payload.scenario);
+  const scenario =
+    requested && SCENARIOS.includes(requested)
+      ? requested
+      : SCENARIOS[Math.floor(Math.random() * SCENARIOS.length)];
 
   const res = await anthropic.messages.create({
     model: CHAT_MODEL,

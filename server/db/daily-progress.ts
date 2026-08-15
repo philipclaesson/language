@@ -3,7 +3,7 @@
 // and only ever raises a flag/counter — a day never un-completes. `day` is the local
 // calendar date in DAY_TZ, matching the heatmap buckets. See PLAN_perfect_day.md.
 
-import { sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { db } from "./client";
 import { dailyProgress } from "./schema";
 import { DAY_TZ } from "../srs/day";
@@ -34,6 +34,15 @@ export function markVerbsDone(userId: string, now: Date) {
       target: [dailyProgress.userId, dailyProgress.day],
       set: { verbsDone: true },
     });
+}
+
+/** How many Freund messages the user has sent today (0 → the nudge should fire). */
+export async function freundCountToday(userId: string, now: Date): Promise<number> {
+  const [row] = await db
+    .select({ n: dailyProgress.freundCount })
+    .from(dailyProgress)
+    .where(and(eq(dailyProgress.userId, userId), eq(dailyProgress.day, dayKey(now))));
+  return row?.n ?? 0;
 }
 
 /** Count one Freund message for today. Called from /freund/message per user turn. */

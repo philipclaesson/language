@@ -109,13 +109,14 @@ export function Freund() {
     }
   }
 
-  // Kick off a random role-play: the server picks a scenario and Freund speaks first.
-  async function startScenario() {
+  // Kick off a role-play: the server picks a scenario (or honors `chosen`, used by
+  // the push nudge's deep-link) and Freund speaks first.
+  async function startScenario(chosen?: string) {
     if (sending) return;
     setError(false);
     setSending(true);
     try {
-      const res = await postFreundStart();
+      const res = await postFreundStart(chosen);
       setScenario(res.scenario);
       setTurns([{ role: "assistant", reply: res.reply, explanation: null }]);
     } catch {
@@ -124,6 +125,17 @@ export function Freund() {
       setSending(false);
     }
   }
+
+  // Deep-link from the daily Freund push nudge: /freund?scenario=… drops the user
+  // straight into that role-play. Strip the param afterward so a refresh doesn't
+  // restart it. Runs once on mount.
+  useEffect(() => {
+    const chosen = new URLSearchParams(window.location.search).get("scenario");
+    if (!chosen) return;
+    history.replaceState(null, "", window.location.pathname);
+    startScenario(chosen);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function newConversation() {
     setTurns([]);
@@ -178,7 +190,7 @@ export function Freund() {
                 </button>
               ))}
               <button
-                onClick={startScenario}
+                onClick={() => startScenario()}
                 disabled={sending}
                 class="block w-full rounded-xl border border-dashed border-slate-300 px-3 py-2 text-left text-sm font-medium text-slate-700 transition-colors hover:border-slate-400 hover:bg-white disabled:opacity-50"
               >

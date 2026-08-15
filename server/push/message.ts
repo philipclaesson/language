@@ -25,5 +25,21 @@ export function reminderMessage(pending: PendingToday): PushPayload | null {
     title: "Zeit zum Üben! 🇩🇪",
     body: `${parts.join(" and ")} to review today.`,
     url: pending.words > 0 ? "/review" : "/verbs/review",
+    tag: "daily-reminder",
+  };
+}
+
+/**
+ * The Freund nudge: an invitation into a specific role-play. `scenario` is one of the
+ * server's SCENARIOS; the deep-link opens Freund straight into it (see freund.tsx).
+ * Its own `tag` so it doesn't collapse with the review reminder. The caller only
+ * sends this when the user hasn't chatted with Freund yet today.
+ */
+export function freundNudge(scenario: string): PushPayload {
+  return {
+    title: "Freund wartet auf dich 🗣️",
+    body: `${scenario} Tap to jump in.`,
+    url: `/freund?scenario=${encodeURIComponent(scenario)}`,
+    tag: "freund-nudge",
   };
 }

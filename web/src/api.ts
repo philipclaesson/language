@@ -14,6 +14,7 @@ import type {
   FreundReviewResponse,
   FreundSaveRequest,
   FreundSaveResponse,
+  FreundStartRequest,
   FreundStartResponse,
   FreundSuggestedCard,
   GameId,
@@ -126,8 +127,12 @@ export function postChat(messages: ChatMessage[]) {
   return api<ChatResponse>("/chat", { method: "POST", body: JSON.stringify(req) });
 }
 
-export function postFreundStart() {
-  return api<FreundStartResponse>("/freund/start", { method: "POST" });
+export function postFreundStart(scenario?: string | null) {
+  const req: FreundStartRequest = { scenario: scenario ?? null };
+  return api<FreundStartResponse>("/freund/start", {
+    method: "POST",
+    body: JSON.stringify(req),
+  });
 }
 
 export function postFreundMessage(messages: FreundMessage[], scenario: string | null) {

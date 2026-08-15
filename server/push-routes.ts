@@ -7,7 +7,9 @@ import { requireAuth, type AppEnv } from "./auth";
 import { env } from "./env";
 import { pushEnabled, sendPush } from "./push/send";
 import { pendingTodayFor } from "./push/reminders";
-import { reminderMessage } from "./push/message";
+import { freundCountToday } from "./db/daily-progress";
+import { SCENARIOS } from "./freund/agent";
+import { freundNudge, reminderMessage } from "./push/message";
 import type { PushConfigResponse, PushSubscriptionInput } from "../shared/types";
 
 // Web Push for the daily training reminder. Additive module (cf. the AI-module
@@ -72,6 +74,34 @@ function cronAuthorized(header: string | undefined): boolean {
   return a.length === b.length && timingSafeEqual(a, b);
 }
 
+// All stored subscriptions grouped by user, so a per-user payload is computed once
+// and fanned out to that user's devices. Shared by the two cron endpoints below.
+async function subsByUser() {
+  const subs = await db
+    .select({
+      userId: pushSubscriptions.userId,
+      endpoint: pushSubscriptions.endpoint,
+      p256dh: pushSubscriptions.p256dh,
+      auth: pushSubscriptions.auth,
+    })
+    .from(pushSubscriptions);
+
+  const byUser = new Map<string, typeof subs>();
+  for (const s of subs) {
+    const list = byUser.get(s.userId) ?? [];
+    list.push(s);
+    byUser.set(s.userId, list);
+  }
+  return byUser;
+}
+
+// Drop subscriptions the push service reported as gone (404/410).
+async function pruneEndpoints(endpoints: string[]) {
+  for (const endpoint of endpoints) {
+    await db.delete(pushSubscriptions).where(eq(pushSubscriptions.endpoint, endpoint));
+  }
+}
+
 // Called once a day by the reminders GitHub Actions workflow. For every user with
 // at least one subscription, send a push IF they still have cards/verbs due today
 // (no nag on an empty day). Prunes subscriptions the push service reports as gone.
@@ -81,32 +111,14 @@ pushRoutes.post("/push/send-reminders", async (c) => {
     return c.json({ error: "unauthorized" }, 401);
   }
 
-  const subs = await db
-    .select({
-      id: pushSubscriptions.id,
-      userId: pushSubscriptions.userId,
-      endpoint: pushSubscriptions.endpoint,
-      p256dh: pushSubscriptions.p256dh,
-      auth: pushSubscriptions.auth,
-    })
-    .from(pushSubscriptions);
-
-  // Group subscriptions by user so we compute each user's pending set only once.
-  const byUser = new Map<string, typeof subs>();
-  for (const s of subs) {
-    const list = byUser.get(s.userId) ?? [];
-    list.push(s);
-    byUser.set(s.userId, list);
-  }
-
+  const byUser = await subsByUser();
   const now = new Date();
   let sent = 0;
   let skipped = 0;
   const pruned: string[] = [];
 
   for (const [userId, userSubs] of byUser) {
-    const pending = await pendingTodayFor(userId, now);
-    const payload = reminderMessage(pending);
+    const payload = reminderMessage(await pendingTodayFor(userId, now));
     if (!payload) {
       skipped++;
       continue;
@@ -118,11 +130,40 @@ pushRoutes.post("/push/send-reminders", async (c) => {
     }
   }
 
-  if (pruned.length > 0) {
-    for (const endpoint of pruned) {
-      await db.delete(pushSubscriptions).where(eq(pushSubscriptions.endpoint, endpoint));
+  await pruneEndpoints(pruned);
+  return c.json({ users: byUser.size, sent, skippedUsers: skipped, pruned: pruned.length });
+});
+
+// Called once a day (earlier than the review reminder) by the freund-nudge workflow.
+// Nudges each subscribed user into a role-play IFF they haven't chatted with Freund
+// yet today — so it never fires once you've done your daily conversation. Each user
+// gets a random scenario; clicking deep-links straight into it (see freund.tsx).
+pushRoutes.post("/push/send-freund-nudge", async (c) => {
+  if (!pushEnabled()) return c.json({ error: "push not configured" }, 503);
+  if (!cronAuthorized(c.req.header("authorization"))) {
+    return c.json({ error: "unauthorized" }, 401);
+  }
+
+  const byUser = await subsByUser();
+  const now = new Date();
+  let sent = 0;
+  let skipped = 0;
+  const pruned: string[] = [];
+
+  for (const [userId, userSubs] of byUser) {
+    if ((await freundCountToday(userId, now)) > 0) {
+      skipped++; // already chatted today — no nudge
+      continue;
+    }
+    const scenario = SCENARIOS[Math.floor(Math.random() * SCENARIOS.length)];
+    const payload = freundNudge(scenario);
+    for (const s of userSubs) {
+      const outcome = await sendPush(s, payload);
+      if (outcome === "sent") sent++;
+      else if (outcome === "gone") pruned.push(s.endpoint);
     }
   }
 
+  await pruneEndpoints(pruned);
   return c.json({ users: byUser.size, sent, skippedUsers: skipped, pruned: pruned.length });
 });

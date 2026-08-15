@@ -16,7 +16,7 @@ self.addEventListener("push", (event) => {
       body: data.body || "Time to train!",
       icon: "/icon.svg",
       badge: "/icon.svg",
-      tag: "daily-reminder", // collapse repeats into one
+      tag: data.tag || "daily-reminder", // collapse repeats of the same kind into one
       renotify: true,
       data: { url },
     }),

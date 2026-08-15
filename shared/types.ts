@@ -352,6 +352,11 @@ export type CorrectionSegment = { text: string; op: CorrectionOp };
 // Freund stays in character.
 export type FreundRequest = { messages: FreundMessage[]; scenario?: string | null };
 
+// Scenario kickoff. `scenario` optionally requests a specific one (used by the
+// daily Freund push nudge's deep-link, /freund?scenario=…); omitted → the server
+// picks at random. An unknown scenario falls back to random.
+export type FreundStartRequest = { scenario?: string | null };
+
 // Random-scenario kickoff: the server picks a scenario and Freund writes the
 // opening message. The client shows `scenario` above the chat and echoes it back
 // in every FreundRequest of the conversation.

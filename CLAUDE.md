@@ -243,8 +243,8 @@ the route/tool glue isn't.
   (hence the manifest); the toggle shows install guidance there.
 - **`pushRoutes` is mounted before `reviewRoutes`/`verbRoutes` in `index.ts`** on
   purpose: those routers register a `use("*", requireAuth)` catch-all at `/*`, which
-  would otherwise 401 the cron-secret-authed (cookie-less) `/push/send-reminders`.
-  A public `/api` route must be mounted ahead of them.
+  would otherwise 401 the cron-secret-authed (cookie-less) `/push/send-reminders`
+  and `/push/send-freund-nudge`. A public `/api` route must be mounted ahead of them.
 - Cloud Run is in **europe-west1** (domain mappings aren't supported in west3).
 - The `pg` SSL deprecation warning in logs is harmless.
 - `Date.now()`/`Math.random()` are fine in server code (the ban is only in

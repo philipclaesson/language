@@ -1,0 +1,24 @@
+name: Freund nudge
+
+# Pokes the app's Freund-nudge endpoint once a day; the server decides who hasn't
+# chatted with Freund yet today and sends the Web Push (see server/push-routes.ts).
+# Cloud Run scales to zero, so this scheduled curl is what wakes it. Auth is the
+# same shared secret as the review reminder.
+#
+# GitHub cron is UTC. 14:00 UTC ≈ 16:00 CEST (summer) / 15:00 CET (winter) — an early
+# afternoon nudge, ahead of the 16:00-UTC (18:00 CEST) review reminder so the two
+# don't stack. Adjust the hour here for a different local send time.
+on:
+  schedule:
+    - cron: "0 14 * * *"
+  workflow_dispatch: # lets you fire a nudge manually to test
+
+jobs:
+  nudge:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Freund nudge
+        run: |
+          curl -fsS -X POST "https://language.levanto.dev/api/push/send-freund-nudge" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            --retry 4 --retry-delay 5 --retry-all-errors

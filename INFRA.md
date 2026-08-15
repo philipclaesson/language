@@ -117,11 +117,20 @@ POSTs `/api/push/send-reminders`, which wakes Cloud Run, computes each subscribe
 user's pending set, and pushes only to those with work left (never nags on an empty
 day). Dead subscriptions (404/410) are pruned at send time.
 
+A **second daily push** rides on the same subscriptions + `CRON_SECRET`: the
+**Freund nudge** (`.github/workflows/freund-nudge.yml`, `cron "0 14 * * *"` ≈ 16:00
+CEST / 15:00 CET — earlier than the review reminder so they don't stack) POSTs
+`/api/push/send-freund-nudge`, which pushes a role-play invitation only to users who
+haven't chatted with Freund yet today (read from `daily_progress.freund_count`).
+Clicking it deep-links straight into that scenario (`/freund?scenario=…`). Distinct
+notification `tag` so it doesn't collapse with the review reminder.
+
 **Pieces:** `server/push-routes.ts` (routes) + `server/push/*` (send wrapper, due
-counts, message) + `web/src/push.ts` + `web/public/{sw.js,manifest.webmanifest,
-icon.svg}`. Uses the `web-push` library (VAPID). The whole feature is gated on the
-VAPID pair being present — with it unset, the endpoint returns 503 and the client
-hides the toggle, so local dev / PR CI run fine without any of these.
+counts, message incl. `freundNudge`) + `web/src/push.ts` + `web/public/{sw.js,
+manifest.webmanifest,icon.svg}`. Uses the `web-push` library (VAPID). The whole
+feature is gated on the VAPID pair being present — with it unset, both endpoints
+return 503 and the client hides the toggle, so local dev / PR CI run fine without
+any of these. Both crons use the same `CRON_SECRET`; no extra secret for the nudge.
 
 **One-time setup (required for it to actually send):**
 

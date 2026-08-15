@@ -1,7 +1,7 @@
 // Writes to daily_progress: the point-in-time record of a "perfect day" (all words
 // done + all verbs done + a Freund chat). Each upsert is idempotent on (user, day)
 // and only ever raises a flag/counter — a day never un-completes. `day` is the local
-// calendar date in DAY_TZ, matching the heatmap buckets. See PLAN_perfect_day.md.
+// calendar date in DAY_TZ, matching the heatmap buckets. See STREAK.md.
 
 import { and, eq, sql } from "drizzle-orm";
 import { db } from "./client";

@@ -129,7 +129,7 @@ export const pushSubscriptions = pgTable("push_subscriptions", {
 // reconstructed after the fact. `day` is the local calendar date in DAY_TZ, matching
 // how the heatmap buckets. Upserted from /session/today, /verbs/session/today, and
 // /freund/message; read by /stats for the grid rings + the 30-day perfect %. See
-// PLAN_perfect_day.md. Counts stay derived from the logs — only completion lives here.
+// STREAK.md. Counts stay derived from the logs — only completion lives here.
 export const dailyProgress = pgTable(
   "daily_progress",
   {

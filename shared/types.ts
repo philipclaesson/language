@@ -181,7 +181,7 @@ export type SubmitScoreResponse = {
 // to the user's own daily volume so a normal day and a grind day look different
 // (absolute count thresholds saturated once daily volume routinely cleared them).
 // `perfect` = all words + all verbs done that day and ≥1 Freund chat (ringed emerald
-// on the grid; never set on a future day). See PLAN_perfect_day.md.
+// on the grid; never set on a future day). See STREAK.md.
 export type HeatmapCell = {
   date: string;
   count: number;

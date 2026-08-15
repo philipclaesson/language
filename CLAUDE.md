@@ -29,6 +29,11 @@ later without touching the core loop.
   **Daily reminders:** opt-in Web Push ("Daily reminder" toggle on the dashboard)
   fired by a GitHub Actions cron that nudges you each afternoon only when you have
   cards/verbs due (see Gotchas + INFRA.md).
+  **Streak & perfect days** (STREAK.md): the lenient activity streak, plus a
+  **perfect day** (all words + all verbs done + a Freund chat) shown as an emerald
+  ring on the Stats heatmap and a 30-day %. Backed by a small `daily_progress` table;
+  also powers a second cron — a **Freund nudge** push into a role-play when you
+  haven't chatted yet today (deep-links into the scenario).
 - **Live:** https://language.levanto.dev — Cloud Run, **auto-deploys on push to main**.
 - **Next:** Phase 3 (deck management UI), Phase 4 (polish), more AI modules
   (news, voice). See PLAN.md §12.

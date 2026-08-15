@@ -40,7 +40,14 @@ as an additive AI module (like the tutor) — the core SRS loop is untouched.
 ## Notes / gotchas
 
 - **Stateless, like the tutor.** The client holds the transcript and replays it each
-  turn; nothing is persisted. A refresh loses the in-progress conversation.
+  turn; no conversation content is persisted. A refresh loses the in-progress chat.
+  (The *one* thing written per turn is a bare per-day message counter,
+  `daily_progress.freund_count` — for perfect days + the Freund nudge, see **STREAK.md**;
+  no message text is stored.)
+- **Daily Freund nudge + scenario deep-link.** A cron pushes an invitation into a
+  random role-play when you haven't chatted yet today; clicking opens
+  `/freund?scenario=…` and `/freund/start` auto-opens that exact scenario (validated
+  against `SCENARIOS`). Details in **STREAK.md** > The daily Freund nudge.
 - Only Freund's German replies are replayed as history — the corrections/explanations
   are display-only metadata the model re-derives.
 - **The review call flattens the transcript into one user message.** The conversation

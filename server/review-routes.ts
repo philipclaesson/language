@@ -47,6 +47,7 @@ export function loadCardsWithState(userId: string) {
       id: cards.id,
       prompt: cards.prompt,
       partOfSpeech: cards.partOfSpeech,
+      swedish: cards.swedish, // Swedish gloss, safe pre-answer (see schema.ts)
       exampleEn: cards.exampleEn, // English context, safe pre-answer
       ownerId: decks.ownerId, // null = global/stock deck
       due: reviewState.due,
@@ -169,6 +170,7 @@ reviewRoutes.get("/session/today", async (c) => {
         id: r.id,
         prompt: r.prompt,
         partOfSpeech: r.partOfSpeech,
+        swedish: r.swedish,
         exampleEn: r.exampleEn,
         tier: tierFor(r.stability),
       };
@@ -235,6 +237,7 @@ reviewRoutes.get("/session/extra", async (c) => {
       id: r.id,
       prompt: r.prompt,
       partOfSpeech: r.partOfSpeech,
+      swedish: r.swedish,
       exampleEn: r.exampleEn,
       tier: tierFor(r.stability),
     };

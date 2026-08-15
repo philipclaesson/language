@@ -57,6 +57,26 @@ export const WORD_OVERRIDES: WordOverride[] = [
       exampleEn: "The restaurant is located near the railway station.",
     },
   },
+  {
+    rank: 287,
+    reason: 'Swedish "erhålla" is a near-perfect cognate of erhalten (to receive)',
+    set: { swedish: "erhålla" },
+  },
+  {
+    rank: 463,
+    reason: 'Swedish "trots det" maps trotzdem (nevertheless) far better than English',
+    set: { swedish: "trots det" },
+  },
+  { rank: 75, reason: 'Swedish cognate for uns (us)', set: { swedish: "oss" } },
+  { rank: 495, reason: 'Swedish cognate for euch (you pl.)', set: { swedish: "er" } },
+  { rank: 340, reason: 'Swedish cognate for tatsächlich (actual)', set: { swedish: "faktisk" } },
+  { rank: 321, reason: 'Swedish cognate for steigen (to climb/rise)', set: { swedish: "stiga" } },
+  { rank: 302, reason: 'Swedish cognate for deutlich (clear)', set: { swedish: "tydlig" } },
+  { rank: 299, reason: 'Swedish cognate for handeln (to act/trade)', set: { swedish: "handla" } },
+  { rank: 297, reason: 'Swedish cognate for die Zahl (number)', set: { swedish: "tal" } },
+  { rank: 280, reason: 'Swedish cognate for bestimmt (certain/definite)', set: { swedish: "bestämd" } },
+  { rank: 279, reason: 'Swedish for überhaupt (at all)', set: { swedish: "över huvud taget" } },
+  { rank: 523, reason: 'Swedish cognate for annehmen (to assume/accept)', set: { swedish: "anta" } },
 ];
 
 /**
@@ -116,6 +136,7 @@ const FIELD_COLUMNS: Record<keyof OverrideFields, string> = {
   article: "article",
   partOfSpeech: "part_of_speech",
   notes: "notes",
+  swedish: "swedish",
   exampleEn: "example_en",
   exampleDe: "example_de",
 };

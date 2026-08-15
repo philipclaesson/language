@@ -51,8 +51,12 @@ and **decide the fix** yourself, then confirm the concrete change with them.
    ```
    Overridable fields (from `OverrideFields`): `prompt`, `answer`, `answerAlts`
    (string[]), `article` (`"der"|"die"|"das"|null`), `partOfSpeech`, `notes`,
-   `exampleEn`, `exampleDe`. `frequencyRank` is the key — never in `set`. The `reason`
-   is one line and gets copied verbatim into the migration comment.
+   `swedish`, `exampleEn`, `exampleDe`. `frequencyRank` is the key — never in `set`.
+   The `reason` is one line and gets copied verbatim into the migration comment.
+   - **Swedish glosses** are a common override: when a German word maps more cleanly
+     to a Swedish cognate than to English (trotzdem → "trots det", erhalten →
+     "erhålla"), set `swedish` — it's shown under the prompt as a hint for Swedish
+     speakers. The source deck has none, so this field is always override-supplied.
    - **Reflexive verbs:** answer is the `"sich <verb>"` citation form with the bare
      infinitive in `answerAlts` (e.g. `answer: "sich befinden", answerAlts: ["befinden"]`).
 

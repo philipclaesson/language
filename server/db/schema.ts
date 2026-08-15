@@ -44,6 +44,13 @@ export const cards = pgTable("cards", {
   partOfSpeech: text("part_of_speech"), // drives answer-checking rules
   article: text("article"), // der/die/das for nouns
   notes: text("notes"), // mnemonic / free-form note (tutor cards)
+  // Optional Swedish gloss (set on frequency-corpus cards via overrides; null
+  // elsewhere). Some German words map cleanly to a Swedish cognate but poorly to
+  // English (trotzdem → "trots det", erhalten → "erhålla"); when present it's shown
+  // up front alongside the prompt as a learning aid for Swedish speakers. Safe
+  // pre-answer: a translation, it carries no article/gender and isn't the graded
+  // German answer. See review-routes.ts + server/db/words-overrides.ts.
+  swedish: text("swedish"),
   // Example sentences (set on the frequency corpus; null elsewhere). `exampleEn` is
   // the English gloss — safe to show before answering, for disambiguating context.
   // `exampleDe` is the German sentence — it embeds the answer word, so it's only

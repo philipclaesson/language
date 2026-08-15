@@ -187,7 +187,10 @@ the route/tool glue isn't.
   split along the same line: `cards.example_en` (English gloss) is sent up front for
   context and rendered under the prompt; `cards.example_de` (German sentence, which
   contains the answer word) is withheld until after answering and returned in the
-  `/reviews` result, shown only in the drill panel on a miss.
+  `/reviews` result, shown only in the drill panel on a miss. `cards.swedish` (an
+  optional Swedish gloss, override-set on a few corpus cards) is safe up front for the
+  same reason as `example_en` — a translation, no article/answer — and rides in
+  `SessionCard`, rendered under the prompt with a 🇸🇪.
 - **Grading is three-valued: `pass` / `near` / `fail`** (PLAN.md §5), mapped to FSRS
   `Good`/`Hard`/`Again` in `srs/scheduler.ts` and logged as `reviews.rating` 3/2/1.
   A **near miss** = knew the word, one thing off: missing article, wrong article, or a

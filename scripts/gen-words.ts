@@ -149,6 +149,7 @@ const valueRows = words.map((w) => {
     sqlNullable(w.partOfSpeech),
     sqlNullable(w.article),
     sqlNullable(w.notes),
+    sqlNullable(w.swedish ?? null),
     sqlNullable(w.exampleEn),
     sqlNullable(w.exampleDe),
     w.frequencyRank === null ? "NULL" : String(w.frequencyRank),
@@ -160,7 +161,7 @@ const valueRows = words.map((w) => {
 // Plain multi-row INSERT (as in 0003_seed_verbs.sql): each literal is coerced to its
 // target column type — notably the unknown deck_id literal → uuid.
 const insert = `
-INSERT INTO "cards" ("deck_id", "prompt", "answer", "answer_alts", "part_of_speech", "article", "notes", "example_en", "example_de", "frequency_rank", "source") VALUES
+INSERT INTO "cards" ("deck_id", "prompt", "answer", "answer_alts", "part_of_speech", "article", "notes", "swedish", "example_en", "example_de", "frequency_rank", "source") VALUES
 ${valueRows.join(",\n")};
 `;
 

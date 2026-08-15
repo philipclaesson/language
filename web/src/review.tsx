@@ -354,6 +354,9 @@ export function Review({
         <h2 class="mt-2 text-center text-3xl font-semibold tracking-tight text-slate-900">
           {current?.prompt}
         </h2>
+        {current?.swedish && (
+          <p class="mt-1 text-center text-base text-slate-500">🇸🇪 {current.swedish}</p>
+        )}
         {current?.exampleEn && (
           <p class="mt-2 text-center text-sm italic text-slate-400">“{current.exampleEn}”</p>
         )}

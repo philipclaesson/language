@@ -180,7 +180,15 @@ export type SubmitScoreResponse = {
 // `level` is the intensity bucket (0 = empty, 1–4 = light→dark), computed relative
 // to the user's own daily volume so a normal day and a grind day look different
 // (absolute count thresholds saturated once daily volume routinely cleared them).
-export type HeatmapCell = { date: string; count: number; level: number; future: boolean };
+// `perfect` = all words + all verbs done that day and ≥1 Freund chat (ringed emerald
+// on the grid; never set on a future day). See PLAN_perfect_day.md.
+export type HeatmapCell = {
+  date: string;
+  count: number;
+  level: number;
+  perfect: boolean;
+  future: boolean;
+};
 
 export type StatsResponse = {
   heatmap: HeatmapCell[]; // weeks * 7 cells, oldest first (chunk by 7 for rows)
@@ -188,6 +196,7 @@ export type StatsResponse = {
   currentStreak: number; // consecutive active days ending today (or yesterday)
   longestStreak: number; // best consecutive-active-days run ever
   practicedLastWeek: number; // cards done in the last 7 days
+  perfectDays30: number; // % of the last 30 days that were "perfect" (0–100)
   mastery: ProgressResponse; // tier bar — words + verbs combined
 };
 

@@ -8,6 +8,7 @@ import { env } from "./env";
 import { normalizeCardInput, type NormalizedCard, type RawCardInput } from "./chat/cards";
 import { diffWords } from "./freund/diff";
 import { todaysVocab } from "./freund/seed";
+import { bumpFreund } from "./db/daily-progress";
 import {
   CHAT_MODEL,
   REVIEW_MODEL,
@@ -154,6 +155,9 @@ freundRoutes.post("/freund/message", async (c) => {
   // Diff the correction against what the learner actually typed (the last user turn).
   const lastUser = history.filter((m) => m.role === "user").at(-1)?.content ?? "";
   const correction = correctionText ? diffWords(lastUser, correctionText) : null;
+
+  // Count this turn toward today's perfect-day Freund requirement (≥1 message).
+  await bumpFreund(userId, new Date());
 
   const body: FreundResponse = { reply, explanation, correction };
   return c.json(body);

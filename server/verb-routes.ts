@@ -13,6 +13,7 @@ import {
   missesPool,
 } from "./srs/day";
 import { summarizeProgress, tierFor } from "./srs/tiers";
+import { markVerbsDone } from "./db/daily-progress";
 import { requireAuth, type AppEnv } from "./auth";
 import {
   VERB_FORMS,
@@ -163,6 +164,9 @@ verbRoutes.get("/verbs/session/today", async (c) => {
   }));
 
   const plan = planVerbDay(todayVerbs, now);
+
+  // Record a finished verb-day (client re-fetches on "done"). See markWordsDone.
+  if (plan.complete) await markVerbsDone(userId, now);
 
   const newAvailable = freshPool(
     rows.map((r) => ({

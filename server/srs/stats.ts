@@ -94,12 +94,15 @@ export function levelFor(count: number, [t1, t2, t3]: [number, number, number]):
  * contains `today`. Returns weeks*7 cells, oldest first, so the client chunks by 7
  * into one row per week. Days after `today` are flagged `future` (rendered blank).
  * `level` is relative to the user's whole history (all of `counts`), not the visible
- * window, so scrolling the window wouldn't reshuffle shades.
+ * window, so scrolling the window wouldn't reshuffle shades. `perfect` days (all
+ * words + all verbs + a Freund chat) are marked for the client's emerald ring; never
+ * a future day.
  */
 export function buildHeatmap(
   counts: Map<string, number>,
   today: string,
   weeks: number,
+  perfect: Set<string> = new Set(),
 ): HeatmapCell[] {
   const thresholds = computeLevelThresholds([...counts.values()]);
   // Start on the Monday of the earliest week in the window.
@@ -108,14 +111,28 @@ export function buildHeatmap(
   for (let i = 0; i < weeks * 7; i++) {
     const date = addDays(start, i);
     const count = counts.get(date) ?? 0;
+    const future = date > today;
     cells.push({
       date,
       count,
       level: levelFor(count, thresholds),
-      future: date > today,
+      perfect: !future && perfect.has(date),
+      future,
     });
   }
   return cells;
+}
+
+/**
+ * Percentage (0–100, rounded) of the last `days` calendar days ending today that were
+ * perfect. A fixed denominator (not "days with any activity") so it honestly reflects
+ * consistency: skipped days count against you. Days before you started simply aren't
+ * perfect (daily_progress has no row), which is the intended, un-backfillable behavior.
+ */
+export function perfectPct(perfect: Set<string>, today: string, days = 30): number {
+  let hits = 0;
+  for (let i = 0; i < days; i++) if (perfect.has(addDays(today, -i))) hits++;
+  return Math.round((hits / days) * 100);
 }
 
 /** Total activity over the last 7 days (today and the 6 days before it). */

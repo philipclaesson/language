@@ -47,6 +47,8 @@ export function Stats() {
             {stats.practicedLastWeek === 1 ? "card" : "cards"} in the last week.
           </p>
 
+          <PerfectCard pct={stats.perfectDays30} />
+
           <Heatmap cells={stats.heatmap} />
 
           <MasteryBar mastery={stats.mastery} />
@@ -168,8 +170,16 @@ function Heatmap({ cells }: { cells: HeatmapCell[] }) {
         {cells.map((cell) => (
           <div
             key={cell.date}
-            class={`aspect-square rounded-[3px] ${cellClass(cell)}`}
-            title={cell.future ? cell.date : `${cell.date}: ${cell.count} ${cell.count === 1 ? "card" : "cards"}`}
+            class={`aspect-square rounded-[3px] ${cellClass(cell)} ${
+              cell.perfect ? "ring-2 ring-inset ring-emerald-500" : ""
+            }`}
+            title={
+              cell.future
+                ? cell.date
+                : `${cell.date}: ${cell.count} ${cell.count === 1 ? "card" : "cards"}${
+                    cell.perfect ? " · perfect day" : ""
+                  }`
+            }
           />
         ))}
       </div>
@@ -182,6 +192,27 @@ function Heatmap({ cells }: { cells: HeatmapCell[] }) {
         <span class="h-2.5 w-2.5 rounded-[2px] bg-blue-800" />
         <span>more</span>
       </div>
+      <div class="mt-1.5 flex items-center justify-end gap-1 text-[10px] text-slate-400">
+        <span class="h-2.5 w-2.5 rounded-[2px] bg-blue-400 ring-2 ring-inset ring-emerald-500" />
+        <span>perfect day</span>
+      </div>
+    </div>
+  );
+}
+
+// The carrot: how consistent you've been over the last 30 days. A "perfect day" is
+// all words done + all verbs done + a chat with Freund; the emerald echoes the grid
+// rings so the number and the marks read as the same thing.
+function PerfectCard({ pct }: { pct: number }) {
+  return (
+    <div class="rounded-2xl border border-emerald-200 bg-emerald-50 p-5">
+      <div class="flex items-baseline gap-2">
+        <span class="text-3xl font-semibold tracking-tight text-emerald-700">{pct}%</span>
+        <span class="text-sm text-emerald-600">perfect days · last 30</span>
+      </div>
+      <p class="mt-1.5 text-xs text-slate-500">
+        A perfect day: all words, all verbs, and a chat with Freund.
+      </p>
     </div>
   );
 }

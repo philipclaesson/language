@@ -3,6 +3,7 @@ import {
   uuid,
   text,
   timestamp,
+  date,
   doublePrecision,
   integer,
   boolean,
@@ -120,6 +121,29 @@ export const pushSubscriptions = pgTable("push_subscriptions", {
   auth: text("auth").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+// One row per (user, local day) recording whether the day was "perfect" — all words
+// done, all verbs done, and at least one Freund message. Persisted (not derived from
+// the reviews log) because completion is a point-in-time fact: today's required set
+// depends on FSRS due dates that move forward, so "was day X finished" can't be
+// reconstructed after the fact. `day` is the local calendar date in DAY_TZ, matching
+// how the heatmap buckets. Upserted from /session/today, /verbs/session/today, and
+// /freund/message; read by /stats for the grid rings + the 30-day perfect %. See
+// PLAN_perfect_day.md. Counts stay derived from the logs — only completion lives here.
+export const dailyProgress = pgTable(
+  "daily_progress",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    day: date("day").notNull(), // local calendar date "YYYY-MM-DD" in DAY_TZ
+    wordsDone: boolean("words_done").notNull().default(false),
+    verbsDone: boolean("verbs_done").notNull().default(false),
+    freundCount: integer("freund_count").notNull().default(0),
+  },
+  (t) => [unique("daily_progress_user_day").on(t.userId, t.day)],
+);
 
 // ---- Verbs mode (VERBS.md) ----
 // A GLOBAL, shared catalog of verbs to drill (no owner) — reference data, ordered

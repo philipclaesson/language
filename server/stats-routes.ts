@@ -1,10 +1,25 @@
 import { Hono } from "hono";
 import { and, eq, isNull, or, sql } from "drizzle-orm";
 import { db } from "./db/client";
-import { cards, decks, reviewState, reviews, verbReviewState, verbReviews, verbs } from "./db/schema";
+import {
+  cards,
+  dailyProgress,
+  decks,
+  reviewState,
+  reviews,
+  verbReviewState,
+  verbReviews,
+  verbs,
+} from "./db/schema";
 import { DAY_TZ } from "./srs/day";
 import { summarizeProgress } from "./srs/tiers";
-import { buildHeatmap, computeStreaks, localDateString, sumLastWeek } from "./srs/stats";
+import {
+  buildHeatmap,
+  computeStreaks,
+  localDateString,
+  perfectPct,
+  sumLastWeek,
+} from "./srs/stats";
 import { requireAuth, type AppEnv } from "./auth";
 import type { StatsResponse } from "../shared/types";
 
@@ -46,6 +61,24 @@ statsRoutes.get("/stats", async (c) => {
   const active = new Set(counts.keys());
   const { current, longest } = computeStreaks(active, today);
 
+  // Perfect days: all words + all verbs done and ≥1 Freund chat. Read straight from
+  // daily_progress (one small row per active day); the definition lives here so it
+  // can change without a schema backfill.
+  const progressRows = await db
+    .select({
+      day: dailyProgress.day,
+      wordsDone: dailyProgress.wordsDone,
+      verbsDone: dailyProgress.verbsDone,
+      freundCount: dailyProgress.freundCount,
+    })
+    .from(dailyProgress)
+    .where(eq(dailyProgress.userId, userId));
+  const perfect = new Set(
+    progressRows
+      .filter((r) => r.wordsDone && r.verbsDone && r.freundCount > 0)
+      .map((r) => r.day),
+  );
+
   // Mastery bar: the whole library (words + verbs), same tiers as the home cards.
   const [wordStates, verbStates] = await Promise.all([
     db
@@ -70,11 +103,12 @@ statsRoutes.get("/stats", async (c) => {
   );
 
   const body: StatsResponse = {
-    heatmap: buildHeatmap(counts, today, HEATMAP_WEEKS),
+    heatmap: buildHeatmap(counts, today, HEATMAP_WEEKS, perfect),
     weeks: HEATMAP_WEEKS,
     currentStreak: current,
     longestStreak: longest,
     practicedLastWeek: sumLastWeek(counts, today),
+    perfectDays30: perfectPct(perfect, today),
     mastery: summarizeProgress(stabilities, 0),
   };
   return c.json(body);

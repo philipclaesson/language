@@ -8,6 +8,7 @@ import {
   buildHeatmap,
   computeLevelThresholds,
   levelFor,
+  perfectPct,
   sumLastWeek,
 } from "./stats.ts";
 
@@ -118,6 +119,25 @@ test("buildHeatmap stamps a relative level on each cell", () => {
   assert.equal(cells.find((c) => c.date === "2026-07-02")!.level, 4);
   assert.equal(cells.find((c) => c.date === "2026-06-29")!.level, 1);
   assert.equal(cells.find((c) => c.date === "2026-06-30")!.level, 0, "empty day");
+});
+
+test("buildHeatmap rings perfect days, never future ones", () => {
+  const counts = new Map([["2026-07-02", 12]]);
+  const perfect = new Set(["2026-07-02", "2026-07-04"]); // 07-04 is in the future
+  const cells = buildHeatmap(counts, "2026-07-02", 6, perfect);
+  assert.equal(cells.find((c) => c.date === "2026-07-02")!.perfect, true);
+  assert.equal(cells.find((c) => c.date === "2026-07-04")!.perfect, false, "future never perfect");
+  assert.equal(cells.find((c) => c.date === "2026-06-29")!.perfect, false);
+});
+
+test("perfectPct: fixed 30-day denominator so skipped days count against you", () => {
+  const perfect = new Set([
+    "2026-07-02", "2026-07-01", "2026-06-30", // 3 of the last 30
+  ]);
+  assert.equal(perfectPct(perfect, "2026-07-02"), 10); // round(3/30*100)
+  assert.equal(perfectPct(new Set(), "2026-07-02"), 0);
+  // A perfect day older than 30 days doesn't count.
+  assert.equal(perfectPct(new Set(["2026-06-01"]), "2026-07-02"), 0);
 });
 
 test("sumLastWeek totals today + the previous six days only", () => {

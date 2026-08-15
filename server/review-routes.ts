@@ -14,6 +14,7 @@ import {
   type CardToday,
 } from "./srs/day";
 import { summarizeProgress, tierFor } from "./srs/tiers";
+import { markWordsDone } from "./db/daily-progress";
 import { requireAuth, type AppEnv } from "./auth";
 import type {
   ExtraResponse,
@@ -137,6 +138,11 @@ reviewRoutes.get("/session/today", async (c) => {
   }));
 
   const plan = planToday(todayCards, now);
+
+  // Record a finished word-day (the client re-fetches this route on reaching "done",
+  // so this fires at completion). Persisted because completion isn't derivable later
+  // from the reviews log — see server/db/daily-progress.ts.
+  if (plan.complete) await markWordsDone(userId, now);
 
   // Extra-work availability (drives the "Done for today" buttons). Uses
   // reviewedTodayAny so a card already touched today (incl. bonus) isn't offered.

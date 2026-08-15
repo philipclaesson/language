@@ -57,6 +57,16 @@ export const WORD_OVERRIDES: WordOverride[] = [
       exampleEn: "The restaurant is located near the railway station.",
     },
   },
+  {
+    rank: 287,
+    reason: 'Swedish "erhålla" is a near-perfect cognate of erhalten (to receive)',
+    set: { swedish: "erhålla" },
+  },
+  {
+    rank: 463,
+    reason: 'Swedish "trots det" maps trotzdem (nevertheless) far better than English',
+    set: { swedish: "trots det" },
+  },
 ];
 
 /**
@@ -116,6 +126,7 @@ const FIELD_COLUMNS: Record<keyof OverrideFields, string> = {
   article: "article",
   partOfSpeech: "part_of_speech",
   notes: "notes",
+  swedish: "swedish",
   exampleEn: "example_en",
   exampleDe: "example_de",
 };

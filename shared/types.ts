@@ -18,6 +18,11 @@ export type SessionCard = {
   id: string;
   prompt: string;
   partOfSpeech: string | null;
+  // Optional Swedish gloss, shown up front under the prompt for Swedish speakers on
+  // corpus cards that map more cleanly to Swedish than English (set via overrides).
+  // Safe pre-answer for the same reason as exampleEn: a translation, no article/answer.
+  // Null for cards without one.
+  swedish: string | null;
   // English gloss of the word's example sentence, shown up front for context (many
   // prompts are ambiguous — "well" → wohl). Safe pre-answer: it's English and never
   // reveals the German answer or its article. Null for cards without an example.

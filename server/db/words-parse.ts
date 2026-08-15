@@ -25,6 +25,11 @@ export type ParsedWord = {
   article: string | null; // der/die/das when unambiguous, else null
   partOfSpeech: string | null; // "noun" | "verb" | "adjective" | … for display; drives noun checking
   notes: string | null; // free-form note / mnemonic (unused by the corpus — always null here)
+  // Optional Swedish gloss. The source Anki deck has none, so parseNote never sets it;
+  // it's added only by the override table (words-overrides.ts) for cards that map more
+  // cleanly to Swedish than English. Optional so a non-overridden row omits the key
+  // (keeps words.data.json diffs minimal). Shown up front like exampleEn.
+  swedish?: string | null;
   exampleEn: string | null; // English gloss of the sample sentence (context, safe pre-answer)
   exampleDe: string | null; // German sample sentence (embeds the answer; shown on a miss)
   frequencyRank: number | null; // lower = more frequent; new-card order

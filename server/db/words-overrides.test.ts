@@ -68,6 +68,11 @@ test("overrideUpdateSql emits one in-place UPDATE keyed on (deck_id, frequency_r
   );
 });
 
+test("overrideUpdateSql maps the swedish field to its column", () => {
+  const sql = overrideUpdateSql({ rank: 463, reason: "sv", set: { swedish: "trots det" } });
+  assert.match(sql, /"swedish" = 'trots det'/);
+});
+
 test("overrideUpdateSql rejects an override that sets nothing", () => {
   assert.throws(() => overrideUpdateSql({ rank: 1, reason: "x", set: {} }), /sets no fields/);
 });

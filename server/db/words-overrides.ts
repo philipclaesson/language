@@ -104,6 +104,13 @@ export const WORD_OVERRIDES: WordOverride[] = [
   { rank: 3929, reason: 'plural noun: die Geschwister (article-less in the source deck)', set: { article: "die" } },
   { rank: 4068, reason: 'plural noun: die Taliban (article-less in the source deck)', set: { article: "die" } },
   { rank: 4099, reason: 'plural-only proper noun: die Alpen (article-less in the source deck)', set: { article: "die" } },
+
+  // Ordinary singular nouns the source deck also left article-less — same grading
+  // bug as the plurals above, but each takes its own gender.
+  { rank: 198, reason: 'der Teil (part of a whole) — article missing in the source deck', set: { article: "der" } },
+  { rank: 1117, reason: 'der Grad (degree) — article missing in the source deck', set: { article: "der" } },
+  { rank: 2172, reason: 'die E-Mail — article missing in the source deck', set: { article: "die" } },
+  { rank: 4516, reason: 'der Laptop — article missing in the source deck', set: { article: "der" } },
 ];
 
 /**

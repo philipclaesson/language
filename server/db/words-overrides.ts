@@ -77,6 +77,17 @@ export const WORD_OVERRIDES: WordOverride[] = [
   { rank: 280, reason: 'Swedish cognate for bestimmt (certain/definite)', set: { swedish: "bestämd" } },
   { rank: 279, reason: 'Swedish for überhaupt (at all)', set: { swedish: "över huvud taget" } },
   { rank: 523, reason: 'Swedish cognate for annehmen (to assume/accept)', set: { swedish: "anta" } },
+  { rank: 569, reason: 'Swedish cognate for der Begriff (concept/term)', set: { swedish: "begrepp" } },
+  { rank: 568, reason: 'Swedish cognate for aktuell (current)', set: { swedish: "aktuell" } },
+  { rank: 419, reason: 'Swedish cognate for bestimmen (to decide/determine)', set: { swedish: "bestämma" } },
+  {
+    rank: 216,
+    reason: 'Swedish "känna någon" pins kennen to knowing a person (vs. wissen)',
+    set: { swedish: "känna någon" },
+  },
+  { rank: 189, reason: 'Swedish cognate for wirklich (real/actual)', set: { swedish: "verklig" } },
+  { rank: 560, reason: 'Swedish "bo" maps wohnen (to live/reside) better than English "to live"', set: { swedish: "bo" } },
+  { rank: 566, reason: 'Swedish cognate for merken (to notice)', set: { swedish: "märka" } },
 ];
 
 /**

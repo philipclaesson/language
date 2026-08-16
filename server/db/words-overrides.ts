@@ -88,6 +88,29 @@ export const WORD_OVERRIDES: WordOverride[] = [
   { rank: 189, reason: 'Swedish cognate for wirklich (real/actual)', set: { swedish: "verklig" } },
   { rank: 560, reason: 'Swedish "bo" maps wohnen (to live/reside) better than English "to live"', set: { swedish: "bo" } },
   { rank: 566, reason: 'Swedish cognate for merken (to notice)', set: { swedish: "märka" } },
+
+  // Plural-only nouns (plurale tantum) the source deck left article-less. With a
+  // null article checkAnswer treats the card as a non-noun, so the *correct*
+  // "die Leute" graded as a plain fail; "die" restores normal noun grading.
+  // Deliberately NOT extended to the nominalized adjectives (Beamte, Deutsche,
+  // Vorsitzende, …), whose article follows the referent's gender.
+  { rank: 224, reason: 'plurale tantum: die Leute (article-less in the source deck)', set: { article: "die" } },
+  { rank: 404, reason: 'plurale tantum: die Eltern (article-less in the source deck)', set: { article: "die" } },
+  { rank: 564, reason: 'plurale tantum: die Kosten (article-less in the source deck)', set: { article: "die" } },
+  { rank: 574, reason: 'plural of das Datum, used as plurale tantum: die Daten', set: { article: "die" } },
+  { rank: 951, reason: 'plural of das Medium, used as plurale tantum: die Medien', set: { article: "die" } },
+  { rank: 2853, reason: 'plurale tantum: die Schulden (article-less in the source deck)', set: { article: "die" } },
+  { rank: 3448, reason: 'plurale tantum: die Ferien (article-less in the source deck)', set: { article: "die" } },
+  { rank: 3929, reason: 'plural noun: die Geschwister (article-less in the source deck)', set: { article: "die" } },
+  { rank: 4068, reason: 'plural noun: die Taliban (article-less in the source deck)', set: { article: "die" } },
+  { rank: 4099, reason: 'plural-only proper noun: die Alpen (article-less in the source deck)', set: { article: "die" } },
+
+  // Ordinary singular nouns the source deck also left article-less — same grading
+  // bug as the plurals above, but each takes its own gender.
+  { rank: 198, reason: 'der Teil (part of a whole) — article missing in the source deck', set: { article: "der" } },
+  { rank: 1117, reason: 'der Grad (degree) — article missing in the source deck', set: { article: "der" } },
+  { rank: 2172, reason: 'die E-Mail — article missing in the source deck', set: { article: "die" } },
+  { rank: 4516, reason: 'der Laptop — article missing in the source deck', set: { article: "der" } },
 ];
 
 /**

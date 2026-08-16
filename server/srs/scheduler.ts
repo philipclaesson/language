@@ -15,7 +15,14 @@ import type { Grade } from "../../shared/types";
 // `enable_short_term: false` means we never schedule sub-day intervals, so the
 // `learning_steps` field (which we don't persist) is irrelevant — without this,
 // cards get stuck in `learning` forever and never graduate to real intervals.
-// Later we can run the optimizer on the `reviews` log to tune parameters.
+//
+// Params: stock defaults, on purpose. We fit FSRS to our own review log
+// (`npm run optimize:fsrs`, 2026-08-17: 5,414 graded reviews, 128 mature lapses)
+// and it was a wash — +1.1% rmse / −0.6% logLoss on held-out data, i.e. no real
+// gain over stock. The fit also *confirmed* the harsh post-lapse reset (a mastered
+// card really does collapse to a few days when forgotten): that's data-justified,
+// not a bug, so we don't hand-soften it. Re-run the optimizer as the log grows;
+// only pin a `w: [...]` here if it clearly beats stock on both metrics.
 const scheduler = fsrs({ enable_short_term: false });
 
 // The subset of FSRS state we persist (the rest is recomputed each review).

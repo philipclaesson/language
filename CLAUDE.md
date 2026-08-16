@@ -134,6 +134,10 @@ TypeScript everywhere. One Cloud Run service serves the SPA and the API.
 - `npm run db:seed:words` — load the global frequency word corpus (idempotent:
   no-op if the global deck exists). Prod gets it via the `0005_seed_words.sql`
   data migration. Regenerate the corpus with `scripts/gen-words.ts`.
+- `npm run optimize:fsrs [-- --csv <dump>]` — fit FSRS params to our own review
+  log and report whether they beat stock on held-out data (writes nothing). Reads
+  `$DATABASE_URL` or a psql CSV dump. As of 2026-08-17 stock wins (see
+  `srs/scheduler.ts`), so params stay unpinned; re-check as the log grows.
 - Deploy = **push to main** (CI: check → migrate → deploy). Manual deploy in INFRA.md.
 
 ## How we work (to avoid breaking things / spaghetti)

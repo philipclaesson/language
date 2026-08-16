@@ -5,3 +5,6 @@ web/dist/
 *.local
 .DS_Store
 npm-debug.log*
+
+# FSRS optimizer input dump (prod review data — never commit)
+reviews.csv

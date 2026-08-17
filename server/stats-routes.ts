@@ -13,6 +13,7 @@ import {
 } from "./db/schema";
 import { DAY_TZ } from "./srs/day";
 import { summarizeProgress } from "./srs/tiers";
+import { tierHistory, type ReplayReview } from "./srs/tier-history";
 import {
   buildHeatmap,
   computeStreaks,
@@ -21,7 +22,7 @@ import {
   sumLastWeek,
 } from "./srs/stats";
 import { requireAuth, type AppEnv } from "./auth";
-import type { StatsResponse } from "../shared/types";
+import type { StatsResponse, TierHistoryResponse } from "../shared/types";
 
 export const statsRoutes = new Hono<AppEnv>();
 statsRoutes.use("*", requireAuth);
@@ -110,6 +111,45 @@ statsRoutes.get("/stats", async (c) => {
     practicedLastWeek: sumLastWeek(counts, today),
     perfectDays30: perfectPct(perfect, today),
     mastery: summarizeProgress(stabilities, 0),
+  };
+  return c.json(body);
+});
+
+// Mastery over the last 30 days for the growth chart. Recomputed on every load
+// (no stored snapshots — the graded-review log is authoritative): replay each
+// card's/verb's log through FSRS to get its tier timeline, then bucket per day.
+// Words + verbs are merged into one library, matching the mastery bar. A separate
+// endpoint from /stats so the main paint isn't blocked on this second log read.
+statsRoutes.get("/stats/history", async (c) => {
+  const userId = c.get("user").id;
+  const today = localDateString(new Date(), DAY_TZ);
+
+  const [wordRows, verbRows] = await Promise.all([
+    db
+      .select({ id: reviews.cardId, rating: reviews.rating, reviewedAt: reviews.reviewedAt })
+      .from(reviews)
+      .where(and(eq(reviews.userId, userId), eq(reviews.graded, true))),
+    db
+      .select({ id: verbReviews.verbId, rating: verbReviews.rating, reviewedAt: verbReviews.reviewedAt })
+      .from(verbReviews)
+      .where(and(eq(verbReviews.userId, userId), eq(verbReviews.graded, true))),
+  ]);
+
+  // Group by entity into one review list each. Card and verb ids live in separate
+  // uuid spaces; prefix so a (vanishingly unlikely) collision can't merge two.
+  const byEntity = new Map<string, ReplayReview[]>();
+  const add = (prefix: string, id: string, rating: number, reviewedAt: Date) => {
+    const key = prefix + id;
+    const list = byEntity.get(key);
+    const review = { rating, reviewedAt };
+    if (list) list.push(review);
+    else byEntity.set(key, [review]);
+  };
+  for (const r of wordRows) add("c:", r.id, r.rating, r.reviewedAt);
+  for (const r of verbRows) add("v:", r.id, r.rating, r.reviewedAt);
+
+  const body: TierHistoryResponse = {
+    history: tierHistory([...byEntity.values()], today),
   };
   return c.json(body);
 });

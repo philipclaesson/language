@@ -1,6 +1,6 @@
-import { useEffect, useState } from "preact/hooks";
-import type { HeatmapCell, StatsResponse } from "../../shared/types";
-import { getStats, getPushConfig } from "./api";
+import { useEffect, useRef, useState } from "preact/hooks";
+import type { HeatmapCell, StatsResponse, TierHistoryPoint } from "../../shared/types";
+import { getStats, getTierHistory, getPushConfig } from "./api";
 import { currentPushState, disablePush, enablePush, needsInstall } from "./push";
 import { navigate } from "./router";
 import { TIERS } from "./tiers";
@@ -52,6 +52,8 @@ export function Stats() {
           <Heatmap cells={stats.heatmap} />
 
           <MasteryBar mastery={stats.mastery} />
+
+          <MasteryHistory />
         </main>
       )}
 
@@ -248,6 +250,179 @@ function MasteryBar({ mastery }: { mastery: StatsResponse["mastery"] }) {
           <span key={t.key} class="inline-flex items-center gap-1.5">
             <span class={`h-2 w-2 rounded-full ${t.dot}`} />
             {t.label} <span class="font-medium text-slate-700">{tiers[t.key]}</span>
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// Mastery over the last 30 days: a stacked area of the growing library. Stacked
+// bottom→top learning → familiar → mastered, so mastered crowns the stack and the
+// whole height is "cards you've actually learned" (the untouched-corpus "new" tier
+// is excluded — see TierHistoryPoint). Colours are the validated, colourblind-safe
+// steps of the same three tier hues used everywhere else (one shade darker than the
+// bar's dots, for legible fills). Own fetch + loading state so the main Stats paint
+// isn't blocked on the second log read.
+const HISTORY_SERIES = [
+  { key: "learning", label: "Learning", color: "#f59e0b" }, // amber-500 (base)
+  { key: "familiar", label: "Familiar", color: "#0ea5e9" }, // sky-500 (middle)
+  { key: "mastered", label: "Mastered", color: "#059669" }, // emerald-600 (top)
+] as const;
+// Painting order, bottom→top of the stack.
+const STACK_ORDER = ["learning", "familiar", "mastered"] as const;
+
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+function shortDate(iso: string): string {
+  const [, m, d] = iso.split("-").map(Number);
+  return `${d} ${MONTHS[m - 1]}`;
+}
+
+// viewBox units (the SVG scales to the card width). Left/bottom padding leaves room
+// for the y-max tick and the date labels.
+const VB = { w: 300, h: 150, padL: 22, padR: 6, padT: 10, padB: 18 };
+const PLOT_W = VB.w - VB.padL - VB.padR;
+const PLOT_H = VB.h - VB.padT - VB.padB;
+
+function MasteryHistory() {
+  const [history, setHistory] = useState<TierHistoryPoint[] | null>(null);
+  const [failed, setFailed] = useState(false);
+  const [hover, setHover] = useState<number | null>(null);
+  const svgRef = useRef<SVGSVGElement>(null);
+
+  useEffect(() => {
+    getTierHistory()
+      .then((r) => setHistory(r.history))
+      .catch(() => setFailed(true));
+  }, []);
+
+  if (failed || history === null) return null;
+
+  const n = history.length;
+  const totals = history.map((p) => p.learning + p.familiar + p.mastered);
+  const peak = Math.max(0, ...totals);
+  if (peak === 0) return null; // nothing learned yet — same as the mastery bar hiding
+
+  const x = (i: number) => VB.padL + (n === 1 ? 0 : (i / (n - 1)) * PLOT_W);
+  const y = (v: number) => VB.padT + PLOT_H * (1 - v / peak);
+
+  // Cumulative upper edge of each series per point (bottom→top stack).
+  const cum: Record<string, number[]> = { learning: [], familiar: [], mastered: [] };
+  history.forEach((p) => {
+    const l = p.learning;
+    const f = l + p.familiar;
+    cum.learning.push(l);
+    cum.familiar.push(f);
+    cum.mastered.push(f + p.mastered);
+  });
+  const lowerOf: Record<string, number[]> = {
+    learning: history.map(() => 0),
+    familiar: cum.learning,
+    mastered: cum.familiar,
+  };
+
+  // A filled band: along its upper edge left→right, back along its lower edge.
+  const areaPath = (key: string) => {
+    const upper = cum[key].map((v, i) => `${x(i)},${y(v)}`);
+    const lower = lowerOf[key].map((v, i) => `${x(i)},${y(v)}`).reverse();
+    return `M ${upper.join(" L ")} L ${lower.join(" L ")} Z`;
+  };
+  // White separators between bands = the 2px surface gap that keeps fills distinct.
+  const boundary = (key: "learning" | "familiar") =>
+    cum[key].map((v, i) => `${x(i)},${y(v)}`).join(" ");
+
+  const onMove = (e: PointerEvent) => {
+    const rect = svgRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const ratio = (e.clientX - rect.left) / rect.width;
+    const plotRatio = (ratio * VB.w - VB.padL) / PLOT_W;
+    setHover(Math.max(0, Math.min(n - 1, Math.round(plotRatio * (n - 1)))));
+  };
+
+  const hp = hover === null ? null : history[hover];
+  const ticks = [0, Math.floor((n - 1) / 2), n - 1];
+
+  return (
+    <div class="rounded-2xl border border-slate-200 p-5">
+      <div class="flex items-baseline justify-between">
+        <p class="font-medium text-slate-900">Mastery over time</p>
+        <span class="text-sm text-slate-400">last 30 days</span>
+      </div>
+
+      <div class="relative mt-3">
+        <svg
+          ref={svgRef}
+          viewBox={`0 0 ${VB.w} ${VB.h}`}
+          class="w-full touch-none"
+          onPointerMove={onMove}
+          onPointerLeave={() => setHover(null)}
+        >
+          {/* y-axis: baseline + peak gridline, labelled with the peak count. */}
+          <line x1={VB.padL} y1={y(0)} x2={VB.w - VB.padR} y2={y(0)} stroke="#e2e8f0" stroke-width="1" />
+          <line x1={VB.padL} y1={y(peak)} x2={VB.w - VB.padR} y2={y(peak)} stroke="#f1f5f9" stroke-width="1" />
+          <text x={VB.padL - 4} y={y(peak) + 3} text-anchor="end" font-size="8" fill="#94a3b8">
+            {peak}
+          </text>
+          <text x={VB.padL - 4} y={y(0) + 3} text-anchor="end" font-size="8" fill="#94a3b8">
+            0
+          </text>
+
+          {STACK_ORDER.map((key) => {
+            const s = HISTORY_SERIES.find((c) => c.key === key)!;
+            return <path key={key} d={areaPath(key)} fill={s.color} />;
+          })}
+          <polyline points={boundary("learning")} fill="none" stroke="#fff" stroke-width="1.5" />
+          <polyline points={boundary("familiar")} fill="none" stroke="#fff" stroke-width="1.5" />
+
+          {/* x-axis date labels */}
+          {ticks.map((i) => (
+            <text
+              key={i}
+              x={x(i)}
+              y={VB.h - 5}
+              text-anchor={i === 0 ? "start" : i === n - 1 ? "end" : "middle"}
+              font-size="8"
+              fill="#94a3b8"
+            >
+              {shortDate(history[i].date)}
+            </text>
+          ))}
+
+          {hover !== null && (
+            <line
+              x1={x(hover)}
+              y1={VB.padT}
+              x2={x(hover)}
+              y2={y(0)}
+              stroke="#64748b"
+              stroke-width="1"
+              stroke-dasharray="2 2"
+            />
+          )}
+        </svg>
+
+        {hp && (
+          <div
+            class="pointer-events-none absolute top-0 z-10 -translate-x-1/2 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-[11px] shadow-sm"
+            style={{ left: `${((x(hover!) - VB.padL) / PLOT_W) * 100}%` }}
+          >
+            <p class="mb-0.5 font-medium text-slate-500">{shortDate(hp.date)}</p>
+            {HISTORY_SERIES.map((s) => (
+              <p key={s.key} class="flex items-center gap-1.5 whitespace-nowrap text-slate-700">
+                <span class="h-2 w-2 rounded-full" style={{ background: s.color }} />
+                {s.label} <span class="font-semibold">{hp[s.key]}</span>
+              </p>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Legend doubles as direct labels: each tier's current (today's) count. */}
+      <div class="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
+        {HISTORY_SERIES.map((s) => (
+          <span key={s.key} class="inline-flex items-center gap-1.5">
+            <span class="h-2 w-2 rounded-full" style={{ background: s.color }} />
+            {s.label} <span class="font-medium text-slate-700">{history[n - 1][s.key]}</span>
           </span>
         ))}
       </div>

@@ -27,6 +27,7 @@ import type {
   ReviewRequest,
   ReviewResult,
   StatsResponse,
+  TierHistoryResponse,
   SubmitScoreRequest,
   SubmitScoreResponse,
   TodayResponse,
@@ -67,6 +68,10 @@ export function getProgress() {
 
 export function getStats() {
   return api<StatsResponse>("/stats");
+}
+
+export function getTierHistory() {
+  return api<TierHistoryResponse>("/stats/history");
 }
 
 export function postReview(req: ReviewRequest) {

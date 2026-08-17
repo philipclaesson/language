@@ -200,6 +200,21 @@ export type StatsResponse = {
   mastery: ProgressResponse; // tier bar — words + verbs combined
 };
 
+// One day in the mastery-over-time chart on Stats (last 30 days, oldest first).
+// Counts are the user's whole library (words + verbs) reconstructed by replaying the
+// graded-review log through FSRS: a card's tier only moves when it's reviewed, so the
+// append-only log is a complete record — no snapshot table needed. Served by its own
+// /stats/history endpoint (a second, cheap read, so the main /stats paint isn't held
+// up). The "new" tier is omitted on purpose — it's dominated by the thousands of
+// untouched corpus cards and would dwarf the growth story. See srs/tier-history.ts.
+export type TierHistoryPoint = {
+  date: string; // local calendar day "YYYY-MM-DD" (DAY_TZ)
+  learning: number;
+  familiar: number;
+  mastered: number;
+};
+export type TierHistoryResponse = { history: TierHistoryPoint[] };
+
 export type DeckCardState = "new" | "learning" | "review" | "relearning";
 
 export type DeckSummary = {

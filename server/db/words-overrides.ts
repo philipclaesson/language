@@ -265,6 +265,30 @@ export const WORD_OVERRIDES: WordOverride[] = [
   { rank: 4562, reason: 'Swedish cognate "frambringa" pins hervorbringen (to bring forth) — hervor+bringen ~ fram+bringa', set: { swedish: "frambringa" } },
   { rank: 4999, reason: 'Swedish "framställa" pins fertigen (to manufacture); cognate förfärdiga (fertigen ~ förfärdiga)', set: { swedish: "framställa" } },
 
+  // The German da(r)- pronominal adverbs (da/dar + preposition = "prep + it/that").
+  // Swedish has the exact same construction with där-, so most map 1:1 (damit→därmed,
+  // dazu→därtill, dagegen→däremot …) — a strong mnemonic. Three traps flagged inline:
+  // dafür is a FALSE FRIEND (Swedish "därför" = therefore, not "for it"); damals is a
+  // past-time adverb, not a där-word; and rank-374 damit is the *conjunction* (so that),
+  // a homograph of rank-119 damit (with it) — keyed by rank, so both glosses coexist.
+  { rank: 119, reason: 'Swedish cognate "därmed" pins damit (with it/thereby) — da+mit = där+med', set: { swedish: "därmed" } },
+  { rank: 129, reason: 'Swedish "därvid" pins dabei (thereby/at that); the presence sense "dabei sein" = vara med', set: { swedish: "därvid, med" } },
+  { rank: 150, reason: 'Swedish cognate "därtill" pins dazu (in addition/to that) — da+zu = där+till', set: { swedish: "därtill" } },
+  { rank: 175, reason: 'FALSE FRIEND: dafür = "for it/in favor" = Swedish "för det", NOT "därför" (which means therefore). The gloss carries the warning so it is learned, not hidden', set: { swedish: "för det (≠ därför)" } },
+  { rank: 195, reason: 'Swedish cognate "därpå" pins darauf (on it/thereupon) — da(r)+auf = där+på', set: { swedish: "därpå" } },
+  { rank: 214, reason: 'Swedish cognate "därav" pins davon (thereof/from it) — da+von = där+av', set: { swedish: "därav" } },
+  { rank: 283, reason: 'Swedish "däröver" (above it) / "därom" (about it) pin darüber — da(r)+über = där+över', set: { swedish: "däröver, därom" } },
+  { rank: 286, reason: 'damals = "back then/at that time" (past-time adverb, NOT a där-compound) = Swedish "då, på den tiden"', set: { swedish: "då, på den tiden" } },
+  { rank: 292, reason: 'daran (on/at it) has no clean där-form (an → på/vid) = Swedish "på det, vid det", vs. darauf→därpå', set: { swedish: "på det, vid det" } },
+  { rank: 354, reason: 'daher = "därför" (therefore — here the där-word IS right, unlike dafür) + "därifrån" (from there)', set: { swedish: "därför, därifrån" } },
+  { rank: 360, reason: 'Swedish cognate "däri" (therein) / "därinne" (in there) pin darin — da(r)+in = där+i', set: { swedish: "däri, därinne" } },
+  { rank: 374, reason: 'The CONJUNCTION damit (so that/in order that) — homograph of rank-119 damit (with it) — = Swedish "för att, så att"', set: { swedish: "för att, så att" } },
+  { rank: 457, reason: 'Swedish cognate "därefter" (thereafter) / "efteråt" (afterwards) pin danach — da+nach = där+efter', set: { swedish: "därefter, efteråt" } },
+  { rank: 466, reason: 'Swedish cognate "därigenom" pins dadurch (through it/as a result) — da+durch = där+igenom', set: { swedish: "därigenom" } },
+  { rank: 467, reason: 'Swedish cognate "däremot" pins dagegen (against it/on the other hand) — da+gegen = där+emot', set: { swedish: "däremot" } },
+  { rank: 518, reason: 'darum = "därför" (therefore) + "runt det" (physically around it) — da+rum = där+om/runt', set: { swedish: "därför, runt det" } },
+  { rank: 1026, reason: 'Swedish cognate "därunder" pins darunter (under it/among them) — da(r)+unter = där+under', set: { swedish: "därunder" } },
+
   // Plural-only nouns (plurale tantum) the source deck left article-less. With a
   // null article checkAnswer treats the card as a non-noun, so the *correct*
   // "die Leute" graded as a plain fail; "die" restores normal noun grading.

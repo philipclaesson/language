@@ -21,7 +21,8 @@
     "db:seed:verbs": "tsx server/db/seed-verbs.ts",
     "db:seed:words": "tsx server/db/seed-words.ts",
     "db:studio": "drizzle-kit studio",
-    "optimize:fsrs": "tsx scripts/optimize-fsrs.ts"
+    "optimize:fsrs": "tsx scripts/optimize-fsrs.ts",
+    "find:clusters": "tsx scripts/find-gloss-clusters.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.105.0",

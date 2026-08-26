@@ -132,6 +132,14 @@ export const WORD_OVERRIDES: WordOverride[] = [
   { rank: 1119, reason: 'Swedish "begagna" pins benutzen (use/operate; cf. begagnad = used), vs. verwenden→använda', set: { swedish: "begagna" } },
   { rank: 1258, reason: 'Swedish "tillämpning" pins Anwendung (application; anwenden = tillämpa)', set: { swedish: "tillämpning" } },
 
+  // The "appear/seem" family (auftreten→uppträda already glossed at rank 654):
+  // skina (shine — the sense unique to scheinen), se ut (look), framträda (emerge),
+  // dyka upp (surface).
+  { rank: 275, reason: 'scheinen carries both senses: "skina" (shine — the cognate, unique in this cluster) and "verka" (seem — its most frequent everyday use)', set: { swedish: "skina, verka" } },
+  { rank: 277, reason: 'Swedish "se ut" pins aussehen (to look/appear) — aus-sehen = se ut', set: { swedish: "se ut" } },
+  { rank: 408, reason: 'Swedish "framträda" pins erscheinen (to appear/come forth/emerge)', set: { swedish: "framträda" } },
+  { rank: 1228, reason: 'Swedish "dyka upp" pins auftauchen (to surface/pop up) — auf-tauchen = dyka upp', set: { swedish: "dyka upp" } },
+
   // Plural-only nouns (plurale tantum) the source deck left article-less. With a
   // null article checkAnswer treats the card as a non-noun, so the *correct*
   // "die Leute" graded as a plain fail; "die" restores normal noun grading.

@@ -111,6 +111,15 @@ export const WORD_OVERRIDES: WordOverride[] = [
   { rank: 617, reason: 'Swedish cognate "höja" pins erhöhen (to raise, transitive)', set: { swedish: "höja" } },
   { rank: 650, reason: 'Swedish "tilltaga" pins zunehmen (to increase/grow, intransitive) — a morpheme-for-morpheme cognate (zu-nehmen = till-taga)', set: { swedish: "tilltaga" } },
 
+  // Swedish glosses splitting three "experience" words: uppleva (undergo an event),
+  // erfara (come to know / find out), erfarenhet (the noun).
+  { rank: 570, reason: 'Swedish cognate "uppleva" pins erleben (to experience/live through) — er-leben = upp-leva', set: { swedish: "uppleva" } },
+  { rank: 619, reason: 'Swedish cognate "erfarenhet" pins Erfahrung (experience, noun)', set: { swedish: "erfarenhet" } },
+  { rank: 690, reason: 'Swedish cognate "erfara" pins erfahren (to experience/find out)', set: { swedish: "erfara" } },
+
+  // gewiss vs. bestimmt (rank 280 → bestämd above): Swedish "viss" (a certain/sure).
+  { rank: 552, reason: 'Swedish cognate "viss" pins gewiss (certain/sure), vs. bestimmt→bestämd', set: { swedish: "viss" } },
+
   // Plural-only nouns (plurale tantum) the source deck left article-less. With a
   // null article checkAnswer treats the card as a non-noun, so the *correct*
   // "die Leute" graded as a plain fail; "die" restores normal noun grading.

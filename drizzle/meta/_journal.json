@@ -169,6 +169,13 @@
       "when": 1787764242459,
       "tag": "0023_swedish_experience_certain",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1787764491184,
+      "tag": "0024_swedish_because_use",
+      "breakpoints": true
     }
   ]
 }

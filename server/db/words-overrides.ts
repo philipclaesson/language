@@ -120,6 +120,18 @@ export const WORD_OVERRIDES: WordOverride[] = [
   // gewiss vs. bestimmt (rank 280 → bestämd above): Swedish "viss" (a certain/sure).
   { rank: 552, reason: 'Swedish cognate "viss" pins gewiss (certain/sure), vs. bestimmt→bestämd', set: { swedish: "viss" } },
 
+  // The two "because" conjunctions, split by Swedish the way German splits them
+  // grammatically: eftersom is subordinating (like weil), ty is coordinating (like denn).
+  { rank: 88, reason: 'Swedish "eftersom" (subordinating because) pins weil, vs. denn', set: { swedish: "eftersom" } },
+  { rank: 93, reason: 'Swedish "ty" (coordinating for/because; colloq. "för") pins denn, vs. weil', set: { swedish: "ty" } },
+
+  // The "use" cluster — German has three overlapping verbs, Swedish mostly leans on
+  // använda, so these are only mostly-distinct (verwenden/benutzen genuinely overlap).
+  { rank: 429, reason: 'Swedish cognate "nyttja" pins nutzen (utilize/make use of); Nutzen = nytta', set: { swedish: "nyttja" } },
+  { rank: 538, reason: 'Swedish "använda" pins verwenden (the general "use/employ")', set: { swedish: "använda" } },
+  { rank: 1119, reason: 'Swedish "begagna" pins benutzen (use/operate; cf. begagnad = used), vs. verwenden→använda', set: { swedish: "begagna" } },
+  { rank: 1258, reason: 'Swedish "tillämpning" pins Anwendung (application; anwenden = tillämpa)', set: { swedish: "tillämpning" } },
+
   // Plural-only nouns (plurale tantum) the source deck left article-less. With a
   // null article checkAnswer treats the card as a non-noun, so the *correct*
   // "die Leute" graded as a plain fail; "die" restores normal noun grading.

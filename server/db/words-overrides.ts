@@ -89,6 +89,28 @@ export const WORD_OVERRIDES: WordOverride[] = [
   { rank: 560, reason: 'Swedish "bo" maps wohnen (to live/reside) better than English "to live"', set: { swedish: "bo" } },
   { rank: 566, reason: 'Swedish cognate for merken (to notice)', set: { swedish: "märka" } },
 
+  // Swedish glosses to disambiguate five near-synonymous "to happen / occur / take
+  // place" verbs clustered around rank 620–654, all glossed near-identically in English.
+  { rank: 623, reason: 'Swedish cognate "ske" pins geschehen (to happen/occur)', set: { swedish: "ske" } },
+  { rank: 628, reason: 'Swedish cognate "förekomma" pins vorkommen (to occur/be present)', set: { swedish: "förekomma" } },
+  { rank: 648, reason: 'Swedish "genomföras" pins erfolgen (to take place/be carried out); the cognate "följa" drifted to mean "follow"', set: { swedish: "genomföras" } },
+  { rank: 652, reason: 'Swedish idiom "äga rum" pins stattfinden (to take place); "ta plats" is a false friend (= take up space)', set: { swedish: "äga rum" } },
+  { rank: 654, reason: 'Swedish cognate "uppträda" pins auftreten (to appear/occur/perform)', set: { swedish: "uppträda" } },
+
+  // Swedish glosses to disambiguate three "different" words all glossed the same in English.
+  { rank: 254, reason: 'Swedish "olika" pins verschieden (various/different)', set: { swedish: "olika" } },
+  { rank: 303, reason: 'Swedish "annorlunda" pins anders (differently); the cognate "annars" is a false friend (= otherwise/else)', set: { swedish: "annorlunda" } },
+  { rank: 345, reason: 'Swedish "skilda" pins unterschiedlich (differing/distinct), mirroring Unterschied→skillnad', set: { swedish: "skilda" } },
+
+  // Swedish glosses splitting the two "doctor" words: title vs. profession.
+  { rank: 240, reason: 'Swedish cognate "doktor" pins Doktor (title/degree)', set: { swedish: "doktor" } },
+  { rank: 622, reason: 'Swedish "läkare" pins Arzt (physician/profession), vs. Doktor the title', set: { swedish: "läkare" } },
+
+  // Swedish glosses splitting three "increase" verbs (steigen already covered above,
+  // rank 321 → stiga): höja (transitive, raise) vs. tilltaga (intransitive, grow).
+  { rank: 617, reason: 'Swedish cognate "höja" pins erhöhen (to raise, transitive)', set: { swedish: "höja" } },
+  { rank: 650, reason: 'Swedish "tilltaga" pins zunehmen (to increase/grow, intransitive) — a morpheme-for-morpheme cognate (zu-nehmen = till-taga)', set: { swedish: "tilltaga" } },
+
   // Plural-only nouns (plurale tantum) the source deck left article-less. With a
   // null article checkAnswer treats the card as a non-noun, so the *correct*
   // "die Leute" graded as a plain fail; "die" restores normal noun grading.

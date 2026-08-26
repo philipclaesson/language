@@ -125,12 +125,22 @@ export const WORD_OVERRIDES: WordOverride[] = [
   { rank: 88, reason: 'Swedish "eftersom" (subordinating because) pins weil, vs. denn', set: { swedish: "eftersom" } },
   { rank: 93, reason: 'Swedish "ty" (coordinating for/because; colloq. "för") pins denn, vs. weil', set: { swedish: "ty" } },
 
-  // The "use" cluster — German has three overlapping verbs, Swedish mostly leans on
-  // använda, so these are only mostly-distinct (verwenden/benutzen genuinely overlap).
+  // The "use" family — a 12-way English collision. Only the three verbs
+  // verwenden/benutzen/(nutzen) genuinely overlap in Swedish; every noun has its own
+  // distinct cognate (insats, användning, bruk, nyttjande, nytta), so Swedish
+  // disambiguates the family well.
   { rank: 429, reason: 'Swedish cognate "nyttja" pins nutzen (utilize/make use of); Nutzen = nytta', set: { swedish: "nyttja" } },
   { rank: 538, reason: 'Swedish "använda" pins verwenden (the general "use/employ")', set: { swedish: "använda" } },
+  { rank: 780, reason: 'Swedish cognate "insats" pins Einsatz (deployment/use/stake/effort) — in-satz = in-sats', set: { swedish: "insats" } },
   { rank: 1119, reason: 'Swedish "begagna" pins benutzen (use/operate; cf. begagnad = used), vs. verwenden→använda', set: { swedish: "begagna" } },
   { rank: 1258, reason: 'Swedish "tillämpning" pins Anwendung (application; anwenden = tillämpa)', set: { swedish: "tillämpning" } },
+  { rank: 1606, reason: 'Swedish "användning" pins Verwendung (usage) — the noun of verwenden→använda', set: { swedish: "användning" } },
+  { rank: 2129, reason: 'Swedish cognate "bruk" pins Gebrauch (use/usage) — ge-brauch ~ bruk', set: { swedish: "bruk" } },
+  { rank: 2140, reason: 'Swedish "nyttjande" pins Nutzung (usage/utilization) — the noun of nutzen→nyttja', set: { swedish: "nyttjande" } },
+  { rank: 2155, reason: 'Swedish cognate "nytta" pins Nutzen (benefit/use/utility), the benefit sense', set: { swedish: "nytta" } },
+  { rank: 2831, reason: 'Swedish cognate "bearbeta" pins verarbeiten (to process/work up) — ver-arbeiten ~ be-arbeta', set: { swedish: "bearbeta" } },
+  { rank: 3307, reason: 'Swedish cognate "förbruka" pins verbrauchen (to consume/use up) — ver-brauchen ~ för-bruka', set: { swedish: "förbruka" } },
+  { rank: 4599, reason: 'Swedish "utgift" pins Aufwendung (expense/expenditure) — the deck\'s "use" gloss is misleading', set: { swedish: "utgift" } },
 
   // The "appear/seem" family (auftreten→uppträda already glossed at rank 654):
   // skina (shine — the sense unique to scheinen), se ut (look), framträda (emerge),
@@ -139,6 +149,42 @@ export const WORD_OVERRIDES: WordOverride[] = [
   { rank: 277, reason: 'Swedish "se ut" pins aussehen (to look/appear) — aus-sehen = se ut', set: { swedish: "se ut" } },
   { rank: 408, reason: 'Swedish "framträda" pins erscheinen (to appear/come forth/emerge)', set: { swedish: "framträda" } },
   { rank: 1228, reason: 'Swedish "dyka upp" pins auftauchen (to surface/pop up) — auf-tauchen = dyka upp', set: { swedish: "dyka upp" } },
+
+  // The "put/place" family: German splits "put" by orientation and Swedish splits it
+  // the same way (ställa upright, lägga flat, sätta set) — mostly cognates, incl. the
+  // three place-nouns (plats/ort/ställe).
+  { rank: 135, reason: 'Swedish cognate "ställa" pins stellen (put upright/vertical)', set: { swedish: "ställa" } },
+  { rank: 228, reason: 'Swedish cognate "sätta" pins setzen (to set/put)', set: { swedish: "sätta" } },
+  { rank: 352, reason: 'Swedish cognate "lägga" pins legen (to lay/put down, horizontal)', set: { swedish: "lägga" } },
+  { rank: 688, reason: 'Swedish "stoppa in" pins stecken (put/stick into); the cognate "sticka" drifted to prick/knit', set: { swedish: "stoppa in" } },
+  { rank: 326, reason: 'Swedish cognate "plats" pins Platz (place/room/square)', set: { swedish: "plats" } },
+  { rank: 341, reason: 'Swedish cognate "ort" pins Ort (place/locality/town)', set: { swedish: "ort" } },
+  { rank: 344, reason: 'Swedish cognate "ställe" pins Stelle (place/spot) — the noun to stellen/ställa', set: { swedish: "ställe" } },
+
+  // Completing the "real/actual" family (wirklich→verklig, tatsächlich→faktisk above):
+  { rank: 151, reason: 'Swedish cognate "egentligen" pins eigentlich (actually/strictly speaking)', set: { swedish: "egentligen" } },
+  { rank: 685, reason: 'Swedish cognate "äkta" pins echt (genuine/real)', set: { swedish: "äkta" } },
+  { rank: 1350, reason: 'Swedish "reell" pins real (real/actual), vs. wirklich→verklig', set: { swedish: "reell" } },
+
+  // The "work" family — all clean cognates. "verka" also glosses scheinen's "seem"
+  // sense (rank 275), which is correct: Swedish verka means both act/work and seem.
+  { rank: 208, reason: 'Swedish cognate "arbete" pins Arbeit (work, noun)', set: { swedish: "arbete" } },
+  { rank: 234, reason: 'Swedish cognate "arbeta" pins arbeiten (to work)', set: { swedish: "arbeta" } },
+  { rank: 401, reason: 'Swedish cognate "verka" pins wirken (to have an effect/act/work)', set: { swedish: "verka" } },
+  { rank: 677, reason: 'Swedish cognate "fungera" pins funktionieren (to function/work)', set: { swedish: "fungera" } },
+  { rank: 681, reason: 'Swedish cognate "verk" pins Werk (work/opus/plant)', set: { swedish: "verk" } },
+
+  // The "call" family: name/mention vs. designate vs. shout vs. telephone.
+  { rank: 191, reason: 'Swedish cognate "nämna" pins nennen (to name/call/mention)', set: { swedish: "nämna" } },
+  { rank: 405, reason: 'Swedish cognate "beteckna" pins bezeichnen (to designate/call as) — the als↔som construction matches: "als X bezeichnen" = "beteckna som X"', set: { swedish: "beteckna" } },
+  { rank: 530, reason: 'Swedish cognate "ropa" pins rufen (to call out/shout) — rufen ~ ropa', set: { swedish: "ropa" } },
+  { rank: 1146, reason: 'Swedish "ringa" pins anrufen (to call on the phone)', set: { swedish: "ringa" } },
+
+  // The "push/press" family — all cognates, distinct.
+  { rank: 924, reason: 'Swedish cognate "trycka" pins drücken (to press/push)', set: { swedish: "trycka" } },
+  { rank: 1221, reason: 'Swedish cognate "stöta" pins stoßen (to bump/push) — stoßen ~ stöta', set: { swedish: "stöta" } },
+  { rank: 1251, reason: 'Swedish cognate "skjuta (på)" pins schieben (to push/shove) — the "(på)" steers away from skjuta=shoot', set: { swedish: "skjuta (på)" } },
+  { rank: 1632, reason: 'Swedish cognate "tränga" pins drängen (to push/press/urge) — drängen ~ tränga', set: { swedish: "tränga" } },
 
   // Plural-only nouns (plurale tantum) the source deck left article-less. With a
   // null article checkAnswer treats the card as a non-noun, so the *correct*

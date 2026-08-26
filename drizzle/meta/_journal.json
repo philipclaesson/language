@@ -190,6 +190,13 @@
       "when": 1787767015889,
       "tag": "0026_swedish_glosses_batch2",
       "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1787777387594,
+      "tag": "0027_swedish_glosses_batch3",
+      "breakpoints": true
     }
   ]
 }

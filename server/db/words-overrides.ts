@@ -110,6 +110,14 @@ export const WORD_OVERRIDES: WordOverride[] = [
   // rank 321 → stiga): höja (transitive, raise) vs. tilltaga (intransitive, grow).
   { rank: 617, reason: 'Swedish cognate "höja" pins erhöhen (to raise, transitive)', set: { swedish: "höja" } },
   { rank: 650, reason: 'Swedish "tilltaga" pins zunehmen (to increase/grow, intransitive) — a morpheme-for-morpheme cognate (zu-nehmen = till-taga)', set: { swedish: "tilltaga" } },
+  // Completing the "increase" family: the remaining verbs + their nouns. Each verb
+  // pairs with its noun (öka/ökning, höja/höjning) so the mapping stays memorable.
+  { rank: 2015, reason: 'Swedish "öka" pins steigern (to boost/increase, transitive), vs. erhöhen→höja', set: { swedish: "öka" } },
+  { rank: 2074, reason: 'Swedish "uppgång" pins Anstieg (a rise/increase, e.g. of prices)', set: { swedish: "uppgång" } },
+  { rank: 2086, reason: 'Swedish "höjning" pins Erhöhung (a raise/increase), the noun to erhöhen→höja', set: { swedish: "höjning" } },
+  { rank: 3147, reason: 'Swedish cognate "förstora" pins vergrößern (to enlarge/increase in size) — ver+größer ~ för+stor', set: { swedish: "förstora" } },
+  { rank: 3579, reason: 'Swedish "ökning" pins Steigerung (an increase), the noun to steigern→öka', set: { swedish: "ökning" } },
+  { rank: 3788, reason: 'Swedish "tillväxt" pins Zunahme (growth/increase), the noun to zunehmen→tilltaga', set: { swedish: "tillväxt" } },
 
   // Swedish glosses splitting three "experience" words: uppleva (undergo an event),
   // erfara (come to know / find out), erfarenhet (the noun).
@@ -185,6 +193,77 @@ export const WORD_OVERRIDES: WordOverride[] = [
   { rank: 1221, reason: 'Swedish cognate "stöta" pins stoßen (to bump/push) — stoßen ~ stöta', set: { swedish: "stöta" } },
   { rank: 1251, reason: 'Swedish cognate "skjuta (på)" pins schieben (to push/shove) — the "(på)" steers away from skjuta=shoot', set: { swedish: "skjuta (på)" } },
   { rank: 1632, reason: 'Swedish cognate "tränga" pins drängen (to push/press/urge) — drängen ~ tränga', set: { swedish: "tränga" } },
+
+  // The "change" family. German splits it three ways and Swedish follows: alter
+  // (ändra/förändra), switch/swap (växla/byta), transform (förvandla/omvandla).
+  // Ausgleich is really "compensation/balancing" — the gloss steers away from "change".
+  { rank: 448, reason: 'Swedish cognate "ändra" pins ändern (to change/alter)', set: { swedish: "ändra" } },
+  { rank: 500, reason: 'Swedish cognate "förändra" pins verändern (to change/transform), vs. plain ändern→ändra', set: { swedish: "förändra" } },
+  { rank: 854, reason: 'Swedish "förändring" pins Veränderung (change/transformation), the noun to verändern', set: { swedish: "förändring" } },
+  { rank: 1084, reason: 'Swedish cognate "växla" pins wechseln (to switch/swap/change) — wechseln ~ växla', set: { swedish: "växla" } },
+  { rank: 1326, reason: 'Swedish "ändring" pins Änderung (change/modification), the noun to ändern', set: { swedish: "ändring" } },
+  { rank: 2513, reason: 'Swedish "förvandling" pins Wandel (gradual change/transformation)', set: { swedish: "förvandling" } },
+  { rank: 2525, reason: 'Swedish "växling" pins Wechsel (switch/change), the noun to wechseln→växla', set: { swedish: "växling" } },
+  { rank: 3169, reason: 'Swedish cognate "omvandla" pins umwandeln (to convert/transform) — um- ~ om-', set: { swedish: "omvandla" } },
+  { rank: 3225, reason: 'Swedish "utjämning" pins Ausgleich (balancing/compensation) — steers away from "change"', set: { swedish: "utjämning" } },
+  { rank: 3647, reason: 'Swedish cognate "byta" pins tauschen (to exchange/swap)', set: { swedish: "byta" } },
+  { rank: 3700, reason: 'Swedish cognate "förvandla" pins wandeln (to change/transform)', set: { swedish: "förvandla" } },
+
+  // The "leave" family — one of the widest collisions. Swedish separates it as cleanly
+  // as German does, including the walk-off (gå iväg) vs. drive-off (åka iväg) split that
+  // English "leave/go away/depart" blurs. Several are clean prefix calques (über~över,
+  // hinter~efter, auf~upp, aus~ut, ab~av).
+  { rank: 450, reason: 'Swedish cognate "lämna" pins verlassen (to leave/abandon a place)', set: { swedish: "lämna" } },
+  { rank: 1147, reason: 'Swedish "avlägsna" pins entfernen (to remove; reflexive = leave/move away)', set: { swedish: "avlägsna" } },
+  { rank: 2291, reason: 'Swedish "efterlämna" pins hinterlassen (to leave behind) — hinter- ~ efter-', set: { swedish: "efterlämna" } },
+  { rank: 2419, reason: 'Swedish cognate "överlåta" pins überlassen (to leave/cede to someone) — über+lassen ~ över+låta', set: { swedish: "överlåta" } },
+  { rank: 2958, reason: 'Swedish "bryta upp" pins aufbrechen — carries both senses (set off / break open) just like the German', set: { swedish: "bryta upp" } },
+  { rank: 3144, reason: 'Swedish "avgå" pins ausscheiden (to leave a post/retire/drop out), vs. austreten→utträda', set: { swedish: "avgå" } },
+  { rank: 3655, reason: 'Swedish "gå iväg" pins weggehen (to walk off/leave on foot), vs. losfahren→åka iväg', set: { swedish: "gå iväg" } },
+  { rank: 4468, reason: 'Swedish "åka iväg" pins losfahren (to drive off/depart by vehicle)', set: { swedish: "åka iväg" } },
+  { rank: 4609, reason: 'Swedish cognate "utträda" pins austreten (to resign/leave an organization) — aus+treten ~ ut+träda', set: { swedish: "utträda" } },
+  { rank: 4690, reason: 'Swedish "gå av" pins abgehen (to come off/go off) — ab+gehen ~ av+gå', set: { swedish: "gå av" } },
+
+  // The "get" family — English "get" is the widest net of all. Swedish separates most
+  // of it (bli/hämta/skaffa), but bekommen and its colloquial twin kriegen genuinely
+  // both = få (register-marked, not sense-marked). beziehen is deliberately pinned to
+  // its dominant "refer" sense, not the marginal "get".
+  { rank: 8, reason: 'Swedish cognate "bli" pins werden (to become) — the become-sense of "get", vs. bekommen=receive', set: { swedish: "bli" } },
+  { rank: 212, reason: 'Swedish "få" pins bekommen (to get/receive) — note: bekommen ≠ become (=werden)', set: { swedish: "få" } },
+  { rank: 547, reason: 'Swedish cognate "hämta" pins holen (to fetch/go get)', set: { swedish: "hämta" } },
+  { rank: 724, reason: 'Swedish "få (vardagligt)" pins kriegen — the colloquial twin of bekommen, same word in Swedish', set: { swedish: "få (vardagligt)" } },
+  { rank: 878, reason: 'Swedish "hänvisa till" pins beziehen via its dominant "sich ~ auf = refer to" sense (the "get" gloss is marginal)', set: { swedish: "hänvisa till (sich ~ auf)" } },
+  { rank: 2377, reason: 'Swedish "hämta upp" pins abholen (to pick up/collect), vs. plain holen→hämta', set: { swedish: "hämta upp" } },
+  { rank: 3653, reason: 'Swedish "få med sig" pins mitbekommen (to catch/notice/pick up on) — mit+bekommen ~ få med sig', set: { swedish: "få med sig" } },
+  { rank: 3839, reason: 'Swedish "skaffa sig" pins zulegen (sich etwas ~ = get/acquire for oneself)', set: { swedish: "skaffa sig" } },
+  { rank: 4170, reason: 'Swedish "skaffa" pins besorgen (to get/procure/provide), vs. reflexive zulegen→skaffa sig', set: { swedish: "skaffa" } },
+
+  // The "stop" family — dense with prefix cognates (auf+halten ~ uppe+hålla,
+  // ab+brechen ~ av+bryta, ein+stellen ~ ställa in, stoppen ~ stoppa). halten is
+  // pinned to its dominant "hold" cognate hålla; einstellen is genuinely many-sensed.
+  { rank: 155, reason: 'Swedish "hålla, stanna" pins halten: hålla (hold — dominant sense, e.g. håll boken / hålla ett tal) + stanna (stop, of a vehicle: bussen stannar)', set: { swedish: "hålla, stanna" } },
+  { rank: 995, reason: 'Swedish "sluta" pins aufhören (to stop/cease an activity)', set: { swedish: "sluta" } },
+  { rank: 1085, reason: 'Swedish calque "ställa in" pins einstellen (adjust/set; also cancel/discontinue) — many-sensed (employ = anställa)', set: { swedish: "ställa in" } },
+  { rank: 1620, reason: 'Swedish "stanna" pins anhalten (to come to a stop/halt)', set: { swedish: "stanna" } },
+  { rank: 2132, reason: 'Swedish cognate "uppehålla" pins aufhalten (to hold up/delay; sich ~ = stay) — auf+halten ~ uppe+hålla', set: { swedish: "uppehålla" } },
+  { rank: 2249, reason: 'Swedish cognate "stoppa" pins stoppen (to stop)', set: { swedish: "stoppa" } },
+  { rank: 2562, reason: 'Swedish "hållplats" pins Station in its "stop on a route" sense (vs. abstract stop verbs)', set: { swedish: "hållplats" } },
+  { rank: 2823, reason: 'Swedish cognate "avbryta" pins abbrechen (to break off/abort) — ab+brechen ~ av+bryta', set: { swedish: "avbryta" } },
+  { rank: 4388, reason: 'Swedish cognate "halt" pins Halt (a stop/halt: göra halt); support-sense = stöd', set: { swedish: "halt, stöd" } },
+
+  // The "produce/make" family — German has a spread of make-verbs and Swedish matches
+  // it, each landing on a distinct word (two clean fram- calques: hervorbringen ~
+  // frambringa, vorlegen ~ lägga fram). herstellen/erzeugen/fertigen all "manufacture"
+  // but split as tillverka/alstra/framställa.
+  { rank: 413, reason: 'Swedish "resultera i" pins ergeben (to result in/yield), vs. the actual make-verbs', set: { swedish: "resultera i" } },
+  { rank: 1000, reason: 'Swedish cognate "producera" pins produzieren (to produce)', set: { swedish: "producera" } },
+  { rank: 1046, reason: 'Swedish "tillverka" pins herstellen (to manufacture/make)', set: { swedish: "tillverka" } },
+  { rank: 1330, reason: 'Swedish "alstra" pins erzeugen (to generate — energy/heat: alstra el/värme), vs. herstellen→tillverka', set: { swedish: "alstra" } },
+  { rank: 2383, reason: 'Swedish calque "lägga fram" pins vorlegen (to present/submit) — vor+legen ~ fram+lägga', set: { swedish: "lägga fram" } },
+  { rank: 2389, reason: 'Swedish "upprätta" pins erstellen (to draw up/create a document: upprätta ett avtal)', set: { swedish: "upprätta" } },
+  { rank: 3668, reason: 'Swedish "prestera" pins erbringen (to render/produce: eine Leistung erbringen = prestera)', set: { swedish: "prestera" } },
+  { rank: 4562, reason: 'Swedish cognate "frambringa" pins hervorbringen (to bring forth) — hervor+bringen ~ fram+bringa', set: { swedish: "frambringa" } },
+  { rank: 4999, reason: 'Swedish "framställa" pins fertigen (to manufacture); cognate förfärdiga (fertigen ~ förfärdiga)', set: { swedish: "framställa" } },
 
   // Plural-only nouns (plurale tantum) the source deck left article-less. With a
   // null article checkAnswer treats the card as a non-noun, so the *correct*

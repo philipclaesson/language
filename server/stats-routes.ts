@@ -1,17 +1,9 @@
 import { Hono } from "hono";
 import { and, eq, isNull, or, sql } from "drizzle-orm";
 import { db } from "./db/client";
-import {
-  cards,
-  dailyProgress,
-  decks,
-  reviewState,
-  reviews,
-  verbReviewState,
-  verbReviews,
-  verbs,
-} from "./db/schema";
+import { cards, dailyProgress, decks, reviewState, reviews, verbReviews } from "./db/schema";
 import { DAY_TZ } from "./srs/day";
+import { verbItemStabilities } from "./verb-routes";
 import { summarizeProgress } from "./srs/tiers";
 import { tierHistory, type ReplayReview } from "./srs/tier-history";
 import {
@@ -81,7 +73,8 @@ statsRoutes.get("/stats", async (c) => {
   );
 
   // Mastery bar: the whole library (words + verbs), same tiers as the home cards.
-  const [wordStates, verbStates] = await Promise.all([
+  // Verbs count every (verb, tense) item (present + past), matching /verbs/progress.
+  const [wordStates, verbStabilities] = await Promise.all([
     db
       .select({ stability: reviewState.stability, stateId: reviewState.id })
       .from(cards)
@@ -91,17 +84,12 @@ statsRoutes.get("/stats", async (c) => {
         and(eq(reviewState.cardId, cards.id), eq(reviewState.userId, userId)),
       )
       .where(or(eq(decks.ownerId, userId), isNull(decks.ownerId))),
-    db
-      .select({ stability: verbReviewState.stability, stateId: verbReviewState.id })
-      .from(verbs)
-      .leftJoin(
-        verbReviewState,
-        and(eq(verbReviewState.verbId, verbs.id), eq(verbReviewState.userId, userId)),
-      ),
+    verbItemStabilities(userId),
   ]);
-  const stabilities = [...wordStates, ...verbStates].map((r) =>
-    r.stateId === null ? null : r.stability,
-  );
+  const stabilities = [
+    ...wordStates.map((r) => (r.stateId === null ? null : r.stability)),
+    ...verbStabilities,
+  ];
 
   const body: StatsResponse = {
     heatmap: buildHeatmap(counts, today, HEATMAP_WEEKS, perfect),
@@ -130,7 +118,12 @@ statsRoutes.get("/stats/history", async (c) => {
       .from(reviews)
       .where(and(eq(reviews.userId, userId), eq(reviews.graded, true))),
     db
-      .select({ id: verbReviews.verbId, rating: verbReviews.rating, reviewedAt: verbReviews.reviewedAt })
+      .select({
+        id: verbReviews.verbId,
+        tense: verbReviews.tense,
+        rating: verbReviews.rating,
+        reviewedAt: verbReviews.reviewedAt,
+      })
       .from(verbReviews)
       .where(and(eq(verbReviews.userId, userId), eq(verbReviews.graded, true))),
   ]);
@@ -146,7 +139,9 @@ statsRoutes.get("/stats/history", async (c) => {
     else byEntity.set(key, [review]);
   };
   for (const r of wordRows) add("c:", r.id, r.rating, r.reviewedAt);
-  for (const r of verbRows) add("v:", r.id, r.rating, r.reviewedAt);
+  // Present and past are separate items — key by tense so their FSRS timelines
+  // replay independently (matching the mastery bar's per-(verb,tense) count).
+  for (const r of verbRows) add("v:", `${r.id}:${r.tense}`, r.rating, r.reviewedAt);
 
   const body: TierHistoryResponse = {
     history: tierHistory([...byEntity.values()], today),

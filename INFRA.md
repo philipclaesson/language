@@ -73,6 +73,13 @@ push the image to Artifact Registry, and deploy a new revision.
   `migrate` job. To grow the catalog later: edit `server/db/verbs.ts`, then either
   `npm run db:seed:verbs` (idempotent upsert against the current `DATABASE_URL`)
   or add a new data migration.
+- **Past tense (VERBS.md).** `drizzle/0030_*.sql` adds the past-form columns to
+  `verbs` (`past_kind`, `perfekt`, `praet_*`) and a `tense` column to
+  `verb_review_state` (now unique on `user, verb, tense`) + `verb_reviews`;
+  existing rows backfill to `tense='present'`. `drizzle/0031_seed_verb_past.sql`
+  populates the past forms — idempotent `UPDATE`s keyed by infinitive, generated
+  from `server/db/verbs.ts`, so nobody's progress is touched. Present and past are
+  independent SRS items; `db:seed:verbs` upserts the past columns onto existing rows.
 - **Frequency word corpus.** `drizzle/0004_*.sql` makes `decks.owner_id` nullable
   and adds `cards.frequency_rank`; `drizzle/0005_seed_words.sql` inserts one
   *global* (null-owner) deck + ~3,700 cards — a plain multi-row `INSERT` (like the

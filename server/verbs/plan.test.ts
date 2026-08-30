@@ -1,6 +1,12 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { planVerbDay, NEW_VERBS_PER_DAY } from "./plan";
+import {
+  planVerbDay,
+  planPastVerbDay,
+  mergeVerbPlans,
+  NEW_VERBS_PER_DAY,
+  NEW_PAST_PER_DAY,
+} from "./plan";
 import type { VerbToday } from "./plan";
 import type { VerbRegularity } from "../../shared/types";
 
@@ -113,4 +119,36 @@ test("a studied verb not due and untouched today is excluded", () => {
   assert.equal(plan.newTotal, 0);
   assert.equal(plan.pending, 0);
   assert.equal(plan.complete, true);
+});
+
+test("past stream: fresh cards taken in plain frequency order, no regularity mix", () => {
+  // Regularity should NOT influence past selection — pure frequency order wins.
+  const verbs = [
+    v("r1", "regular", 1),
+    v("i2", "irregular", 2),
+    v("r3", "regular", 3),
+    v("i4", "irregular", 4),
+    v("r5", "regular", 5),
+    v("i6", "irregular", 6),
+    v("r7", "regular", 7),
+  ];
+  const plan = planPastVerbDay(verbs, NOW);
+  assert.equal(plan.newTotal, NEW_PAST_PER_DAY);
+  assert.deepEqual(plan.pendingIds.sort(), ["r1", "i2", "r3", "i4", "r5"].sort());
+});
+
+test("past stream: fewer verbs than the limit → take what exists", () => {
+  const verbs = [v("a", "regular", 1), v("b", "irregular", 2)];
+  const plan = planPastVerbDay(verbs, NOW);
+  assert.equal(plan.newTotal, 2);
+});
+
+test("mergeVerbPlans sums totals and ANDs completeness", () => {
+  const present = planVerbDay([v("p1", "irregular", 1), v("p2", "regular", 2)], NOW);
+  const past = planPastVerbDay([v("q1", "regular", 1)], NOW);
+  const merged = mergeVerbPlans(present, past);
+  assert.equal(merged.newTotal, present.newTotal + past.newTotal);
+  assert.equal(merged.pending, present.pending + past.pending);
+  assert.deepEqual(merged.pendingIds.sort(), [...present.pendingIds, ...past.pendingIds].sort());
+  assert.equal(merged.complete, present.complete && past.complete);
 });

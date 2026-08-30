@@ -163,6 +163,18 @@ export const verbs = pgTable("verbs", {
   formWir: text("form_wir").notNull(),
   formIhr: text("form_ihr").notNull(),
   formSie: text("form_sie").notNull(),
+  // Past tense (VERBS.md). Nullable so a verb can lack past data during rollout.
+  // `pastKind` picks how the past card is drilled:
+  //   'praeteritum' → the six praet_* forms (grid; sein/haben/modals/wissen/…)
+  //   'perfekt'     → `perfekt` only, aux + participle as one string ("bin gegangen")
+  pastKind: text("past_kind"), // 'praeteritum' | 'perfekt' | null
+  perfekt: text("perfekt"), // Perfekt ich-form, e.g. "bin gegangen" / "habe gemacht"
+  praetIch: text("praet_ich"),
+  praetDu: text("praet_du"),
+  praetEr: text("praet_er"),
+  praetWir: text("praet_wir"),
+  praetIhr: text("praet_ihr"),
+  praetSie: text("praet_sie"),
   notes: text("notes"), // optional irregularity note / mnemonic
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
@@ -179,6 +191,9 @@ export const verbReviewState = pgTable(
     verbId: uuid("verb_id")
       .notNull()
       .references(() => verbs.id, { onDelete: "cascade" }),
+    // Which tense this schedule tracks — present and past are independent SRS
+    // items for the same verb (VERBS.md §7). Existing rows backfill to 'present'.
+    tense: text("tense").notNull().default("present"), // 'present' | 'past'
     due: timestamp("due", { withTimezone: true }).notNull().defaultNow(),
     stability: doublePrecision("stability").notNull().default(0),
     difficulty: doublePrecision("difficulty").notNull().default(0),
@@ -187,7 +202,7 @@ export const verbReviewState = pgTable(
     lastReview: timestamp("last_review", { withTimezone: true }),
     state: text("state").notNull().default("new"),
   },
-  (t) => [unique("verb_review_state_user_verb").on(t.userId, t.verbId)],
+  (t) => [unique("verb_review_state_user_verb").on(t.userId, t.verbId, t.tense)],
 );
 
 // Append-only log of every verb attempt (parity with `reviews`; drives the day-
@@ -200,6 +215,7 @@ export const verbReviews = pgTable("verb_reviews", {
   verbId: uuid("verb_id")
     .notNull()
     .references(() => verbs.id, { onDelete: "cascade" }),
+  tense: text("tense").notNull().default("present"), // 'present' | 'past' — see verb_review_state
   rating: integer("rating").notNull(), // 1 = fail, 3 = pass (all-or-nothing)
   graded: boolean("graded").notNull().default(true), // first-attempt-of-day only
   // Extra/bonus work (EXTRA_WORK.md): a review done via "learn more"/"practice"

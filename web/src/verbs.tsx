@@ -30,6 +30,15 @@ function RegularityTag({ regularity }: { regularity: string }) {
   );
 }
 
+// The tense a past card drills, shown in place of the regularity tag.
+function PastTag({ kind }: { kind?: string }) {
+  return (
+    <span class="rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-medium text-indigo-700">
+      {kind === "praeteritum" ? "Präteritum" : "Perfekt"}
+    </span>
+  );
+}
+
 // ---- Verbs dashboard (tab root) ----
 
 export function VerbsHome({
@@ -58,7 +67,7 @@ export function VerbsHome({
     <div class="mx-auto flex min-h-screen max-w-md flex-col px-5 pb-24 pt-10">
       <header>
         <h1 class="text-2xl font-semibold tracking-tight text-slate-900">Verbs</h1>
-        <p class="mt-1 text-slate-500">Drill the six present-tense forms.</p>
+        <p class="mt-1 text-slate-500">Drill present- and past-tense forms.</p>
       </header>
 
       <main class="mt-8">
@@ -238,7 +247,8 @@ export function VerbReview({
 }) {
   const [queue, setQueue] = useState<SessionVerb[]>([]);
   const [phase, setPhase] = useState<Phase>("loading");
-  const [typed, setTyped] = useState<Conjugation>(emptyConj());
+  const [typed, setTyped] = useState<Conjugation>(emptyConj()); // grid cards
+  const [typedForm, setTypedForm] = useState(""); // single-input Perfekt card
   const [result, setResult] = useState<VerbReviewResult | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [flash, setFlash] = useState<"green" | "red" | null>(null);
@@ -248,13 +258,19 @@ export function VerbReview({
   const [completed, setCompleted] = useState(0);
   const startedAt = useRef(0);
   const inputRefs = useRef<Partial<Record<VerbForm, HTMLInputElement | null>>>({});
+  const formRef = useRef<HTMLInputElement | null>(null);
 
   const isBonus = mode !== "daily";
+  const current = queue[0];
+  // A Perfekt past card is a single "aux + participle" input; everything else
+  // (present, and Präteritum past) is the six-form grid.
+  const isPerfekt = current?.tense === "past" && current.pastKind === "perfekt";
 
   function load() {
     setPhase("loading");
     setResult(null);
     setTyped(emptyConj());
+    setTypedForm("");
     setFlash(null);
     setCompleted(0);
     setSubmitting(false);
@@ -289,18 +305,21 @@ export function VerbReview({
 
   useEffect(load, [mode]);
 
-  const current = queue[0];
   const doneCount = baseDone + completed;
 
   // In the drill only the previously-wrong rows are editable; in input, all six;
   // in reveal, none.
   const editableForms = (): VerbForm[] =>
     phase === "drill" && result
-      ? VERB_FORMS.filter((f) => !result.perForm[f])
+      ? VERB_FORMS.filter((f) => !result.perForm?.[f])
       : [...VERB_FORMS];
 
   useEffect(() => {
     if (phase !== "input" && phase !== "drill") return;
+    if (isPerfekt) {
+      formRef.current?.focus();
+      return;
+    }
     const first = editableForms()[0];
     if (first) inputRefs.current[first]?.focus();
   }, [phase, queue]);
@@ -329,6 +348,7 @@ export function VerbReview({
 
     setResult(null);
     setTyped(emptyConj());
+    setTypedForm("");
     setFlash(null);
     setSubmitting(false);
     if (nextQueue.length === 0) {
@@ -343,14 +363,17 @@ export function VerbReview({
 
   async function grade() {
     if (!current || phase !== "input" || submitting) return;
-    // Ignore a fully-blank submission (e.g. hitting Enter with no forms filled): it
+    // Ignore a fully-blank submission (e.g. hitting Enter with nothing typed): it
     // isn't a recall attempt, so it shouldn't be graded as a miss.
-    if (VERB_FORMS.every((f) => typed[f].trim() === "")) return;
+    const blank = isPerfekt ? typedForm.trim() === "" : VERB_FORMS.every((f) => typed[f].trim() === "");
+    if (blank) return;
     setSubmitting(true);
     try {
       const r = await postVerbReview({
-        verbId: current.id,
-        typed,
+        verbId: current.verbId,
+        tense: current.tense,
+        typed: isPerfekt ? undefined : typed,
+        pastForm: isPerfekt ? typedForm : undefined,
         elapsedMs: Date.now() - startedAt.current,
         bonus: isBonus,
       });
@@ -358,13 +381,18 @@ export function VerbReview({
         setFlash("green");
         setTimeout(() => next(true, true), 200);
       } else {
-        // Wrong (all modes, incl. practice): keep correct rows filled + locked,
-        // clear the wrong rows to re-type; the verb rotates to the back. The miss
-        // was already graded on this first-of-day attempt (FSRS Again).
+        // Wrong (all modes, incl. practice): reveal the answer and re-type it to
+        // continue; the verb rotates to the back. The miss was already graded on
+        // this first-of-day attempt (FSRS Again). For the grid, keep the correct
+        // rows filled + locked and clear the wrong ones.
         setResult(r);
-        const revealed = emptyConj();
-        for (const f of VERB_FORMS) revealed[f] = r.perForm[f] ? r.expected[f] : "";
-        setTyped(revealed);
+        if (isPerfekt) {
+          setTypedForm("");
+        } else {
+          const revealed = emptyConj();
+          for (const f of VERB_FORMS) revealed[f] = r.perForm?.[f] ? r.expected?.[f] ?? "" : "";
+          setTyped(revealed);
+        }
         setFlash("red");
         setPhase("drill");
         setSubmitting(false);
@@ -375,12 +403,14 @@ export function VerbReview({
     }
   }
 
-  // Drill: continue once every previously-wrong row matches the revealed form.
+  // Drill: continue once the revealed answer has been re-typed correctly.
   function drillSubmit() {
     if (!result) return;
-    const allFixed = editableForms().every(
-      (f) => normalizeAnswer(typed[f]) === normalizeAnswer(result.expected[f]),
-    );
+    const allFixed = isPerfekt
+      ? normalizeAnswer(typedForm) === normalizeAnswer(result.expectedForm ?? "")
+      : editableForms().every(
+          (f) => normalizeAnswer(typed[f]) === normalizeAnswer(result.expected?.[f] ?? ""),
+        );
     if (allFixed) next(false, false); // rotate to back, come again
     else {
       setFlash("red");
@@ -538,7 +568,12 @@ export function VerbReview({
         )}
 
         <div class="flex items-center justify-center gap-2">
-          {current && <RegularityTag regularity={current.regularity} />}
+          {current &&
+            (current.tense === "past" ? (
+              <PastTag kind={current.pastKind} />
+            ) : (
+              <RegularityTag regularity={current.regularity} />
+            ))}
           {current && <TierChip tier={current.tier} />}
         </div>
         <h2 class="mt-2 text-center text-3xl font-semibold tracking-tight text-slate-900">
@@ -546,60 +581,82 @@ export function VerbReview({
         </h2>
         <p class="mt-1 text-center text-slate-400">{current?.english}</p>
 
-        <div class="mt-6 space-y-2">
-          {VERB_FORMS.map((f) => {
-            const isEditable = editable.has(f);
-            const wrongInDrill = phase === "drill" && result && !result.perForm[f];
-            const border = wrongInDrill
-              ? "border-red-300 focus:border-red-500"
-              : phase === "drill" && !isEditable
-                ? "border-emerald-200 bg-emerald-50 text-emerald-800"
-                : flash === "green"
-                  ? "border-green-500"
-                  : flash === "red"
-                    ? "border-red-400"
-                    : "border-slate-300 focus:border-slate-900";
-            return (
-              <div key={f} class="flex items-start gap-3">
-                <label class="w-20 shrink-0 pt-2.5 text-right text-sm text-slate-500">
-                  {VERB_FORM_LABELS[f]}
-                </label>
-                <div class="flex-1">
-                  <input
-                    ref={(el) => {
-                      inputRefs.current[f] = el;
-                    }}
-                    value={typed[f]}
-                    disabled={!isEditable}
-                    onInput={(e) =>
-                      setTyped((t) => ({ ...t, [f]: (e.target as HTMLInputElement).value }))
-                    }
-                    onKeyDown={(e) => onKey(e, f)}
-                    placeholder={isEditable ? "…" : ""}
-                    autocomplete="off"
-                    autocapitalize="off"
-                    autocorrect="off"
-                    spellcheck={false}
-                    enterkeyhint={f === "sie" ? "go" : "next"}
-                    class={`w-full rounded-lg border px-3 py-2 text-lg outline-none transition-colors disabled:opacity-90 ${border}`}
-                  />
-                  {wrongInDrill && result && (
-                    <p class="mt-0.5 text-xs text-amber-700">
-                      correct: <span class="font-semibold">{result.expected[f]}</span>
-                    </p>
-                  )}
+        {isPerfekt ? (
+          <PerfektInput
+            value={typedForm}
+            onInput={setTypedForm}
+            onEnter={submit}
+            flash={flash}
+            drill={phase === "drill"}
+            inputRef={formRef}
+          />
+        ) : (
+          <div class="mt-6 space-y-2">
+            {VERB_FORMS.map((f) => {
+              const isEditable = editable.has(f);
+              const wrongInDrill = phase === "drill" && result && !result.perForm?.[f];
+              const border = wrongInDrill
+                ? "border-red-300 focus:border-red-500"
+                : phase === "drill" && !isEditable
+                  ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                  : flash === "green"
+                    ? "border-green-500"
+                    : flash === "red"
+                      ? "border-red-400"
+                      : "border-slate-300 focus:border-slate-900";
+              return (
+                <div key={f} class="flex items-start gap-3">
+                  <label class="w-20 shrink-0 pt-2.5 text-right text-sm text-slate-500">
+                    {VERB_FORM_LABELS[f]}
+                  </label>
+                  <div class="flex-1">
+                    <input
+                      ref={(el) => {
+                        inputRefs.current[f] = el;
+                      }}
+                      value={typed[f]}
+                      disabled={!isEditable}
+                      onInput={(e) =>
+                        setTyped((t) => ({ ...t, [f]: (e.target as HTMLInputElement).value }))
+                      }
+                      onKeyDown={(e) => onKey(e, f)}
+                      placeholder={isEditable ? "…" : ""}
+                      autocomplete="off"
+                      autocapitalize="off"
+                      autocorrect="off"
+                      spellcheck={false}
+                      enterkeyhint={f === "sie" ? "go" : "next"}
+                      class={`w-full rounded-lg border px-3 py-2 text-lg outline-none transition-colors disabled:opacity-90 ${border}`}
+                    />
+                    {wrongInDrill && result && (
+                      <p class="mt-0.5 text-xs text-amber-700">
+                        correct: <span class="font-semibold">{result.expected?.[f]}</span>
+                      </p>
+                    )}
+                  </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
-
-        {phase === "drill" && result && (
-          <div class="mt-4 rounded-xl bg-amber-50 px-4 py-3 text-center text-sm text-amber-900 ring-1 ring-amber-200">
-            <p class="font-medium">Not quite — type the correct forms shown to continue.</p>
-            <p class="mt-1 opacity-70">You'll see this verb again later.</p>
+              );
+            })}
           </div>
         )}
+
+        {phase === "drill" &&
+          result &&
+          (isPerfekt ? (
+            // Single-entry card → mirror the Words miss panel (answer inside the box).
+            <div class="mt-4 rounded-xl bg-amber-50 px-4 py-3 text-center text-amber-900 ring-1 ring-amber-200">
+              <p class="font-medium">Not quite</p>
+              <p class="mt-1 text-lg font-semibold">{result.expectedForm}</p>
+              <p class="mt-1 text-xs opacity-70">
+                Type it to continue — you'll see it again later.
+              </p>
+            </div>
+          ) : (
+            <div class="mt-4 rounded-xl bg-amber-50 px-4 py-3 text-center text-sm text-amber-900 ring-1 ring-amber-200">
+              <p class="font-medium">Not quite — type the correct forms shown to continue.</p>
+              <p class="mt-1 opacity-70">You'll see this verb again later.</p>
+            </div>
+          ))}
 
         <button
           onClick={submit}
@@ -610,6 +667,56 @@ export function VerbReview({
         </button>
       </div>
     </Shell>
+  );
+}
+
+// The Perfekt past card: one input for "auxiliary + participle" (e.g. "bin
+// gegangen"). A single entry, so it mirrors the Words review input; on a miss the
+// answer is shown in the amber panel and re-typed to continue.
+function PerfektInput({
+  value,
+  onInput,
+  onEnter,
+  flash,
+  drill,
+  inputRef,
+}: {
+  value: string;
+  onInput: (v: string) => void;
+  onEnter: () => void;
+  flash: "green" | "red" | null;
+  drill: boolean;
+  inputRef: { current: HTMLInputElement | null };
+}) {
+  const border =
+    flash === "green"
+      ? "border-green-500"
+      : flash === "red"
+        ? "border-red-400"
+        : "border-slate-300 focus:border-slate-900";
+  return (
+    <div class="mt-8">
+      <input
+        ref={(el) => {
+          inputRef.current = el;
+        }}
+        value={value}
+        onInput={(e) => onInput((e.target as HTMLInputElement).value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            onEnter();
+          }
+        }}
+        placeholder={drill ? "Type it to continue…" : "Hilfsverb (ich) + Partizip …"}
+        autocomplete="off"
+        autocapitalize="off"
+        autocorrect="off"
+        spellcheck={false}
+        enterkeyhint={drill ? "next" : "go"}
+        class={`w-full rounded-xl border px-4 py-3 text-lg outline-none transition-colors ${border}`}
+      />
+    </div>
   );
 }
 

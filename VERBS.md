@@ -1,7 +1,8 @@
 # Verbs Mode — Implementation Plan
 
-> **Status: built (2026-07-01).** Shipped as described below; see PLAN.md status +
-> decision 12. This doc is now both the plan and the reference for the feature.
+> **Status: built (2026-07-01); past tense added 2026-08-30.** Shipped as described
+> below; see PLAN.md status + decision 12 and §6a "Past tense (built)". This doc is
+> now both the plan and the reference for the feature.
 
 > A separate practice mode for German present-tense **conjugation**. You drill the
 > six present forms of a verb at once (ich / du / er-sie-es / wir / ihr / sie-Sie),
@@ -39,8 +40,9 @@ get isolated and drilled. Verbs mode fixes that:
    the next 3 unstudied irregular and next 2 regular, both in frequency order.
    Deterministic and always leans irregular. Spills over to the other bucket when
    one is exhausted so we still reach 5/day while verbs remain.
-4. **Scope → present tense only, for now.** Six forms. Other tenses (Präteritum,
-   Perfekt) are a later, additive extension (see "Future extensions").
+4. **Scope → present tense first; past tense added later.** Present is six forms.
+   Past shipped afterward as a second, independent SRS stream per verb (see
+   "Past tense (built)" below) — not a rework of the present loop.
 
 ---
 
@@ -382,11 +384,36 @@ new shared types. Same `fetch` wrapper.
 
 ---
 
+## 6a. Past tense (built)
+
+Added after the present-tense loop as an **additive second stream** — the present
+loop above is unchanged.
+
+- **Everyday-German split, baked into the catalog** (`verbs.past_kind`): Präteritum
+  for the high-frequency verbs that actually take it in speech (sein, haben, werden,
+  the modals, wissen, geben/*es gab*); Perfekt for everything else.
+- **Two card shapes.** Präteritum → the same six-form grid (it conjugates), graded
+  by `checkConjugation`. Perfekt → a **single input** for *auxiliary + participle*
+  as one string (e.g. `bin gegangen`), graded by `checkPerfekt`. The participle is
+  invariant and the aux fixed per verb, so the ich-form string is the whole answer.
+- **Independent SRS per (verb, tense).** `verb_review_state` / `verb_reviews` gained
+  a `tense` column; their key is `(user, verb, tense)`. `verb-routes.ts` expands the
+  catalog into items (`${verbId}:${tense}`) and plans two streams — `planVerbDay`
+  (present, 3:2 mix) + `planPastVerbDay` (past, plain frequency order, own
+  `NEW_PAST_PER_DAY` quota) — merged by `mergeVerbPlans`. Streams are independent: a
+  verb's past card can appear before/after its present.
+- **Data model.** Past columns on `verbs`: `past_kind`, `perfekt`, and six
+  `praet_*`. Never leaked in a session payload (same rule as the present forms).
+  Authored in `server/db/verbs.ts`; reaches prod via `drizzle/0030` (DDL) +
+  `0031_seed_verb_past.sql` (idempotent backfill).
+- **Mastery counts every (verb, tense) item.** `/verbs/progress` and the Stats
+  mastery bar/growth chart both go through `verbItemStabilities` (present + past),
+  so the total reflects all the work left; the activity heatmap counts all tenses
+  too. Only the Freund vocab seed filters `tense='present'` (it wants the present
+  form for conversation context). The browse-all list stays a 99-verb *catalog*.
+
 ## 7. Future extensions (designed-in, not now)
 
-- **More tenses** (Präteritum, Perfekt/auxiliary + participle): promote the six
-  form columns to a `verb_forms` child table keyed by `(verb_id, tense)`; the
-  review card gains a tense selector or interleaves tenses.
 - **Finer regularity** (`stem-changing` vs fully irregular) for smarter weighting.
 - **Per-user new-verb limit / weighting** if a settings screen ever lands (today
   these are constants, exactly like `NEW_PER_DAY`).

@@ -260,10 +260,25 @@ export const VERB_FORM_LABELS: Record<VerbForm, string> = {
 export type Conjugation = Record<VerbForm, string>;
 export type VerbRegularity = "regular" | "irregular";
 
-// What the client sees before answering. Deliberately omits the six forms — they
-// are the answer (cf. SessionCard omitting the noun's article).
+// A verb is drilled in two independent tenses (each its own SRS item — VERBS.md §7):
+//   present — the six present forms (grid).
+//   past    — a single past tense, chosen per verb by `pastKind`:
+//     'praeteritum' → the six Präteritum forms (grid; sein/haben/modals/…)
+//     'perfekt'     → auxiliary + participle as ONE string, e.g. "bin gegangen".
+// The everyday-German split (Präteritum for the high-frequency aux/modal set,
+// Perfekt for the rest) is baked into the catalog, not computed.
+export type VerbTense = "present" | "past";
+export type PastKind = "praeteritum" | "perfekt";
+
+// What the client sees before answering. Deliberately omits the forms — they are
+// the answer (cf. SessionCard omitting the noun's article).
 export type SessionVerb = {
+  // Queue key, unique per drilled item: `${verbId}:${tense}`. (`verbId`+`tense`
+  // are what a review POST sends back.)
   id: string;
+  verbId: string;
+  tense: VerbTense;
+  pastKind?: PastKind; // set only when tense === 'past' (which past card to render)
   infinitive: string; // "gehen"
   english: string; // "to go"
   regularity: VerbRegularity;
@@ -273,18 +288,23 @@ export type SessionVerb = {
 
 export type VerbReviewRequest = {
   verbId: string;
-  typed: Conjugation; // the six forms the user filled in
+  tense?: VerbTense; // omitted = "present" (back-compat)
+  typed?: Conjugation; // the six forms — present & Präteritum grids
+  pastForm?: string; // the single Perfekt string, e.g. "bin gegangen"
   elapsedMs?: number;
   bonus?: boolean; // extra-work review — see ReviewRequest.bonus / EXTRA_WORK.md
 };
 
 export type VerbReviewResult = {
-  correct: boolean; // all six forms matched (all-or-nothing)
-  expected: Conjugation; // full correct set, revealed on a miss
-  perForm: Record<VerbForm, boolean>; // which rows were right (for highlighting)
+  correct: boolean; // all-or-nothing
   nextDue: string; // ISO timestamp
   graded: boolean; // first-attempt-of-day only drives FSRS (see §5a)
   needsRedrill: boolean; // true when this answer was wrong (still needs a correct typing today)
+  // Grid reveal (present & Präteritum). Present for those cards, absent for Perfekt.
+  expected?: Conjugation; // full correct set, revealed on a miss
+  perForm?: Record<VerbForm, boolean>; // which rows were right (for highlighting)
+  // Single-string reveal (Perfekt). Present for Perfekt cards only.
+  expectedForm?: string;
 };
 
 // The verb day's required work — mirrors TodayResponse. `verbs` is the still-PENDING

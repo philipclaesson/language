@@ -10,6 +10,10 @@ import type { VerbRegularity } from "../../shared/types";
 export const NEW_VERBS_PER_DAY = 5;
 export const IRREGULAR_PER_DAY = 3;
 export const REGULAR_PER_DAY = 2;
+// Past tense is a separate, independent stream (VERBS.md §7): its own daily quota,
+// introduced in plain frequency order. No irregular/regular mix — the highest-
+// frequency verbs (which take Präteritum) naturally come first.
+export const NEW_PAST_PER_DAY = 5;
 
 // One verb's daily-relevant facts (as `CardToday`) plus what drives new-verb
 // selection. `frequencyRank` orders introduction; fresh verbs must be passable in
@@ -53,20 +57,10 @@ function pickFresh(irrPool: VerbToday[], regPool: VerbToday[], slots: number): V
   return picked;
 }
 
-/**
- * Build today's required verb set + progress. Pure: the route passes `now` and
- * per-verb facts. Mirrors `planToday`; only new-verb *selection* differs (the
- * 3:2 mix). The required total (due + new) is stable across the day.
- */
-export function planVerbDay(
-  verbs: VerbToday[],
-  now: Date,
-  opts: { tz?: string; limit?: number } = {},
-): VerbDayPlan {
-  const tz = opts.tz ?? DAY_TZ;
-  const limit = opts.limit ?? NEW_VERBS_PER_DAY;
-  const end = endOfDay(now, tz).getTime();
-
+// Split today's candidates into the three buckets shared by both streams: due
+// reviews, verbs introduced today, and never-studied "fresh" verbs (frequency-
+// ordered). Identical to `planToday`'s bucketing.
+function partitionDay(verbs: VerbToday[], end: number) {
   const dueReq: VerbToday[] = [];
   const introduced: VerbToday[] = [];
   const fresh: VerbToday[] = [];
@@ -85,28 +79,87 @@ export function planVerbDay(
     // else: a studied verb not due and untouched today — not part of today.
   }
 
-  const slotsLeft = Math.max(0, limit - introduced.length);
   fresh.sort((a, b) => a.frequencyRank - b.frequencyRank);
+  return { dueReq, introduced, fresh };
+}
+
+// Assemble the required set (due + introduced + freshly-pulled) into a VerbDayPlan.
+function finalize(
+  allVerbs: VerbToday[],
+  dueReq: VerbToday[],
+  introduced: VerbToday[],
+  freshToPresent: VerbToday[],
+): VerbDayPlan {
+  const required = [...dueReq, ...introduced, ...freshToPresent];
+  const correct = new Set(allVerbs.filter((v) => v.correctToday).map((v) => v.id));
+  const { done, pending, complete } = dayProgress(
+    required.map((v) => v.id),
+    correct,
+  );
+  return {
+    pendingIds: required.filter((v) => !correct.has(v.id)).map((v) => v.id),
+    dueTotal: dueReq.length,
+    newTotal: introduced.length + freshToPresent.length,
+    done,
+    pending,
+    complete,
+  };
+}
+
+/**
+ * Build today's required PRESENT-tense verb set + progress. Pure: the route passes
+ * `now` and per-verb facts. Mirrors `planToday`; only new-verb *selection* differs
+ * (the 3-irregular : 2-regular mix). The required total (due + new) is stable
+ * across the day.
+ */
+export function planVerbDay(
+  verbs: VerbToday[],
+  now: Date,
+  opts: { tz?: string; limit?: number } = {},
+): VerbDayPlan {
+  const tz = opts.tz ?? DAY_TZ;
+  const limit = opts.limit ?? NEW_VERBS_PER_DAY;
+  const { dueReq, introduced, fresh } = partitionDay(verbs, endOfDay(now, tz).getTime());
+
+  const slotsLeft = Math.max(0, limit - introduced.length);
   const freshToPresent = pickFresh(
     fresh.filter((v) => v.regularity === "irregular"),
     fresh.filter((v) => v.regularity === "regular"),
     slotsLeft,
   );
-  const newTotal = introduced.length + freshToPresent.length;
 
-  const required = [...dueReq, ...introduced, ...freshToPresent];
-  const correct = new Set(verbs.filter((v) => v.correctToday).map((v) => v.id));
-  const { done, pending, complete } = dayProgress(
-    required.map((v) => v.id),
-    correct,
-  );
+  return finalize(verbs, dueReq, introduced, freshToPresent);
+}
 
+/**
+ * Build today's required PAST-tense set + progress. Same buckets as `planVerbDay`,
+ * but fresh past cards are introduced in plain frequency order (no regularity mix)
+ * up to `NEW_PAST_PER_DAY`. Present and past are independent streams (VERBS.md §7):
+ * a verb's past card can appear before/after its present card.
+ */
+export function planPastVerbDay(
+  verbs: VerbToday[],
+  now: Date,
+  opts: { tz?: string; limit?: number } = {},
+): VerbDayPlan {
+  const tz = opts.tz ?? DAY_TZ;
+  const limit = opts.limit ?? NEW_PAST_PER_DAY;
+  const { dueReq, introduced, fresh } = partitionDay(verbs, endOfDay(now, tz).getTime());
+
+  const slotsLeft = Math.max(0, limit - introduced.length);
+  const freshToPresent = fresh.slice(0, slotsLeft);
+
+  return finalize(verbs, dueReq, introduced, freshToPresent);
+}
+
+/** Sum two stream plans into one (present + past). Complete only when both are. */
+export function mergeVerbPlans(a: VerbDayPlan, b: VerbDayPlan): VerbDayPlan {
   return {
-    pendingIds: required.filter((v) => !correct.has(v.id)).map((v) => v.id),
-    dueTotal: dueReq.length,
-    newTotal,
-    done,
-    pending,
-    complete,
+    pendingIds: [...a.pendingIds, ...b.pendingIds],
+    dueTotal: a.dueTotal + b.dueTotal,
+    newTotal: a.newTotal + b.newTotal,
+    done: a.done + b.done,
+    pending: a.pending + b.pending,
+    complete: a.complete && b.complete,
   };
 }

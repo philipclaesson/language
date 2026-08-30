@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { checkConjugation } from "./check";
+import { checkConjugation, checkPerfekt } from "./check";
 import type { Conjugation } from "../../shared/types";
 
 const gehen: Conjugation = {
@@ -58,4 +58,20 @@ test("strict mode rejects ae for ä", () => {
   const expected: Conjugation = { ...gehen, du: "gähst" };
   const typed = { ...gehen, du: "gaehst" };
   assert.equal(checkConjugation(expected, typed, { umlautTolerant: false }).correct, false);
+});
+
+test("perfekt: exact aux + participle passes", () => {
+  assert.equal(checkPerfekt("bin gegangen", "bin gegangen").correct, true);
+});
+
+test("perfekt: wrong auxiliary fails", () => {
+  assert.equal(checkPerfekt("bin gegangen", "habe gegangen").correct, false);
+});
+
+test("perfekt: case / extra whitespace / trailing punct tolerated", () => {
+  assert.equal(checkPerfekt("habe gemacht", "  Habe   gemacht. ").correct, true);
+});
+
+test("perfekt: empty answer fails", () => {
+  assert.equal(checkPerfekt("habe gemacht", "").correct, false);
 });

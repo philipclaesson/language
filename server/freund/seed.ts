@@ -50,7 +50,11 @@ export async function todaysVocab(userId: string): Promise<VocabSeed> {
     .from(verbs)
     .innerJoin(
       verbReviewState,
-      and(eq(verbReviewState.verbId, verbs.id), eq(verbReviewState.userId, userId)),
+      and(
+        eq(verbReviewState.verbId, verbs.id),
+        eq(verbReviewState.userId, userId),
+        eq(verbReviewState.tense, "present"), // vocab context uses the present form
+      ),
     )
     .where(lte(verbReviewState.due, end))
     .orderBy(asc(verbReviewState.due))
@@ -61,7 +65,11 @@ export async function todaysVocab(userId: string): Promise<VocabSeed> {
     .from(verbs)
     .leftJoin(
       verbReviewState,
-      and(eq(verbReviewState.verbId, verbs.id), eq(verbReviewState.userId, userId)),
+      and(
+        eq(verbReviewState.verbId, verbs.id),
+        eq(verbReviewState.userId, userId),
+        eq(verbReviewState.tense, "present"),
+      ),
     )
     .where(isNull(verbReviewState.id))
     .orderBy(asc(verbs.frequencyRank))

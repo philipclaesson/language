@@ -37,3 +37,24 @@ export function checkConjugation(
 
   return { correct, perForm, expected };
 }
+
+export type PerfektCheckResult = {
+  correct: boolean;
+  expected: string; // echoed back so the route can reveal it on a miss
+};
+
+/**
+ * Match a single Perfekt answer — auxiliary + participle as one string, e.g.
+ * "bin gegangen". Same normalization as the grid (umlaut/ß tolerant, whitespace-
+ * collapsed, case-folded), so "Bin  gegangen" or "habe gemacht." all match.
+ */
+export function checkPerfekt(
+  expected: string,
+  typed: string,
+  opts: ConjugationCheckOptions = {},
+): PerfektCheckResult {
+  const tolerant = opts.umlautTolerant ?? true;
+  const want = normalizeAnswer(expected, tolerant);
+  const got = normalizeAnswer(typed, tolerant);
+  return { correct: got.length > 0 && got === want, expected };
+}

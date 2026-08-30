@@ -17,6 +17,11 @@ later without touching the core loop.
   **chat tutor** (chat to build/maintain decks; Claude tool-use, `source='ai_chat'`).
   **Verbs mode** (VERBS.md): a separate tab that drills the six present-tense
   conjugations of a global, frequency-ordered verb catalog on the same daily loop.
+  Also drills **past tense** as a second, independent SRS stream per verb: the
+  everyday-German split — Präteritum (six-form grid) for the high-frequency
+  aux/modal/wissen/geben set, Perfekt (a single "aux + participle" string, e.g.
+  *bin gegangen*) for the rest. Each (verb, tense) is its own SRS item; the mastery
+  bar counts them all (present + past).
   **Frequency word corpus:** ~5,000 frequency-ranked German words as a single
   *global* (ownerless) deck that flows through the normal Words loop, introduced
   most-frequent-first. Each card carries an **example sentence** (English gloss shown
@@ -87,8 +92,9 @@ TypeScript everywhere. One Cloud Run service serves the SPA and the API.
     (+ `check.test.ts`; grades pass/near/fail — see Gotchas) · `srs/distance.ts`
     pure Damerau-Levenshtein for the near-miss typo rule (+ `distance.test.ts`) ·
     `srs/scheduler.ts` FSRS wrapper · `srs/day.ts` daily-loop
-    logic · `verbs/check.ts` conjugation matcher + `verbs/plan.ts` verb day-planner
-    (both pure, tested) · `db/schema.ts` Drizzle schema · `db/seed.ts` starter deck ·
+    logic · `verbs/check.ts` conjugation matcher (grid) + Perfekt matcher +
+    `verbs/plan.ts` verb day-planner (present + past streams, merged; all pure,
+    tested) · `db/schema.ts` Drizzle schema · `db/seed.ts` starter deck ·
     `db/verbs.ts` the global verb catalog · `db/words.ts` loads the global word
     corpus + `db/words-parse.ts` pure Anki-note cleaner (+ `words-parse.test.ts`) +
     `db/words-overrides.ts` hand-fix table for individual corpus cards
@@ -214,6 +220,20 @@ the route/tool glue isn't.
   only `verb_review_state`/`verb_reviews` are per-user. The core loop, FSRS
   wrapper (`srs/scheduler.ts`), and mastery tiers (`srs/tiers.ts`) are reused
   unchanged — Verbs mode is additive, like an AI module.
+- **Verb past tense = a second SRS item per verb, keyed by `tense`.**
+  `verb_review_state`/`verb_reviews` carry a `tense` column (`'present'|'past'`);
+  their unique/scheduling key is `(user, verb, tense)`, so a verb schedules present
+  and past independently. `verb-routes.ts` expands the catalog into **items**
+  (`${verbId}:${tense}`) and plans two streams — `planVerbDay` (present, 3:2 mix) +
+  `planPastVerbDay` (past, plain frequency order) — merged by `mergeVerbPlans`.
+  Which past card a verb uses is data, not computed: `verbs.past_kind`
+  (`'praeteritum'` → six `praet_*` forms, graded by `checkConjugation`; `'perfekt'`
+  → the single `perfekt` string, graded by `checkPerfekt`). **Never leak the past
+  forms in a session payload** (same rule as present). Mastery counts **every**
+  (verb, tense) item — `/verbs/progress` and the Stats bar/growth chart both go
+  through `verbItemStabilities`, keyed per item, so present + past both count toward
+  the total. The activity heatmap counts all tenses too. Only `freund/seed.ts`
+  filters `tense='present'` (its vocab context wants the present form).
 - **A `decks` row with `owner_id = NULL` is a *global* deck** (the frequency word
   corpus). Reads widen to `or(ownerId = user, ownerId IS NULL)` (review-routes +
   deck-routes); **writes stay scoped to `ownerId = user`**, so global decks are

@@ -311,6 +311,66 @@ export const WORD_OVERRIDES: WordOverride[] = [
   { rank: 1117, reason: 'der Grad (degree) — article missing in the source deck', set: { article: "der" } },
   { rank: 2172, reason: 'die E-Mail — article missing in the source deck', set: { article: "die" } },
   { rank: 4516, reason: 'der Laptop — article missing in the source deck', set: { article: "der" } },
+
+  // The "finally / -schließlich" family — English "finally/exclusive" flattens a
+  // distinction Swedish keeps: endlich is the relief "at last", schließlich the
+  // "in the end / after all", ausschließlich the "solely".
+  { rank: 454, reason: 'endlich = the relief "at last" — Swedish "äntligen" (not the "eventually" of schließlich)', set: { swedish: "äntligen" } },
+  { rank: 351, reason: 'schließlich = "eventually / in the end / after all" — Swedish "slutligen, till slut"', set: { swedish: "slutligen, till slut" } },
+  { rank: 1485, reason: 'ausschließlich = "solely, exclusively" — Swedish cognate "uteslutande" (aus-schließen → ute-sluta)', set: { swedish: "uteslutande" } },
+  { rank: 661, reason: 'wesentlich (essential, substantial) — clean Swedish cognate "väsentlig", senses line up', set: { swedish: "väsentlig" } },
+  { rank: 416, reason: 'betreffen (to concern/affect) — modern everyday "angå" (det angår mig), not the stilted cognate "beträffa" (only alive in "vad beträffar")', set: { swedish: "angå" } },
+
+  // außerdem / zudem — synonyms in both languages (both ≈ dessutom); split by
+  // register to give each a distinct anchor: außerdem everyday, zudem more formal.
+  { rank: 424, reason: 'außerdem (besides, in addition) — everyday Swedish "dessutom" (des-utom ≈ außer-dem)', set: { swedish: "dessutom" } },
+  { rank: 542, reason: 'zudem (moreover, furthermore) — more formal register, Swedish "därtill"', set: { swedish: "därtill" } },
+
+  // Beziehung / Verhältnis — English flattens both to "relation(ship)"; the cognate
+  // splits them: Verhältnis → förhållande (also ratio/proportion, circumstances),
+  // Beziehung → relation (personal relations, connections).
+  { rank: 649, reason: 'Beziehung (relation, connection) — Swedish "relation"', set: { swedish: "relation" } },
+  { rank: 668, reason: 'Verhältnis (relationship; also ratio/proportion) — cognate "förhållande" (ver-hält-nis ≈ för-håll-ande)', set: { swedish: "förhållande" } },
+  { rank: 912, reason: 'Bindung (emotional bond/attachment) — everyday "anknytning, band"; avoid the cognate "bindning" (technical: chemical/ski/book binding)', set: { swedish: "anknytning, band" } },
+  { rank: 3577, reason: 'Relation (formal: proportion, ratio) — Swedish "proportion, samband", kept distinct from Beziehung → relation', set: { swedish: "proportion, samband" } },
+
+  // Lage / Situation — English "situation" collides; the Germanic Lage → läge
+  // (position/location) vs the loanword Situation → situation.
+  { rank: 555, reason: 'Lage (situation, location, position) — cognate "läge"', set: { swedish: "läge" } },
+  { rank: 423, reason: 'Situation — the loanword, identical Swedish "situation"; glossed to complete the Lage/Situation split', set: { swedish: "situation" } },
+
+  // The "to exist" family — cognates split it: existieren the loanword, bestehen the
+  // consist/persist/pass verb, vorliegen the "be at hand/present" verb.
+  { rank: 1061, reason: 'existieren (to exist) — loanword "existera"', set: { swedish: "existera" } },
+  { rank: 246, reason: 'bestehen — cognate "bestå" covers consist of / persist / pass (an exam); the "insist" sense (bestehen auf) is separate (insistera på)', set: { swedish: "bestå" } },
+  { rank: 647, reason: 'vorliegen (to be at hand/present, exist) — cognate "föreligga" (vor-liegen ≈ före-ligga); formal but current, everyday alt "finnas"', set: { swedish: "föreligga" } },
+
+  // The "just / now" family — modal particles + "now" adverbs. Swedish splits the
+  // particles (eben/halt) and nunmehr → numera, but jetzt/nun are genuine synonyms
+  // both landing on "nu".
+  { rank: 196, reason: 'eben — temporal "just now" (han gick nyss) + the "exactly" sense; Swedish "nyss, just"', set: { swedish: "nyss, just" } },
+  { rank: 478, reason: 'halt — modal particle "simply / that\'s just how it is" (det är helt enkelt så); Swedish "helt enkelt"', set: { swedish: "helt enkelt" } },
+  { rank: 114, reason: 'nun (now; discourse "well then") — Swedish "nu, nå"', set: { swedish: "nu, nå" } },
+  { rank: 72, reason: 'jetzt — the plain concrete "now", Swedish "nu"', set: { swedish: "nu" } },
+  { rank: 4228, reason: 'nunmehr (now, by now, henceforth) — cognate "numera" (nun-mehr ≈ nu-mera)', set: { swedish: "numera" } },
+  { rank: 672, reason: 'beispielsweise (for example) — clean structural match "exempelvis" (Beispiel-s-weise ≈ exempel-vis)', set: { swedish: "exempelvis" } },
+  { rank: 258, reason: 'entsprechen (to correspond to, match) — Swedish "motsvara" (etwas entspricht ≈ motsvara något)', set: { swedish: "motsvara" } },
+
+  // The "look" family — English "look" flattens perception, search, and care-for.
+  // aussehen (se ut) already glossed. Perception verbs split by register (neutral
+  // titta/betrakta vs colloquial kolla/kika); ansehen/anschauen stay synonyms.
+  { rank: 510, reason: 'schauen (to look) — general everyday "titta"', set: { swedish: "titta" } },
+  { rank: 507, reason: 'ansehen (to look at, watch) — "titta på, se på" (≈ anschauen, genuine synonym)', set: { swedish: "titta på, se på" } },
+  { rank: 949, reason: 'anschauen (to look at, watch) — South-German ≈ ansehen; "titta på"', set: { swedish: "titta på" } },
+  { rank: 485, reason: 'betrachten (to look at, consider) — cognate "betrakta" (the considered regard/contemplate)', set: { swedish: "betrakta" } },
+  { rank: 1256, reason: 'blicken (to look, glance) — cognate "blicka"', set: { swedish: "blicka" } },
+  { rank: 306, reason: 'Blick (noun: look, glance, gaze) — Swedish "blick"', set: { swedish: "blick" } },
+  { rank: 1362, reason: 'gucken (to look) — colloquial "kika, kolla"', set: { swedish: "kika, kolla" } },
+  { rank: 3078, reason: 'angucken (to look at) — colloquial "kolla på, kika på"', set: { swedish: "kolla på, kika på" } },
+  { rank: 293, reason: 'suchen (to search, look for) — "söka, leta"', set: { swedish: "söka, leta" } },
+  { rank: 1944, reason: 'versorgen (to supply, provide, look after) — cognate "försörja" (ver-sorgen ≈ för-sörja) + "ta hand om"', set: { swedish: "försörja, ta hand om" } },
+  { rank: 3123, reason: 'betreuen (to look after, take care, supervise) — "ta hand om, sköta"', set: { swedish: "ta hand om, sköta" } },
+  { rank: 1540, reason: 'vorsehen (to plan, earmark, provide for; sich vorsehen = watch out) — "planera, avse; akta sig"', set: { swedish: "planera, avse; akta sig" } },
 ];
 
 /**

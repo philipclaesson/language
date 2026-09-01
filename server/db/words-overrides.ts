@@ -371,6 +371,9 @@ export const WORD_OVERRIDES: WordOverride[] = [
   { rank: 1944, reason: 'versorgen (to supply, provide, look after) — cognate "försörja" (ver-sorgen ≈ för-sörja) + "ta hand om"', set: { swedish: "försörja, ta hand om" } },
   { rank: 3123, reason: 'betreuen (to look after, take care, supervise) — "ta hand om, sköta"', set: { swedish: "ta hand om, sköta" } },
   { rank: 1540, reason: 'vorsehen (to plan, earmark, provide for; sich vorsehen = watch out) — "planera, avse; akta sig"', set: { swedish: "planera, avse; akta sig" } },
+  { rank: 270, reason: 'besonders (adverb: particularly, especially) — "särskilt"', set: { swedish: "särskilt" } },
+  { rank: 512, reason: 'besondere (adjective: special) — "särskild"', set: { swedish: "särskild" } },
+  { rank: 655, reason: 'insbesondere (in particular, especially) — "i synnerhet" (keeps it distinct from besonders = särskilt)', set: { swedish: "i synnerhet" } },
 ];
 
 /**

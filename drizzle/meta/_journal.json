@@ -225,6 +225,13 @@
       "when": 1788100500000,
       "tag": "0031_seed_verb_past",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1788288599220,
+      "tag": "0032_swedish_besonder_cluster",
+      "breakpoints": true
     }
   ]
 }

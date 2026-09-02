@@ -232,6 +232,13 @@
       "when": 1788288599220,
       "tag": "0032_swedish_besonder_cluster",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1788344829710,
+      "tag": "0033_fix_sondern_example_swedish",
+      "breakpoints": true
     }
   ]
 }

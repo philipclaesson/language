@@ -374,6 +374,16 @@ export const WORD_OVERRIDES: WordOverride[] = [
   { rank: 270, reason: 'besonders (adverb: particularly, especially) — "särskilt"', set: { swedish: "särskilt" } },
   { rank: 512, reason: 'besondere (adjective: special) — "särskild"', set: { swedish: "särskild" } },
   { rank: 655, reason: 'insbesondere (in particular, especially) — "i synnerhet" (keeps it distinct from besonders = särskilt)', set: { swedish: "i synnerhet" } },
+  {
+    rank: 115,
+    reason:
+      'sondern is the not-X-but-Y "but" (Swedish "utan"); the old example glossed an aber-style clause contrast ("...but his sister does") and had awkward German word order — replaced with a proper not-X-but-Y pair, plus the Swedish gloss',
+    set: {
+      swedish: "utan",
+      exampleEn: "It's not him but his sister who likes soccer.",
+      exampleDe: "Nicht er, sondern seine Schwester mag Fußball.",
+    },
+  },
 ];
 
 /**

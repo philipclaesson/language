@@ -42,8 +42,9 @@ export const WORD_OVERRIDES: WordOverride[] = [
   {
     rank: 221,
     reason:
-      'the "weiter" example used "weitere" (the rank-182 card), never the word itself — replaced with a sentence in the adverbial "onwards" sense (first shipped as 0012)',
+      'the "weiter" example used "weitere" (the rank-182 card), never the word itself — replaced with a sentence in the adverbial "onwards" sense (first shipped as 0012); Swedish "vidare" splits it from weitere→ytterligare, the same confusion the example fix was for',
     set: {
+      swedish: "vidare",
       exampleEn: "We’re tired, but we walk a little further.",
       exampleDe: "Wir sind müde, aber wir gehen noch ein bisschen weiter.",
     },
@@ -384,6 +385,177 @@ export const WORD_OVERRIDES: WordOverride[] = [
       exampleDe: "Nicht er, sondern seine Schwester mag Fußball.",
     },
   },
+  // The "however / but" contrast cluster: English flattens these onto one or two
+  // words, Swedish keeps them apart by register and position.
+  { rank: 73, reason: 'Swedish cognate "dock" pins doch (however/but) — literally the same word; leaves "men" to aber', set: { swedish: "dock" } },
+  { rank: 227, reason: 'Swedish "emellertid" pins jedoch (however) in the same written register, keeping it distinct from doch→dock', set: { swedish: "emellertid" } },
+  { rank: 31, reason: 'Swedish "men" pins aber as the default "but" — the anchor that makes doch→dock informative, since English calls both "but"', set: { swedish: "men" } },
+  { rank: 206, reason: 'zwar has two uses and the prompt names both: zwar…aber = "visserligen", und zwar = "närmare bestämt" (the sense the example tests)', set: { swedish: "visserligen / närmare bestämt" } },
+  { rank: 225, reason: 'Swedish "minsann" carries the emphatic, I-grant-you-that sense of allerdings that the example tests (Das ist allerdings… = Det är minsann…)', set: { swedish: "minsann, verkligen" } },
+  { rank: 390, reason: 'Swedish "fastän" pins obwohl — same subordinating conjunction; the full form over bare "fast" keeps it unmistakably the conjunction', set: { swedish: "fastän" } },
+  { rank: 717, reason: 'Swedish "ändå" pins dennoch (nevertheless) and leaves "trots det" to trotzdem (463), the card it would otherwise be confused with', set: { swedish: "ändå" } },
+  { rank: 1016, reason: 'Swedish "å andra sidan" pins hingegen; the literal match "däremot" is already on dagegen (467), so this keeps the two apart', set: { swedish: "å andra sidan" } },
+  // The "further / additional" family — weiter vs. weitere is the confusion the
+  // rank-221 example fix (0012) was already about; Swedish splits them outright.
+  { rank: 182, reason: 'Swedish "ytterligare" pins weitere (additional/further, attributive) — Weitere Informationen = Ytterligare information; weiter (221) takes "vidare"', set: { swedish: "ytterligare" } },
+  { rank: 583, reason: 'Swedish "extra, kompletterande" pins zusätzlich (additional), keeping it distinct from weitere→ytterligare', set: { swedish: "extra, kompletterande" } },
+  { rank: 827, reason: 'Swedish "vidare, fortfarande" pins weiterhin — both its senses (going forward / still), matching its example "Es gibt weiterhin Probleme" = "Det finns fortfarande problem"', set: { swedish: "vidare, fortfarande" } },
+  // "At least": English says it for both the numerical floor and the concessive,
+  // Swedish does not — minst counts, åtminstone concedes.
+  { rank: 604, reason: 'Swedish cognate "minst" pins mindestens as the numerical floor (mindestens acht Stunden = minst åtta timmar), vs. zumindest→åtminstone', set: { swedish: "minst" } },
+  { rank: 612, reason: 'Swedish "åtminstone" pins zumindest as the concessive "at least" (aber zumindest habe ich es versucht), vs. mindestens→minst', set: { swedish: "åtminstone" } },
+  { rank: 1138, reason: 'Swedish "i alla fall" pins wenigstens (at least, if nothing else), keeping "åtminstone" on zumindest', set: { swedish: "i alla fall" } },
+  { rank: 2362, reason: 'Swedish cognate "högst" pins höchstens (at most) — the mirror of mindestens→minst', set: { swedish: "högst" } },
+
+  // "At the moment / current": derzeit vs. derzeitig is adverb vs. adjective, and
+  // Swedish mirrors the split exactly (för närvarande / nuvarande).
+  { rank: 676, reason: 'Swedish "för närvarande" pins derzeit (adverb: at the moment), mirroring derzeitig→nuvarande', set: { swedish: "för närvarande" } },
+  { rank: 4459, reason: 'Swedish "nuvarande" pins derzeitig (adjective: current) — die derzeitige Situation = den nuvarande situationen', set: { swedish: "nuvarande" } },
+  { rank: 3014, reason: 'Swedish "just nu" pins zurzeit as the everyday "at the moment", distinct from derzeit→för närvarande', set: { swedish: "just nu" } },
+  { rank: 2661, reason: 'Swedish "för tillfället" pins momentan (at the moment), distinct from derzeit and zurzeit', set: { swedish: "för tillfället" } },
+  { rank: 2378, reason: 'Swedish "rådande" pins gegenwärtig (present/current) — die gegenwärtige politische Lage = den rådande politiska situationen; keeps "nuvarande" on derzeitig', set: { swedish: "rådande" } },
+
+  // "In the meantime": three near-twins, split by what each actually stresses.
+  { rank: 534, reason: 'inzwischen carries both senses and its prompt is "in the meantime", so the gloss leads with "under tiden" and keeps "numera" for the by-now use its example shows', set: { swedish: "under tiden, numera" } },
+  { rank: 862, reason: 'Swedish "vid det här laget" pins mittlerweile as the by-this-point sense (Mittlerweile haben alle Dörfer Internet)', set: { swedish: "vid det här laget" } },
+  { rank: 4617, reason: 'Swedish "samtidigt" pins unterdessen as pure simultaneity (ich koche unterdessen das Abendessen), leaving "under tiden" to inzwischen', set: { swedish: "samtidigt" } },
+
+  { rank: 3162, reason: 'Swedish "när som helst" pins jederzeit (anytime) exactly', set: { swedish: "när som helst" } },
+  // The ziehen family. German and Swedish both build these from one root
+  // (ziehen = dra) where English reaches for unrelated Latin words — vorziehen is
+  // före-dra, not "prefer"; abziehen is dra av, not "subtract". Glossing the family
+  // together is what makes that visible. (beziehen, rank 878, was glossed earlier.)
+  { rank: 193, reason: 'Swedish cognate "dra" pins ziehen — the root that makes the whole compound family legible', set: { swedish: "dra" } },
+  { rank: 4348, reason: 'Swedish "föredra" is vorziehen morpheme-for-morpheme (vor+ziehen = före+dra), which English "prefer" hides completely', set: { swedish: "föredra" } },
+  { rank: 3796, reason: 'Swedish "dra av" is abziehen morpheme-for-morpheme (ab = av); the example is the subtract sense', set: { swedish: "dra av" } },
+  { rank: 2111, reason: 'Swedish "dra sig tillbaka" is zurückziehen morpheme-for-morpheme (zurück = tillbaka), reflexive like the example', set: { swedish: "dra sig tillbaka" } },
+  { rank: 1436, reason: 'anziehen spans attract and put-on, so the gloss carries both: "dra till sig" (the example) and "ta på sig"', set: { swedish: "dra till sig; ta på sig" } },
+  { rank: 3870, reason: 'überziehen spans put-on (its example) and the banking overdraw, so the gloss carries both Swedish words', set: { swedish: "dra på sig; övertrassera" } },
+  { rank: 4854, reason: 'aufziehen spans rear (its example) and wind-up; "uppfostra; dra upp" carries both, with auf = upp visible in the second', set: { swedish: "uppfostra; dra upp" } },
+  { rank: 2973, reason: 'Swedish "dra ut ur, frånta" pins entziehen — Salz entzieht dem Körper Wasser = saltet drar ut vatten ur kroppen', set: { swedish: "dra ut ur, frånta" } },
+
+  // Same family, but Swedish drops the dra- root — worth glossing precisely
+  // because they break the pattern the ones above establish.
+  { rank: 2434, reason: 'ausziehen spans move-out (its example) and take-off-clothes; Swedish uses neither dra- compound, hence "flytta ut; ta av sig"', set: { swedish: "flytta ut; ta av sig" } },
+  { rank: 2665, reason: 'Swedish "flytta in" pins einziehen (to move in) — no dra- compound, unlike most of the family', set: { swedish: "flytta in" } },
+  { rank: 3190, reason: 'Swedish "involvera, räkna in" pins einbeziehen (to include/involve), matching its example about involving the children', set: { swedish: "involvera, räkna in" } },
+  { rank: 3968, reason: 'Swedish "förstå, sätta sig in i" pins nachvollziehen (to understand/relate to) — the empathetic understanding its example shows', set: { swedish: "förstå, sätta sig in i" } },
+  { rank: 3782, reason: 'Swedish "anlita, ta hjälp av" pins heranziehen in the consult-a-source sense its example uses', set: { swedish: "anlita, ta hjälp av" } },
+  { rank: 4119, reason: 'Swedish "förvrida (munnen)" pins verziehen (to distort/twist), matching its pucker-the-mouth example', set: { swedish: "förvrida (munnen)" } },
+  { rank: 3975, reason: 'Swedish "fullfölja" pins durchziehen (see it through); the obvious "genomföra" is avoided because erfolgen (648) already holds "genomföras"', set: { swedish: "fullfölja" } },
+  { rank: 3436, reason: 'vollziehen spans transitive carry-out and reflexive take-place (its example is the latter), so the gloss carries both; "äga rum" was unavailable — it is on stattfinden (652)', set: { swedish: "verkställa; (sich ~) ske" } },
+
+  { rank: 561, reason: 'Swedish "röra (sig)" pins bewegen as moving oneself, reflexive like its example — distinct from ziehen→dra', set: { swedish: "röra (sig)" } },
+  // Place and direction. Swedish keeps the location/motion split German makes
+  // (där/dit = da/dahin) and English lost — every one of these is just "there".
+  // Grid: da→där, dort→där borta (location) | dahin→dit, dorthin→dit bort (motion).
+  { rank: 48, reason: 'Swedish "där" pins da as the neutral location "there", the anchor of the där/dit grid', set: { swedish: "där" } },
+  { rank: 139, reason: 'Swedish "där borta" pins dort as the distal location "there" — its own example is "dort drüben"', set: { swedish: "där borta" } },
+  { rank: 1520, reason: 'Swedish "dit" pins dahin as motion-toward-there; dit vs. där is exactly dahin vs. da, a split English cannot express', set: { swedish: "dit" } },
+  { rank: 2599, reason: 'Swedish "dit bort" pins dorthin as distal motion-toward, completing the där/där borta/dit/dit bort grid', set: { swedish: "dit bort" } },
+  { rank: 712, reason: 'Swedish "dit, bort" pins hin as the direction-away marker the whole -hin column is built from', set: { swedish: "dit, bort" } },
+  { rank: 2457, reason: 'Swedish "gå dit" is hingehen morpheme-for-morpheme (hin+gehen = dit+gå)', set: { swedish: "gå dit" } },
+  { rank: 4881, reason: 'Swedish "åka dit" is hinfahren morpheme-for-morpheme, same construction as hingehen→gå dit', set: { swedish: "åka dit" } },
+  { rank: 2792, reason: 'dastehen spans literal standing-there and the figurative be-in-a-position its example uses (steht gut da = står sig bra), so the gloss carries both', set: { swedish: "stå där; stå sig" } },
+  { rank: 2938, reason: 'Swedish "på andra sidan" pins drüben as the other-side word it literally is; "där borta" is spent on dort (139)', set: { swedish: "på andra sidan" } },
+  { rank: 417, reason: 'Swedish "uppe, ovanpå" pins oben as the static "up there" — uppe/upp mirrors the same location/motion split as där/dit', set: { swedish: "uppe, ovanpå" } },
+
+  // "Therefore" ×5. deshalb and deswegen are genuinely interchangeable in German,
+  // so both lead with "därför" rather than inventing a distinction; the rest differ
+  // by what they actually stress.
+  { rank: 229, reason: 'Swedish "därför" pins deshalb as the plain default "therefore"', set: { swedish: "därför" } },
+  { rank: 749, reason: 'deswegen is interchangeable with deshalb, so it also leads with "därför"; the parenthetical exposes wegen = orsak to tell the two cards apart', set: { swedish: "därför (av den orsaken)" } },
+  { rank: 792, reason: 'Swedish "alltså, därmed" pins somit (consequently/thus), leading with alltså to keep it off damit→därmed (119)', set: { swedish: "alltså, därmed" } },
+  { rank: 1227, reason: 'Swedish "följaktligen" pins demnach as the inferential "therefore" (Es gibt demnach nur zwei Möglichkeiten)', set: { swedish: "följaktligen" } },
+  { rank: 1815, reason: 'Swedish "såtillvida, i den mån" pins insofern as "to that extent", its actual meaning behind the English "therefore"', set: { swedish: "såtillvida, i den mån" } },
+  // The dienen family: German prefixes map onto Swedish prefixes one-for-one
+  // (dienen/verdienen/bedienen = tjäna/förtjäna/betjäna). Two of the three cards
+  // drill a sense the bare cognate no longer covers in modern Swedish, so those
+  // glosses keep the cognate first and add the half the example actually tests.
+  { rank: 684, reason: 'Swedish cognate "tjäna" pins dienen (to serve) — the root of the tjäna/förtjäna/betjäna set', set: { swedish: "tjäna" } },
+  { rank: 835, reason: 'verdienen = förtjäna by prefix, but its example is earning money and Swedish says "tjäna pengar" (förtjäna has drifted to "deserve"), so the gloss carries both', set: { swedish: "förtjäna; tjäna (pengar)" } },
+  { rank: 2179, reason: 'bedienen = betjäna by prefix, but its example is operating a machine and "betjäna en maskin" is not idiomatic Swedish — hence "sköta (maskin)" alongside', set: { swedish: "betjäna; sköta (maskin)" } },
+  { rank: 1558, reason: 'Swedish cognate "tjänst" pins der Dienst (service/duty), the noun side of dienen→tjäna', set: { swedish: "tjänst" } },
+  { rank: 2305, reason: 'Swedish "tjänst, service" pins die Dienstleistung (a service, commercial sense)', set: { swedish: "tjänst, service" } },
+  { rank: 4476, reason: 'Swedish cognate "tjänare" pins der Diener (servant), completing the dien-/tjän- root family', set: { swedish: "tjänare" } },
+  // The sehen/schauen "watch" family. The -sehen member takes "se på", the
+  // -schauen member "titta på", following the ansehen (507) / anschauen (949)
+  // precedent already in the table.
+  { rank: 79, reason: 'Swedish cognate "se" pins sehen — the root of the whole ansehen/zusehen/Zuschauer family', set: { swedish: "se" } },
+  { rank: 348, reason: 'Swedish "klocka" covers all three senses of die Uhr at once (clock, wristwatch, klockan 3 = um 3 Uhr) exactly as German does; only English needs three words', set: { swedish: "klocka" } },
+  { rank: 4180, reason: 'Swedish "övervaka" is überwachen morpheme-for-morpheme (über+wachen = över+vaka) and is the live surveillance word its example uses', set: { swedish: "övervaka" } },
+  { rank: 697, reason: 'Swedish "iaktta, observera" pins beobachten — beobachtet seine Kinder = iakttar sina barn', set: { swedish: "iaktta, observera" } },
+  { rank: 2182, reason: 'what separates zusehen from ansehen is grammar, not the Swedish verb: dative + an activity, so the gloss spells out "se på (ngn göra ngt)"', set: { swedish: "se på (ngn göra ngt)" } },
+  { rank: 3239, reason: 'zuschauen is the -schauen twin of zusehen, so it takes "titta på" like anschauen does, with the same dative-activity note', set: { swedish: "titta på (ngn göra ngt)" } },
+  { rank: 1410, reason: 'Swedish "åskådare" pins der Zuschauer (spectator), the noun to zuschauen', set: { swedish: "åskådare" } },
+  // The zusammen- family. German zusammen- maps to Swedish samman-/sam- in the
+  // nouns and the abstract verbs, but everyday Swedish switches to "ihop" for the
+  // physical ones (hålla ihop, sätta ihop) — zusammensetzen/Zusammensetzung shows
+  // both halves on a single root.
+  { rank: 533, reason: 'Swedish "tillsammans" pins zusammen (together), the root of the whole samman-/ihop family', set: { swedish: "tillsammans" } },
+  { rank: 525, reason: 'Swedish cognate "sammanhang" pins der Zusammenhang and covers both its senses (connection and context) exactly as the German does', set: { swedish: "sammanhang" } },
+  { rank: 1312, reason: 'Swedish cognate "samarbete" pins die Zusammenarbeit (cooperation)', set: { swedish: "samarbete" } },
+  { rank: 2747, reason: 'Swedish cognate "samarbeta" pins zusammenarbeiten, the verb to Zusammenarbeit→samarbete', set: { swedish: "samarbeta" } },
+  { rank: 1858, reason: 'Swedish "sammanfatta" is zusammenfassen morpheme-for-morpheme (zusammen+fassen = samman+fatta)', set: { swedish: "sammanfatta" } },
+  { rank: 3001, reason: 'Swedish cognate "sammanfattning" pins die Zusammenfassung, the noun to zusammenfassen→sammanfatta', set: { swedish: "sammanfattning" } },
+  { rank: 3110, reason: 'Swedish cognate "sammansättning" pins die Zusammensetzung — the noun keeps samman- where the verb (2881) goes to "sätta ihop"', set: { swedish: "sammansättning" } },
+  { rank: 4956, reason: 'Swedish everyday "hålla ihop" pins zusammenhalten (the cognate "sammanhålla" is stiff), matching its stick-together-as-siblings example', set: { swedish: "hålla ihop" } },
+  { rank: 2710, reason: 'Swedish everyday "hänga ihop (med)" pins zusammenhängen; "sammanhänga" exists but is not said', set: { swedish: "hänga ihop (med)" } },
+  { rank: 2881, reason: 'Swedish "sätta ihop" pins zusammensetzen — the physical verb takes ihop even though its noun stays sammansättning (3110)', set: { swedish: "sätta ihop" } },
+  { rank: 3633, reason: 'Swedish "samlas, träffas" pins zusammenkommen (to come together), matching its whole-family-at-Christmas example', set: { swedish: "samlas, träffas" } },
+  { rank: 3648, reason: 'Swedish "leva tillsammans" pins zusammenleben, built straight off zusammen→tillsammans', set: { swedish: "leva tillsammans" } },
+  { rank: 4730, reason: 'zusammenbrechen leads with "bryta samman" to keep the samman- pattern visible, plus "rasa" for the collapsing-bridge sense its example uses', set: { swedish: "bryta samman, rasa" } },
+  // The -einander family. einander = varandra, and the preposition simply rides in
+  // front in both languages (mit→med, von→av, zu→till, auf→på, neben→bredvid), so
+  // one rule unlocks six cards. English hides it by flattening all of them to
+  // "each other". The last four break the pattern, which is why they need glossing.
+  { rank: 1821, reason: 'Swedish "varandra" pins einander — the root that makes every PREP+einander card readable', set: { swedish: "varandra" } },
+  { rank: 716, reason: 'miteinander = med varandra, the preposition riding in front exactly as in German', set: { swedish: "med varandra" } },
+  { rank: 1883, reason: 'voneinander = av varandra (viel voneinander lernen = lära sig mycket av varandra)', set: { swedish: "av varandra" } },
+  { rank: 4085, reason: 'zueinander = till varandra (müssen zueinander passen = måste passa till varandra)', set: { swedish: "till varandra" } },
+  { rank: 3269, reason: 'aufeinander = på varandra (leg die Bücher aufeinander = lägg böckerna på varandra)', set: { swedish: "på varandra" } },
+  { rank: 4440, reason: 'nebeneinander = bredvid varandra, morpheme-for-morpheme (neben = bredvid)', set: { swedish: "bredvid varandra" } },
+  { rank: 3295, reason: 'untereinander breaks the pattern: Swedish has the dedicated "sinsemellan", not "under varandra"', set: { swedish: "sinsemellan" } },
+  { rank: 1755, reason: 'gegenseitig is the adjective, not a varandra phrase — Swedish "ömsesidig" matches its register', set: { swedish: "ömsesidig" } },
+  { rank: 1841, reason: 'die Auseinandersetzung is aus-einander-setzen literally but means a quarrel; Swedish "gräl, dispyt" says so', set: { swedish: "gräl, dispyt" } },
+  { rank: 3841, reason: 'Swedish "ta itu med, bearbeta" pins auseinandersetzen (to deal with), matching its therapy example; "sätta sig in i" is spent on nachvollziehen (3968)', set: { swedish: "ta itu med, bearbeta" } },
+  // Exact morpheme cognates, each glossed together with the corpus card English
+  // flattens onto the same word — so the pair teaches a distinction, not just a
+  // translation (Zustand/Bedingung both "condition"; Vorlesung/Vortrag both "lecture").
+  { rank: 736, reason: 'Swedish "tillstånd" is der Zustand morpheme-for-morpheme (zu+stand = till+stånd) — how something IS, vs. Bedingung→villkor', set: { swedish: "tillstånd" } },
+  { rank: 673, reason: 'Swedish "villkor" pins die Bedingung as what is REQUIRED; English calls both this and Zustand a "condition", Swedish does not', set: { swedish: "villkor" } },
+  { rank: 703, reason: 'Swedish "föreläsning" is die Vorlesung morpheme-for-morpheme (vor+lesung = före+läsning)', set: { swedish: "föreläsning" } },
+  { rank: 2879, reason: 'Swedish "föredrag" is der Vortrag morpheme-for-morpheme (vor+trag = före+drag); English calls both this and Vorlesung a "lecture"', set: { swedish: "föredrag" } },
+  { rank: 3690, reason: 'vorlesen is a false friend: Swedish "föreläsa" means to lecture, not to read aloud — hence "läsa högt (för)"', set: { swedish: "läsa högt (för)" } },
+  { rank: 756, reason: 'Swedish "överallt" is überall morpheme-for-morpheme (über+all = över+allt)', set: { swedish: "överallt" } },
+  { rank: 935, reason: 'Swedish "någonstans" pins irgendwo (somewhere), completing the överallt/någonstans/ingenstans row', set: { swedish: "någonstans" } },
+  { rank: 3806, reason: 'Swedish "ingenstans" pins nirgendwo (nowhere); nirgends (4577) is a true synonym and is left unglossed rather than duplicated', set: { swedish: "ingenstans" } },
+  { rank: 1823, reason: 'Swedish "undervisning" pins der Unterricht (instruction/classes)', set: { swedish: "undervisning" } },
+  { rank: 2678, reason: 'Swedish "författning, grundlag" pins die Verfassung — ver+fassung = för+fattning, the same fassen/fatta root as zusammenfassen→sammanfatta', set: { swedish: "författning, grundlag" } },
+  // The irgend- family. German marks indefiniteness twice (irgend- + the w-word)
+  // where Swedish marks it once, so there is no morpheme mapping here — but the
+  // family splits cleanly by word class: the ADVERBS are merely vague (någon-),
+  // while the PRONOUNS carry the "at all" reading (alls / som helst). Compare
+  // irgendwann→någon gång with jederzeit→när som helst (3162): English calls both
+  // "sometime/anytime" and cannot tell them apart.
+  { rank: 626, reason: 'irgendwie is the vague adverb: "på något sätt" (wie → sätt), no "alls" reading', set: { swedish: "på något sätt" } },
+  { rank: 764, reason: 'irgendwann is vague "någon gång" (wann → gång), vs. the free-choice jederzeit→när som helst (3162)', set: { swedish: "någon gång" } },
+  { rank: 1120, reason: 'irgendetwas is the pronoun, so it carries the at-all reading: Hast du irgendetwas gesagt? = Sa du någonting alls?', set: { swedish: "någonting alls" } },
+  { rank: 1118, reason: 'irgendein carries the at-all/free-choice reading (irgendeinen Rat = något råd alls); "vilken" mirrors the determiner', set: { swedish: "något alls, vilken som helst" } },
+  { rank: 1911, reason: 'irgendwelche is the plural of irgendein and Swedish pluralises identically (vilken → vilka)', set: { swedish: "några alls, vilka som helst" } },
+  { rank: 4941, reason: 'irgendjemand takes "vem som helst" where irgendein takes "vilken som helst" — vem/vilken mirrors jemand/ein exactly', set: { swedish: "någon alls, vem som helst" } },
+  { rank: 3619, reason: 'bare irgend is the fixed "irgend so ein" construction, not the productive prefix, so "någon sorts" is a rough fit rather than a clean one', set: { swedish: "någon sorts" } },
+
+  // The plain indefinites the irgend- cards are built on — glossing irgendjemand
+  // as "någon alls" only means something once jemand is pinned to "någon".
+  { rank: 32, reason: 'Swedish "man" is the same word doing the same job as German man; English needs one/you/they for it', set: { swedish: "man" } },
+  { rank: 87, reason: 'Swedish "varje" pins jede (every)', set: { swedish: "varje" } },
+  { rank: 100, reason: 'etwas spans the pronoun and the adverbial "a little" its example tests (macht die Welt etwas besser = lite bättre), so the gloss carries both', set: { swedish: "något; lite (bättre)" } },
+  { rank: 109, reason: 'Swedish "ingenting" pins nichts (nothing), the negative counterpart to etwas→något', set: { swedish: "ingenting" } },
+  { rank: 174, reason: 'Swedish "några" pins einige (a few/some)', set: { swedish: "några" } },
+  { rank: 330, reason: 'Swedish "någon" pins jemand (someone) — the plain form that makes irgendjemand→någon alls readable', set: { swedish: "någon" } },
+  { rank: 362, reason: 'Swedish "ingen" pins niemand (nobody), the negative counterpart to jemand→någon', set: { swedish: "ingen" } },
+  { rank: 433, reason: 'Swedish "somliga, vissa" pins manche (some people/many a), distinct from einige→några', set: { swedish: "somliga, vissa" } },
 ];
 
 /**

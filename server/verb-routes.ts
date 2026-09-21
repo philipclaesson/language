@@ -3,12 +3,7 @@ import { and, eq, gte, lt } from "drizzle-orm";
 import { db } from "./db/client";
 import { verbs, verbReviewState, verbReviews } from "./db/schema";
 import { checkConjugation, checkPerfekt } from "./verbs/check";
-import {
-  planVerbDay,
-  planPastVerbDay,
-  mergeVerbPlans,
-  type VerbToday,
-} from "./verbs/plan";
+import { planVerbsToday, type VerbToday } from "./verbs/plan";
 import { scheduleNext, type StoredSrs } from "./srs/scheduler";
 import {
   startOfDay,
@@ -180,6 +175,7 @@ function toToday(it: VerbItem, sets: ReviewSets): VerbToday {
     frequencyRank: it.frequencyRank,
     hasState: it.hasState,
     due: it.due,
+    stability: it.hasState ? it.stability : null, // sizes the learning stack (the cap)
     reviewedToday: sets.reviewedToday.has(it.itemId),
     correctToday: sets.correctToday.has(it.itemId),
     reviewedBeforeToday: sets.reviewedBefore.has(it.itemId),
@@ -202,7 +198,7 @@ export async function verbPlanFor(userId: string, now: Date) {
   const sets = await todayVerbReviewSets(userId, startOfDay(now));
   const presentToday = items.filter((i) => i.tense === "present").map((i) => toToday(i, sets));
   const pastToday = items.filter((i) => i.tense === "past").map((i) => toToday(i, sets));
-  const plan = mergeVerbPlans(planVerbDay(presentToday, now), planPastVerbDay(pastToday, now));
+  const plan = planVerbsToday(presentToday, pastToday, now);
   return { items, sets, plan };
 }
 
@@ -260,6 +256,7 @@ verbRoutes.get("/verbs/session/today", async (c) => {
     verbs: pending,
     dueTotal: plan.dueTotal,
     newTotal: plan.newTotal,
+    newPaused: plan.newPaused,
     done: plan.done,
     pending: plan.pending,
     complete: plan.complete,

@@ -9,11 +9,18 @@
 // "practice" pull serves. Defined in the shared contract so the client's button
 // labels stay in sync. Bonus work never touches the required daily set.
 import { EXTRA_NEW, EXTRA_PRACTICE } from "../../shared/types";
+import { tierFor } from "./tiers";
 export { EXTRA_NEW, EXTRA_PRACTICE };
 
 export const DAY_TZ = "Europe/Berlin";
 export const NEW_PER_DAY = 10;
 
+// How many cards may be "in flight" (studied but not yet consolidated) before the
+// daily intake of fresh cards pauses itself. Without it the stack grows by 10 a day
+// whether or not you're keeping up, and the due pile follows. Bonus work ("Pick 5
+// new cards") ignores the cap — the pause is only about what we add *for* you.
+// See PLAN.md §5a.
+export const LEARNING_CAP = 80;
 
 /**
  * Offset (ms) of `tz` at the instant `date`, such that local = utc + offset.
@@ -217,10 +224,33 @@ export type CardToday = {
   reviewedToday: boolean;
   correctToday: boolean;
   reviewedBeforeToday: boolean;
+  // FSRS stability in days, or null when unstudied. Only used to size the learning
+  // stack (see `learningStackSize`) — never to order or grade anything.
+  stability: number | null;
   // From a global/stock deck (ownerless) rather than the user's own decks. New
   // cards are introduced 50/50 between the two; defaults to false (own).
   stock?: boolean;
 };
+
+/**
+ * The size of the learning stack: cards you've started but not yet consolidated —
+ * the "learning" mastery tier (stability under FAMILIAR_MIN_DAYS). Familiar and
+ * mastered cards are excluded: they come round rarely and aren't the load the cap
+ * is about.
+ *
+ * Cards whose first-ever attempt is *today* are excluded too. They're today's own
+ * intake rather than the backlog being throttled, and leaving them out keeps the
+ * count — and therefore today's required total — stable as you work through the day.
+ */
+export function learningStackSize(cards: CardToday[]): number {
+  let n = 0;
+  for (const c of cards) {
+    if (!c.hasState) continue; // never studied — not in the stack
+    if (c.reviewedToday && !c.reviewedBeforeToday) continue; // introduced today
+    if (tierFor(c.stability) === "learning") n++;
+  }
+  return n;
+}
 
 // New cards each day are split evenly between the user's own cards and the stock
 // corpus; whichever pool runs dry, the other fills the remaining slots. Both pools
@@ -249,6 +279,9 @@ export type TodayPlan = {
   pendingIds: string[]; // required cards not yet typed correctly today (to present)
   dueTotal: number; // required due-reviews in today's set
   newTotal: number; // required new cards in today's set (<= limit)
+  // True when fresh cards were withheld because the learning stack is at the cap
+  // (and there were fresh cards to withhold). Drives the "no new cards today" hint.
+  newPaused: boolean;
   done: number; // required cards already typed correctly today
   pending: number; // = pendingIds.length
   complete: boolean;
@@ -263,17 +296,19 @@ export type TodayPlan = {
  *     FSRS due moved to tomorrow);
  *   - **introduced today** — brand-new cards whose first-ever attempt was today;
  *   - **fresh** — unstudied cards pulled in to fill the daily new-card quota,
- *     split 50/50 between the user's own cards and the stock corpus (see pickFresh).
+ *     split 50/50 between the user's own cards and the stock corpus (see pickFresh),
+ *     and skipped entirely while the learning stack is at `cap` (`newPaused`).
  * The total (due + new) is stable across the day: completing a card moves it from
  * pending to done without changing the denominator.
  */
 export function planToday(
   cards: CardToday[],
   now: Date,
-  opts: { tz?: string; limit?: number } = {},
+  opts: { tz?: string; limit?: number; cap?: number } = {},
 ): TodayPlan {
   const tz = opts.tz ?? DAY_TZ;
   const limit = opts.limit ?? NEW_PER_DAY;
+  const cap = opts.cap ?? LEARNING_CAP;
   const end = endOfDay(now, tz).getTime();
 
   const dueReq: CardToday[] = [];
@@ -294,7 +329,11 @@ export function planToday(
     // else: a studied card not due and untouched today — not part of today.
   }
 
-  const slotsLeft = Math.max(0, limit - introduced.length);
+  // Backpressure: with the learning stack at the cap, stop *introducing* cards.
+  // Due reviews and anything already introduced today are unaffected — only the
+  // fresh intake pauses, and "Pick 5 new cards" still overrides it by hand.
+  const atCap = learningStackSize(cards) >= cap;
+  const slotsLeft = atCap ? 0 : Math.max(0, limit - introduced.length);
   const freshToPresent = pickFresh(
     fresh.filter((c) => !c.stock),
     fresh.filter((c) => c.stock),
@@ -313,6 +352,7 @@ export function planToday(
     pendingIds: required.filter((c) => !correct.has(c.id)).map((c) => c.id),
     dueTotal: dueReq.length,
     newTotal,
+    newPaused: atCap && fresh.length > 0,
     done,
     pending,
     complete,

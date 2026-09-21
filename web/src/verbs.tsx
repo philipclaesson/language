@@ -107,6 +107,7 @@ export function VerbsHome({
             <div class="mt-4">
               <ExtraButtons
                 noun="verbs"
+                newPaused={today.newPaused}
                 newAvailable={today.newAvailable}
                 practiceAvailable={today.practiceAvailable}
                 missesAvailable={today.missesAvailable}
@@ -254,7 +255,7 @@ export function VerbReview({
   const [flash, setFlash] = useState<"green" | "red" | null>(null);
   const [requiredTotal, setRequiredTotal] = useState(0);
   const [baseDone, setBaseDone] = useState(0);
-  const [avail, setAvail] = useState({ new: 0, practice: 0, misses: 0 });
+  const [avail, setAvail] = useState({ new: 0, practice: 0, misses: 0, paused: false });
   const [completed, setCompleted] = useState(0);
   const startedAt = useRef(0);
   const inputRefs = useRef<Partial<Record<VerbForm, HTMLInputElement | null>>>({});
@@ -292,6 +293,7 @@ export function VerbReview({
             new: t.newAvailable,
             practice: t.practiceAvailable,
             misses: t.missesAvailable,
+            paused: t.newPaused,
           });
           start(t.verbs, t.dueTotal + t.newTotal > 0);
         })
@@ -335,6 +337,7 @@ export function VerbReview({
             new: t.newAvailable,
             practice: t.practiceAvailable,
             misses: t.missesAvailable,
+            paused: t.newPaused,
           }),
         )
         .catch(() => {});
@@ -471,6 +474,7 @@ export function VerbReview({
               <div class="mt-6">
                 <ExtraButtons
                   noun="verbs"
+                  newPaused={avail.paused}
                   newAvailable={avail.new}
                   practiceAvailable={avail.practice}
                   missesAvailable={avail.misses}

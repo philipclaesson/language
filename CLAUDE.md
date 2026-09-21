@@ -206,6 +206,15 @@ the route/tool glue isn't.
   optional Swedish gloss, override-set on a few corpus cards) is safe up front for the
   same reason as `example_en` — a translation, no article/answer — and rides in
   `SessionCard`, rendered under the prompt with a 🇸🇪.
+- **New cards/verbs stop when the learning stack is full** (PLAN.md §5a). The daily
+  intake (10 words / 5+5 verbs) is a ceiling, not a duty: at `LEARNING_CAP = 80`
+  words or `VERB_LEARNING_CAP = 30` verb items still in the **learning** tier
+  (FSRS stability < 7d), `planToday`/`planVerbsToday` introduce nothing fresh. Due
+  reviews and cards already introduced today are untouched, cards introduced today
+  don't count toward the stack (so today's required total stays stable), verbs count
+  present + past as one pile, and the **extra-work pools ignore the cap** — "Pick 5
+  new cards ✋" is the manual override. The response says `newPaused` so the Done
+  screen can explain the quiet day.
 - **Grading is three-valued: `pass` / `near` / `fail`** (PLAN.md §5), mapped to FSRS
   `Good`/`Hard`/`Again` in `srs/scheduler.ts` and logged as `reviews.rating` 3/2/1.
   A **near miss** = knew the word, one thing off: missing article, wrong article, or a

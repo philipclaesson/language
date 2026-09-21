@@ -63,7 +63,7 @@ export function Review({
   const [requiredTotal, setRequiredTotal] = useState(0);
   const [baseDone, setBaseDone] = useState(0);
   // Availability of the two on-ramps, for the "Done for today" buttons (daily mode).
-  const [avail, setAvail] = useState({ new: 0, practice: 0, misses: 0 });
+  const [avail, setAvail] = useState({ new: 0, practice: 0, misses: 0, paused: false });
   const [completed, setCompleted] = useState(0); // cards finished this session
   const startedAt = useRef(0);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -97,6 +97,7 @@ export function Review({
             new: t.newAvailable,
             practice: t.practiceAvailable,
             misses: t.missesAvailable,
+            paused: t.newPaused,
           });
           start(t.cards, t.dueTotal + t.newTotal > 0);
         })
@@ -129,6 +130,7 @@ export function Review({
             new: t.newAvailable,
             practice: t.practiceAvailable,
             misses: t.missesAvailable,
+            paused: t.newPaused,
           }),
         )
         .catch(() => {});
@@ -244,6 +246,7 @@ export function Review({
               <div class="mt-6">
                 <ExtraButtons
                   noun="cards"
+                  newPaused={avail.paused}
                   newAvailable={avail.new}
                   practiceAvailable={avail.practice}
                   missesAvailable={avail.misses}
@@ -410,8 +413,11 @@ export function Review({
 // "Fix misses" re-drills today's wrong answers and reads the live miss count.
 // `onPairs` (words only) adds the match-the-pairs game over the same misses pool;
 // it needs at least two pairs to be a game.
+// `newPaused` explains an empty daily intake: the learning stack is full, so no new
+// ones were added for you today — picking more by hand is still right there.
 export function ExtraButtons({
   noun,
+  newPaused,
   newAvailable,
   practiceAvailable,
   missesAvailable,
@@ -421,6 +427,7 @@ export function ExtraButtons({
   onPairs,
 }: {
   noun: "cards" | "verbs";
+  newPaused?: boolean;
   newAvailable: number;
   practiceAvailable: number;
   missesAvailable: number;
@@ -432,6 +439,12 @@ export function ExtraButtons({
   if (newAvailable === 0 && practiceAvailable === 0 && missesAvailable === 0) return null;
   return (
     <div class="space-y-2">
+      {newPaused && (
+        <p class="pb-1 text-sm text-slate-400">
+          No new {noun} added today — your learning stack is full. Pick some yourself
+          if you want more. 🧘
+        </p>
+      )}
       {newAvailable > 0 && (
         <button
           onClick={onNew}

@@ -131,6 +131,7 @@ reviewRoutes.get("/session/today", async (c) => {
     id: r.id,
     hasState: r.stateId !== null,
     due: r.due,
+    stability: r.stability, // sizes the learning stack (the new-card cap)
     reviewedToday: sets.reviewedToday.has(r.id),
     correctToday: sets.correctToday.has(r.id),
     reviewedBeforeToday: sets.reviewedBefore.has(r.id),
@@ -187,6 +188,7 @@ reviewRoutes.get("/session/today", async (c) => {
     cards: pending,
     dueTotal: plan.dueTotal,
     newTotal: plan.newTotal,
+    newPaused: plan.newPaused,
     done: plan.done,
     pending: plan.pending,
     complete: plan.complete,

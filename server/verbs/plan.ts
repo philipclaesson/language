@@ -4,7 +4,13 @@
 // mix (leaning irregular; they matter more), in frequency order. The words
 // planner is untouched; this reuses the day-boundary + progress helpers.
 
-import { DAY_TZ, endOfDay, dayProgress, type CardToday } from "../srs/day";
+import {
+  DAY_TZ,
+  endOfDay,
+  dayProgress,
+  learningStackSize,
+  type CardToday,
+} from "../srs/day";
 import type { VerbRegularity } from "../../shared/types";
 
 export const NEW_VERBS_PER_DAY = 5;
@@ -14,6 +20,13 @@ export const REGULAR_PER_DAY = 2;
 // introduced in plain frequency order. No irregular/regular mix — the highest-
 // frequency verbs (which take Präteritum) naturally come first.
 export const NEW_PAST_PER_DAY = 5;
+
+// The verb equivalent of `LEARNING_CAP` (srs/day.ts): how many verb *items* may be
+// in flight (studied, still in the "learning" tier) before the daily intake of new
+// verbs pauses. Counted across BOTH tense streams together — present and past are
+// separate items but the same pile of work (VERBS.md §6a) — and gating both.
+// "Pick 5 new verbs" still overrides it by hand.
+export const VERB_LEARNING_CAP = 30;
 
 // One verb's daily-relevant facts (as `CardToday`) plus what drives new-verb
 // selection. `frequencyRank` orders introduction; fresh verbs must be passable in
@@ -27,6 +40,7 @@ export type VerbDayPlan = {
   pendingIds: string[]; // required verbs not yet conjugated correctly today
   dueTotal: number;
   newTotal: number; // required new verbs today (introduced + freshly pulled)
+  newPaused: boolean; // fresh verbs withheld — the learning stack is at the cap
   done: number;
   pending: number;
   complete: boolean;
@@ -89,6 +103,7 @@ function finalize(
   dueReq: VerbToday[],
   introduced: VerbToday[],
   freshToPresent: VerbToday[],
+  newPaused: boolean,
 ): VerbDayPlan {
   const required = [...dueReq, ...introduced, ...freshToPresent];
   const correct = new Set(allVerbs.filter((v) => v.correctToday).map((v) => v.id));
@@ -100,6 +115,7 @@ function finalize(
     pendingIds: required.filter((v) => !correct.has(v.id)).map((v) => v.id),
     dueTotal: dueReq.length,
     newTotal: introduced.length + freshToPresent.length,
+    newPaused,
     done,
     pending,
     complete,
@@ -115,20 +131,21 @@ function finalize(
 export function planVerbDay(
   verbs: VerbToday[],
   now: Date,
-  opts: { tz?: string; limit?: number } = {},
+  opts: { tz?: string; limit?: number; cap?: number; stack?: number } = {},
 ): VerbDayPlan {
   const tz = opts.tz ?? DAY_TZ;
   const limit = opts.limit ?? NEW_VERBS_PER_DAY;
   const { dueReq, introduced, fresh } = partitionDay(verbs, endOfDay(now, tz).getTime());
 
-  const slotsLeft = Math.max(0, limit - introduced.length);
+  const atCap = (opts.stack ?? learningStackSize(verbs)) >= (opts.cap ?? VERB_LEARNING_CAP);
+  const slotsLeft = atCap ? 0 : Math.max(0, limit - introduced.length);
   const freshToPresent = pickFresh(
     fresh.filter((v) => v.regularity === "irregular"),
     fresh.filter((v) => v.regularity === "regular"),
     slotsLeft,
   );
 
-  return finalize(verbs, dueReq, introduced, freshToPresent);
+  return finalize(verbs, dueReq, introduced, freshToPresent, atCap && fresh.length > 0);
 }
 
 /**
@@ -140,16 +157,17 @@ export function planVerbDay(
 export function planPastVerbDay(
   verbs: VerbToday[],
   now: Date,
-  opts: { tz?: string; limit?: number } = {},
+  opts: { tz?: string; limit?: number; cap?: number; stack?: number } = {},
 ): VerbDayPlan {
   const tz = opts.tz ?? DAY_TZ;
   const limit = opts.limit ?? NEW_PAST_PER_DAY;
   const { dueReq, introduced, fresh } = partitionDay(verbs, endOfDay(now, tz).getTime());
 
-  const slotsLeft = Math.max(0, limit - introduced.length);
+  const atCap = (opts.stack ?? learningStackSize(verbs)) >= (opts.cap ?? VERB_LEARNING_CAP);
+  const slotsLeft = atCap ? 0 : Math.max(0, limit - introduced.length);
   const freshToPresent = fresh.slice(0, slotsLeft);
 
-  return finalize(verbs, dueReq, introduced, freshToPresent);
+  return finalize(verbs, dueReq, introduced, freshToPresent, atCap && fresh.length > 0);
 }
 
 /** Sum two stream plans into one (present + past). Complete only when both are. */
@@ -158,8 +176,28 @@ export function mergeVerbPlans(a: VerbDayPlan, b: VerbDayPlan): VerbDayPlan {
     pendingIds: [...a.pendingIds, ...b.pendingIds],
     dueTotal: a.dueTotal + b.dueTotal,
     newTotal: a.newTotal + b.newTotal,
+    newPaused: a.newPaused || b.newPaused,
     done: a.done + b.done,
     pending: a.pending + b.pending,
     complete: a.complete && b.complete,
   };
+}
+
+/**
+ * Today's whole verb day: both tense streams planned and merged. The learning
+ * stack is sized ONCE over present + past together and handed to both planners, so
+ * the cap throttles the two streams as one pile of work rather than 30 items each.
+ */
+export function planVerbsToday(
+  present: VerbToday[],
+  past: VerbToday[],
+  now: Date,
+  opts: { tz?: string; cap?: number } = {},
+): VerbDayPlan {
+  const stack = learningStackSize([...present, ...past]);
+  const streamOpts = { ...opts, stack };
+  return mergeVerbPlans(
+    planVerbDay(present, now, streamOpts),
+    planPastVerbDay(past, now, streamOpts),
+  );
 }

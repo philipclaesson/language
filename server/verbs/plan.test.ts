@@ -4,8 +4,10 @@ import {
   planVerbDay,
   planPastVerbDay,
   mergeVerbPlans,
+  planVerbsToday,
   NEW_VERBS_PER_DAY,
   NEW_PAST_PER_DAY,
+  VERB_LEARNING_CAP,
 } from "./plan";
 import type { VerbToday } from "./plan";
 import type { VerbRegularity } from "../../shared/types";
@@ -25,6 +27,7 @@ function v(
     frequencyRank,
     hasState: false,
     due: null,
+    stability: null,
     reviewedToday: false,
     correctToday: false,
     reviewedBeforeToday: false,
@@ -151,4 +154,76 @@ test("mergeVerbPlans sums totals and ANDs completeness", () => {
   assert.equal(merged.pending, present.pending + past.pending);
   assert.deepEqual(merged.pendingIds.sort(), [...present.pendingIds, ...past.pendingIds].sort());
   assert.equal(merged.complete, present.complete && past.complete);
+});
+
+// --- the learning-stack cap (new-verb intake backpressure) ---
+
+const FUTURE = new Date("2026-07-05T00:00:00Z"); // after end-of-today
+
+// A verb item in the learning tier, studied on an earlier day and not due today:
+// stack weight with no work attached today.
+const inStack = (id: string, rank: number): VerbToday =>
+  v(id, "irregular", rank, {
+    hasState: true,
+    stability: 1,
+    due: FUTURE,
+    reviewedBeforeToday: true,
+  });
+
+test("planVerbDay: a full learning stack pauses new verbs", () => {
+  const verbs = [
+    ...Array.from({ length: 3 }, (_, i) => inStack(`s${i}`, i + 1)),
+    v("f1", "irregular", 10),
+    v("f2", "regular", 11),
+  ];
+  const p = planVerbDay(verbs, NOW, { cap: 3 });
+  assert.equal(p.newTotal, 0);
+  assert.equal(p.newPaused, true);
+  // One under the cap and the usual quota is back.
+  assert.equal(planVerbDay(verbs.slice(1), NOW, { cap: 3 }).newTotal, 2);
+});
+
+test("planPastVerbDay: the cap applies to the past stream too", () => {
+  const verbs = [
+    ...Array.from({ length: 3 }, (_, i) => inStack(`s${i}`, i + 1)),
+    v("f1", "irregular", 10),
+  ];
+  const p = planPastVerbDay(verbs, NOW, { cap: 3 });
+  assert.equal(p.newTotal, 0);
+  assert.equal(p.newPaused, true);
+});
+
+test("planVerbsToday: the stack is counted across both tense streams, not per stream", () => {
+  // Two in the present stack + two in the past stack = 4 items in flight. Neither
+  // stream alone reaches a cap of 3; together they do, so both stop introducing.
+  const present = [...Array.from({ length: 2 }, (_, i) => inStack(`p${i}`, i + 1)), v("pf", "irregular", 20)];
+  const past = [...Array.from({ length: 2 }, (_, i) => inStack(`q${i}`, i + 1)), v("qf", "irregular", 21)];
+
+  const merged = planVerbsToday(present, past, NOW, { cap: 3 });
+  assert.equal(merged.newTotal, 0);
+  assert.equal(merged.newPaused, true);
+
+  // Per-stream counting would have let both through — the guard against regressing.
+  const perStream = mergeVerbPlans(
+    planVerbDay(present, NOW, { cap: 3 }),
+    planPastVerbDay(past, NOW, { cap: 3 }),
+  );
+  assert.equal(perStream.newTotal, 2);
+});
+
+test("planVerbsToday: under the cap both streams introduce as before", () => {
+  const present = Array.from({ length: 10 }, (_, i) => v(`p${i}`, i % 2 ? "regular" : "irregular", i + 1));
+  const past = Array.from({ length: 10 }, (_, i) => v(`q${i}`, "irregular", i + 1));
+  const p = planVerbsToday(present, past, NOW);
+  assert.equal(p.newTotal, NEW_VERBS_PER_DAY + NEW_PAST_PER_DAY);
+  assert.equal(p.newPaused, false);
+});
+
+test("planVerbsToday: the cap defaults to VERB_LEARNING_CAP", () => {
+  const present = [
+    ...Array.from({ length: VERB_LEARNING_CAP }, (_, i) => inStack(`s${i}`, i + 1)),
+    v("f1", "irregular", 100),
+  ];
+  assert.equal(planVerbsToday(present, [], NOW).newTotal, 0);
+  assert.equal(planVerbsToday(present.slice(1), [], NOW).newTotal, 1);
 });

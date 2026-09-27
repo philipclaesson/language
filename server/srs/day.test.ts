@@ -8,6 +8,8 @@ import {
   dayProgress,
   newRequiredCount,
   planToday,
+  learningStackSize,
+  LEARNING_CAP,
   freshPool,
   practicePool,
   missesPool,
@@ -117,6 +119,7 @@ function card(id: string, o: Partial<CardToday> = {}): CardToday {
     id,
     hasState: o.hasState ?? false,
     due: o.due ?? null,
+    stability: o.stability ?? null,
     reviewedToday: o.reviewedToday ?? false,
     correctToday: o.correctToday ?? false,
     reviewedBeforeToday: o.reviewedBeforeToday ?? false,
@@ -287,4 +290,101 @@ test("missesPool: only cards missed today, in order, capped by limit", () => {
   assert.deepEqual(missesPool(cands), ["m1", "m2", "m3"]); // all, in order
   assert.deepEqual(missesPool(cands, 2), ["m1", "m2"]);
   assert.deepEqual(missesPool([{ id: "hit", missedToday: false }]), []); // nothing missed
+});
+
+// --- the learning-stack cap (new-card intake backpressure) ---
+
+// A card sitting in the learning tier (stability below FAMILIAR_MIN_DAYS), studied
+// on an earlier day and not due today — pure stack weight, no work attached.
+function inStack(id: string): CardToday {
+  return card(id, { hasState: true, stability: 1, due: TOMORROW, reviewedBeforeToday: true });
+}
+
+test("learningStackSize counts only studied cards still in the learning tier", () => {
+  const cards = [
+    card("fresh"), // never studied
+    inStack("l1"),
+    inStack("l2"),
+    card("familiar", { hasState: true, stability: 10, due: TOMORROW, reviewedBeforeToday: true }),
+    card("mastered", { hasState: true, stability: 400, due: TOMORROW, reviewedBeforeToday: true }),
+  ];
+  assert.equal(learningStackSize(cards), 2);
+});
+
+test("learningStackSize excludes cards introduced today (today's own intake)", () => {
+  const cards = [
+    inStack("l1"),
+    // first-ever attempt today → not part of the backlog being throttled
+    card("nX", { hasState: true, stability: 1, due: TOMORROW, reviewedToday: true, correctToday: true }),
+  ];
+  assert.equal(learningStackSize(cards), 1);
+});
+
+test("planToday: a full learning stack pauses fresh intake, due reviews unaffected", () => {
+  const cards = [
+    ...Array.from({ length: 5 }, (_, i) => inStack(`s${i}`)),
+    card("d1", { hasState: true, stability: 1, due: YESTERDAY, reviewedBeforeToday: true }),
+    ...Array.from({ length: 20 }, (_, i) => card(`f${i}`)),
+  ];
+  // Cap of 5: the stack (5) is full, so no fresh cards — but the due review stays.
+  const p = planToday(cards, NOW, { limit: 10, cap: 5 });
+  assert.equal(p.newTotal, 0);
+  assert.equal(p.dueTotal, 1);
+  assert.equal(p.pending, 1);
+  assert.equal(p.newPaused, true);
+});
+
+test("planToday: below the cap the daily quota is untouched", () => {
+  const cards = [
+    ...Array.from({ length: 4 }, (_, i) => inStack(`s${i}`)),
+    ...Array.from({ length: 20 }, (_, i) => card(`f${i}`)),
+  ];
+  const p = planToday(cards, NOW, { limit: 10, cap: 5 });
+  assert.equal(p.newTotal, 10);
+  assert.equal(p.newPaused, false);
+});
+
+test("planToday: cards introduced today stay required even though the cap is hit", () => {
+  // The stack is full, but two cards were already met today (e.g. the cap was
+  // crossed mid-day by a lapse): they're still owed, and no fresh ones join them.
+  const cards = [
+    ...Array.from({ length: 5 }, (_, i) => inStack(`s${i}`)),
+    card("nA", { hasState: true, stability: 1, due: TOMORROW, reviewedToday: true, correctToday: true }),
+    card("nB", { hasState: true, stability: 1, due: TOMORROW, reviewedToday: true, correctToday: false }),
+    ...Array.from({ length: 20 }, (_, i) => card(`f${i}`)),
+  ];
+  const p = planToday(cards, NOW, { limit: 10, cap: 5 });
+  assert.equal(p.newTotal, 2, "the two introduced today, no fresh ones");
+  assert.equal(p.newPaused, true);
+  assert.deepEqual(p.pendingIds, ["nB"]);
+});
+
+test("planToday: today's own intake never pauses the rest of the same day's intake", () => {
+  // 4 in the stack, cap 5: introducing 10 cards today takes the *live* learning
+  // count past the cap, but today's intake is excluded from it, so the day's
+  // required total stays what it was when the day started.
+  const cards = [
+    ...Array.from({ length: 4 }, (_, i) => inStack(`s${i}`)),
+    // three of today's ten already answered
+    ...Array.from({ length: 3 }, (_, i) =>
+      card(`n${i}`, { hasState: true, stability: 1, due: TOMORROW, reviewedToday: true, correctToday: true }),
+    ),
+    ...Array.from({ length: 20 }, (_, i) => card(`f${i}`)),
+  ];
+  const p = planToday(cards, NOW, { limit: 10, cap: 5 });
+  assert.equal(p.newTotal, 10, "still 3 done + 7 to go");
+  assert.equal(p.newPaused, false);
+});
+
+test("planToday: newPaused stays false when there was nothing fresh to withhold", () => {
+  const cards = Array.from({ length: 5 }, (_, i) => inStack(`s${i}`));
+  const p = planToday(cards, NOW, { limit: 10, cap: 5 });
+  assert.equal(p.newPaused, false);
+});
+
+test("planToday: the cap defaults to LEARNING_CAP", () => {
+  const stack = Array.from({ length: LEARNING_CAP }, (_, i) => inStack(`s${i}`));
+  const fresh = Array.from({ length: 20 }, (_, i) => card(`f${i}`));
+  assert.equal(planToday([...stack, ...fresh], NOW).newTotal, 0);
+  assert.equal(planToday([...stack.slice(1), ...fresh], NOW).newTotal, 10);
 });

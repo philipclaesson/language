@@ -237,6 +237,7 @@ function Dashboard({
             <div class="mt-4">
               <ExtraButtons
                 noun="cards"
+                newPaused={today.newPaused}
                 newAvailable={today.newAvailable}
                 practiceAvailable={today.practiceAvailable}
                 missesAvailable={today.missesAvailable}

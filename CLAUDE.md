@@ -144,6 +144,10 @@ TypeScript everywhere. One Cloud Run service serves the SPA and the API.
   log and report whether they beat stock on held-out data (writes nothing). Reads
   `$DATABASE_URL` or a psql CSV dump. As of 2026-08-17 stock wins (see
   `srs/scheduler.ts`), so params stay unpinned; re-check as the log grows.
+- `npm run words:grep -- <pattern> [--all] [--regex] [--rank=N,M] [--missing-sv]
+  [--max-rank=N]` — look up frequency-corpus cards (en/de/sv + example) straight
+  from `words.data.json`; read-only. The lookup half of the Swedish-gloss workflow
+  (`--missing-sv --max-rank=N` lists what's left to gloss in a band).
 - Deploy = **push to main** (CI: check → migrate → deploy). Manual deploy in INFRA.md.
 
 ## How we work (to avoid breaking things / spaghetti)

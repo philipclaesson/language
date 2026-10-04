@@ -356,3 +356,11 @@ WHERE "deck_id" = 'b7c8e3a0-6d4f-4e2a-9c1b-000000005000'::uuid AND "frequency_ra
 -- rank 336: Swedish "annars" is the exact match for sonst (otherwise)
 UPDATE "cards" SET "swedish" = 'annars'
 WHERE "deck_id" = 'b7c8e3a0-6d4f-4e2a-9c1b-000000005000'::uuid AND "frequency_rank" = 336;
+
+-- rank 607: Swedish "skilja på" is the everyday match for unterscheiden (the example: links und rechts nicht unterscheiden = inte skilja på höger och vänster), in the same family as unterschiedlich→skilda
+UPDATE "cards" SET "swedish" = 'skilja (på)'
+WHERE "deck_id" = 'b7c8e3a0-6d4f-4e2a-9c1b-000000005000'::uuid AND "frequency_rank" = 607;
+
+-- rank 632: Swedish "skillnad" is the exact match for der Unterschied (difference), apart from die Unterscheidung→åtskillnad
+UPDATE "cards" SET "swedish" = 'skillnad'
+WHERE "deck_id" = 'b7c8e3a0-6d4f-4e2a-9c1b-000000005000'::uuid AND "frequency_rank" = 632;

@@ -990,6 +990,16 @@ export const WORD_OVERRIDES: WordOverride[] = [
     reason: 'Swedish "annars" is the exact match for sonst (otherwise)',
     set: { swedish: "annars" },
   },
+  {
+    rank: 607,
+    reason: 'Swedish "skilja på" is the everyday match for unterscheiden (the example: links und rechts nicht unterscheiden = inte skilja på höger och vänster), in the same family as unterschiedlich→skilda',
+    set: { swedish: "skilja (på)" },
+  },
+  {
+    rank: 632,
+    reason: 'Swedish "skillnad" is the exact match for der Unterschied (difference), apart from die Unterscheidung→åtskillnad',
+    set: { swedish: "skillnad" },
+  },
 ];
 
 /**

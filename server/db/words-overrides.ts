@@ -283,7 +283,7 @@ export const WORD_OVERRIDES: WordOverride[] = [
   { rank: 292, reason: 'daran (on/at it) has no clean där-form (an → på/vid) = Swedish "på det, vid det", vs. darauf→därpå', set: { swedish: "på det, vid det" } },
   { rank: 354, reason: 'daher = "därför" (therefore — here the där-word IS right, unlike dafür) + "därifrån" (from there)', set: { swedish: "därför, därifrån" } },
   { rank: 360, reason: 'Swedish cognate "däri" (therein) / "därinne" (in there) pin darin — da(r)+in = där+i', set: { swedish: "däri, därinne" } },
-  { rank: 374, reason: 'The CONJUNCTION damit (so that/in order that) — homograph of rank-119 damit (with it) — = Swedish "för att, så att"', set: { swedish: "för att, så att" } },
+  { rank: 374, reason: 'The CONJUNCTION damit (so that/in order that) — homograph of rank-119 damit (with it) — is purpose, Swedish "för att"; "så att" (result) moved to its cognate sodass (1512)', set: { swedish: "för att" } },
   { rank: 457, reason: 'Swedish cognate "därefter" (thereafter) / "efteråt" (afterwards) pin danach — da+nach = där+efter', set: { swedish: "därefter, efteråt" } },
   { rank: 466, reason: 'Swedish cognate "därigenom" pins dadurch (through it/as a result) — da+durch = där+igenom', set: { swedish: "därigenom" } },
   { rank: 467, reason: 'Swedish cognate "däremot" pins dagegen (against it/on the other hand) — da+gegen = där+emot', set: { swedish: "däremot" } },
@@ -465,8 +465,8 @@ export const WORD_OVERRIDES: WordOverride[] = [
   // by what they actually stress.
   { rank: 229, reason: 'Swedish "därför" pins deshalb as the plain default "therefore"', set: { swedish: "därför" } },
   { rank: 749, reason: 'deswegen is interchangeable with deshalb, so it also leads with "därför"; the parenthetical exposes wegen = orsak to tell the two cards apart', set: { swedish: "därför (av den orsaken)" } },
-  { rank: 792, reason: 'Swedish "alltså, därmed" pins somit (consequently/thus), leading with alltså to keep it off damit→därmed (119)', set: { swedish: "alltså, därmed" } },
-  { rank: 1227, reason: 'Swedish "följaktligen" pins demnach as the inferential "therefore" (Es gibt demnach nur zwei Möglichkeiten)', set: { swedish: "följaktligen" } },
+  { rank: 792, reason: 'Swedish "således" pins somit (consequently/thus): so-mit = så-ledes, and it stays off damit→därmed (119) and also→alltså (71), the true cognate', set: { swedish: "således" } },
+  { rank: 1227, reason: 'demnach is "according to that, therefore" (Es gibt demnach nur zwei Möglichkeiten); "enligt detta" exposes dem-nach = detta-enligt, with "följaktligen" on its cognate folglich (3669), "alltså" on its cognate also (71) and "således" on somit (792)', set: { swedish: "enligt detta" } },
   { rank: 1815, reason: 'Swedish "såtillvida, i den mån" pins insofern as "to that extent", its actual meaning behind the English "therefore"', set: { swedish: "såtillvida, i den mån" } },
   // The dienen family: German prefixes map onto Swedish prefixes one-for-one
   // (dienen/verdienen/bedienen = tjäna/förtjäna/betjäna). Two of the three cards
@@ -556,6 +556,450 @@ export const WORD_OVERRIDES: WordOverride[] = [
   { rank: 330, reason: 'Swedish "någon" pins jemand (someone) — the plain form that makes irgendjemand→någon alls readable', set: { swedish: "någon" } },
   { rank: 362, reason: 'Swedish "ingen" pins niemand (nobody), the negative counterpart to jemand→någon', set: { swedish: "ingen" } },
   { rank: 433, reason: 'Swedish "somliga, vissa" pins manche (some people/many a), distinct from einige→några', set: { swedish: "somliga, vissa" } },
+  // batch 6
+  {
+    rank: 678,
+    reason: 'Swedish "såväl . . . som" is the exact pair for sowohl . . . als auch',
+    set: { swedish: "såväl . . . som" },
+  },
+  {
+    rank: 766,
+    reason: 'Swedish "varken . . . eller" is the exact pair for weder . . . noch',
+    set: { swedish: "varken . . . eller" },
+  },
+  {
+    rank: 368,
+    reason: 'Swedish "prata" matches reden as the everyday word for talking, leaving "tala" for the more formal sprechen',
+    set: { swedish: "prata" },
+  },
+  {
+    rank: 759,
+    reason: 'Swedish "tal" is the exact match for die Rede (a speech); the "number" sense on die Zahl is told apart by the English prompt',
+    set: { swedish: "tal" },
+  },
+  {
+    rank: 58,
+    reason: 'machen spans "do" and "make"; Swedish "göra; laga, tillverka" carries both, leaving plain "göra" for tun so the two "to do" cards stay apart',
+    set: { swedish: "göra; laga, tillverka" },
+  },
+  {
+    rank: 646,
+    reason: 'Swedish "prestation" is the exact match for die Leistung (performance, achievement)',
+    set: { swedish: "prestation" },
+  },
+  {
+    rank: 693,
+    reason: 'Swedish "prestera, åstadkomma" pins leisten (to perform, achieve) and ties it to Leistung→prestation',
+    set: { swedish: "prestera, åstadkomma" },
+  },
+  {
+    rank: 760,
+    reason: 'Swedish "stödja" is the everyday word for unterstützen (to support); the cognate "understödja" is stilted',
+    set: { swedish: "stödja" },
+  },
+  {
+    rank: 1141,
+    reason: 'Swedish "stöd" pins die Unterstützung (support), pairing with unterstützen→stödja',
+    set: { swedish: "stöd" },
+  },
+  {
+    rank: 3519,
+    reason: 'unterstellen covers "put under someone" (the example: underställd, as in an org chart) and "insinuate"; Swedish needs a word for each',
+    set: { swedish: "underställa; insinuera" },
+  },
+  {
+    rank: 4347,
+    reason: 'Swedish "stryka under" is the literal underline the example tests, leaving "betona" free for betonen',
+    set: { swedish: "stryka under" },
+  },
+  {
+    rank: 123,
+    reason: 'Swedish "göra" pins tun (to do); machen carries the extra "make" senses, so the two "to do" cards differ in Swedish',
+    set: { swedish: "göra" },
+  },
+  {
+    rank: 173,
+    reason: 'während is both "while" (conjunction, the example) and "during" (preposition); Swedish splits them as medan / under',
+    set: { swedish: "medan; under" },
+  },
+  {
+    rank: 666,
+    reason: 'Swedish "genom att" is exactly how indem works (by doing X), which the English "while, by" blurs',
+    set: { swedish: "genom att" },
+  },
+  {
+    rank: 1631,
+    reason: 'Swedish "ett tag" is the everyday match for eine Weile (a while); "en stund" would be just as good but primes the false friend die Stunde (hour)',
+    set: { swedish: "ett tag" },
+  },
+  {
+    rank: 449,
+    reason: 'Swedish "beslut" is the everyday word for die Entscheidung (decision); der Beschluss (beslut\'s direct cognate) is split off as "resolution, formellt beslut"',
+    set: { swedish: "beslut" },
+  },
+  {
+    rank: 3290,
+    reason: 'Swedish "åtskillnad" pins die Unterscheidung (making a distinction), keeping plain "skillnad" free for der Unterschied (difference)',
+    set: { swedish: "åtskillnad" },
+  },
+  {
+    rank: 799,
+    reason: 'Swedish "val" covers both senses of die Wahl (a choice, an election)',
+    set: { swedish: "val" },
+  },
+  {
+    rank: 2064,
+    reason: 'Swedish "urval" pins die Auswahl (a selection to pick from), apart from Wahl→val',
+    set: { swedish: "urval" },
+  },
+  {
+    rank: 414,
+    reason: 'three "to decide" verbs: entscheiden→avgöra (its structural twin: ent-scheiden = av-göra) + "bestämma sig" for the reflexive sich entscheiden the example tests; bestimmen→bestämma, beschließen→besluta',
+    set: { swedish: "avgöra; bestämma sig" },
+  },
+  {
+    rank: 905,
+    reason: 'Swedish "avgörande" is the exact match for entscheidend (decisive), pairing with entscheiden→avgöra',
+    set: { swedish: "avgörande" },
+  },
+  {
+    rank: 1073,
+    reason: 'Swedish "besluta" is the live cognate of beschließen (to decide, formally resolve), apart from entscheiden→avgöra and bestimmen→bestämma',
+    set: { swedish: "besluta" },
+  },
+  {
+    rank: 3220,
+    reason: 'der Beschluss is a formal decision/resolution; "resolution, formellt beslut" keeps it apart from die Entscheidung→beslut',
+    set: { swedish: "resolution, formellt beslut" },
+  },
+  {
+    rank: 636,
+    reason: 'Swedish "välja" covers wählen in both senses, choose and elect (välja en ny kansler, as in the example)',
+    set: { swedish: "välja" },
+  },
+  {
+    rank: 1884,
+    reason: 'Swedish "välja ut" mirrors aus-wählen (to pick out), apart from plain wählen→välja',
+    set: { swedish: "välja ut" },
+  },
+  {
+    rank: 2518,
+    reason: 'Swedish "väljare" is the exact match for der Wähler (voter)',
+    set: { swedish: "väljare" },
+  },
+  {
+    rank: 2911,
+    reason: 'Swedish "valrörelse" is the everyday word for der Wahlkampf (election campaign)',
+    set: { swedish: "valrörelse" },
+  },
+  {
+    rank: 3802,
+    reason: 'Swedish "mandatperiod" is the everyday word for die Wahlperiode (term of office between elections)',
+    set: { swedish: "mandatperiod" },
+  },
+  {
+    rank: 399,
+    reason: 'Swedish "röst" covers both senses of die Stimme (voice, vote), just like German',
+    set: { swedish: "röst" },
+  },
+  {
+    rank: 490,
+    reason: 'stimmen is "be correct" (Swedish cognate: det stämmer) and "vote for/against" (the example: stimmen gegen = röstar emot)',
+    set: { swedish: "stämma; rösta för/emot" },
+  },
+  {
+    rank: 2802,
+    reason: 'abstimmen is "vote on" (the example) and "coordinate", where Swedish "stämma av" is its live cognate',
+    set: { swedish: "rösta om; stämma av" },
+  },
+  {
+    rank: 2994,
+    reason: 'die Abstimmung mirrors abstimmen: a vote (omröstning, the example) and a coordination (avstämning)',
+    set: { swedish: "omröstning; avstämning" },
+  },
+  {
+    rank: 2507,
+    reason: 'Swedish "instämma" is the live cognate of zustimmen (to agree with); "hålla med" is the everyday phrasing',
+    set: { swedish: "instämma, hålla med" },
+  },
+  {
+    rank: 2737,
+    reason: 'Swedish "samtycke" pins die Zustimmung (consent, approval) as in the example (parents give consent)',
+    set: { swedish: "samtycke" },
+  },
+  {
+    rank: 3289,
+    reason: 'Swedish "stämma överens" is the exact match for übereinstimmen (to correspond, agree)',
+    set: { swedish: "stämma överens" },
+  },
+  {
+    rank: 4901,
+    reason: 'Swedish "överensstämmelse" is the exact match for die Übereinstimmung (match, agreement)',
+    set: { swedish: "överensstämmelse" },
+  },
+  {
+    rank: 1728,
+    reason: 'Swedish "stämning" is the exact match for die Stimmung (mood, atmosphere)',
+    set: { swedish: "stämning" },
+  },
+  {
+    rank: 1586,
+    reason: 'Swedish "bestämmelse" is the live cognate of die Bestimmung in its regulation sense, the one the example tests',
+    set: { swedish: "bestämmelse" },
+  },
+  {
+    rank: 160,
+    reason: 'Swedish "följa" is the live cognate of folgen (to follow)',
+    set: { swedish: "följa" },
+  },
+  {
+    rank: 431,
+    reason: 'Swedish "följd" is the live cognate of die Folge (consequence), keeping "konsekvens" free for die Konsequenz',
+    set: { swedish: "följd" },
+  },
+  {
+    rank: 386,
+    reason: 'Swedish "resultat" is the everyday word for das Ergebnis (result); the rarer das Resultat (its direct cognate) can be split off later',
+    set: { swedish: "resultat" },
+  },
+  {
+    rank: 541,
+    reason: 'Swedish "framgång" is the everyday word for der Erfolg (success)',
+    set: { swedish: "framgång" },
+  },
+  {
+    rank: 735,
+    reason: 'Swedish "framgångsrik" pairs erfolgreich (successful) with Erfolg→framgång',
+    set: { swedish: "framgångsrik" },
+  },
+  {
+    rank: 1150,
+    reason: 'Swedish "förfölja" is the live cognate of verfolgen; "jaga" fits the chase in the example (von der Polizei verfolgt)',
+    set: { swedish: "förfölja, jaga" },
+  },
+  {
+    rank: 2996,
+    reason: 'Swedish "efterträda" is the exact match for nachfolgen in the succeed-in-office sense the example tests',
+    set: { swedish: "efterträda" },
+  },
+  {
+    rank: 2781,
+    reason: 'Swedish "efterträdare" pairs der Nachfolger (successor) with nachfolgen→efterträda',
+    set: { swedish: "efterträdare" },
+  },
+  {
+    rank: 3311,
+    reason: 'Swedish "ordningsföljd" is the exact match for die Reihenfolge (order, sequence)',
+    set: { swedish: "ordningsföljd" },
+  },
+  {
+    rank: 3669,
+    reason: 'Swedish "följaktligen" is the live cognate of folglich (consequently)',
+    set: { swedish: "följaktligen" },
+  },
+  {
+    rank: 3380,
+    reason: 'Swedish "till följd av" is the exact match for infolge (as a result of)',
+    set: { swedish: "till följd av" },
+  },
+  {
+    rank: 1413,
+    reason: 'Swedish "enligt" is the everyday match for zufolge (according to, as in the example: dem Arzt zufolge = enligt läkaren)',
+    set: { swedish: "enligt" },
+  },
+  {
+    rank: 1582,
+    reason: 'Swedish "konsekvens" is the live cognate of die Konsequenz, apart from die Folge→följd',
+    set: { swedish: "konsekvens" },
+  },
+  {
+    rank: 2142,
+    reason: 'resultieren aus (the example) is Swedish "bero på / komma av", which also keeps it apart from ergeben→resultera i',
+    set: { swedish: "bero på, komma av" },
+  },
+  {
+    rank: 2848,
+    reason: 'Swedish has one word for both das Ergebnis and das Resultat; Ergebnis gets plain "resultat", and "(lånordet)" points at the German loanword Resultat',
+    set: { swedish: "resultat (lånordet)" },
+  },
+  {
+    rank: 3797,
+    reason: 'der Befund is a (medical) finding; Swedish "provsvar" fits the example (my findings are negative), "fynd" the general sense',
+    set: { swedish: "provsvar; fynd" },
+  },
+  {
+    rank: 859,
+    reason: 'Swedish "främmande" is the exact match for fremd (foreign, strange)',
+    set: { swedish: "främmande" },
+  },
+  {
+    rank: 3770,
+    reason: 'Swedish "främmande språk" mirrors die Fremdsprache (foreign language) and pairs it with fremd→främmande',
+    set: { swedish: "främmande språk" },
+  },
+  {
+    rank: 4285,
+    reason: 'Swedish "främling" is the exact match for der Fremde (stranger)',
+    set: { swedish: "främling" },
+  },
+  {
+    rank: 793,
+    reason: 'bezahlen leans to a direct object, the thing or person paid for (das Essen bezahlen); "betala (för något)" marks that against zahlen→betala (ett belopp). The source example paid an amount (Wie viel hast du bezahlt?), which is zahlen territory, so it now pays for a thing',
+    set: {
+      swedish: "betala (för något)",
+      exampleDe: "Hast du das Essen schon bezahlt?",
+      exampleEn: "Have you already paid for the food?",
+    },
+  },
+  {
+    rank: 832,
+    reason: 'zahlen leans to an amount or no object (50 Euro zahlen, Zahlen bitte!); "betala (ett belopp)" marks that against bezahlen→betala (för något). The source example paid a bill (die Rechnung zahlen), which is bezahlen territory, so it now asks about an amount',
+    set: {
+      swedish: "betala (ett belopp)",
+      exampleDe: "Wie viel muss ich zahlen?",
+      exampleEn: "How much do I have to pay?",
+    },
+  },
+  {
+    rank: 740,
+    reason: 'Swedish "räkna" is the live cognate of rechnen (to calculate), apart from berechnen→beräkna',
+    set: { swedish: "räkna" },
+  },
+  {
+    rank: 857,
+    reason: 'Swedish "beräkna" is the be- cognate of berechnen (to calculate, the example: berechnen die Kosten = beräknar kostnaderna)',
+    set: { swedish: "beräkna" },
+  },
+  {
+    rank: 1754,
+    reason: 'Swedish "beräkning" pairs die Berechnung with berechnen→beräkna',
+    set: { swedish: "beräkning" },
+  },
+  {
+    rank: 1856,
+    reason: 'Swedish "räkning" is the live cognate of die Rechnung (bill); "faktura" covers the invoice in the example',
+    set: { swedish: "räkning, faktura" },
+  },
+  {
+    rank: 3365,
+    reason: 'der Rechner is a computer (the example) or a calculator; Swedish uses dator / räknare',
+    set: { swedish: "dator; räknare" },
+  },
+  {
+    rank: 4824,
+    reason: 'Swedish "räkna om" mirrors um-rechnen (to convert, e.g. prices into another currency)',
+    set: { swedish: "räkna om" },
+  },
+  {
+    rank: 1835,
+    reason: 'ausgerechnet is "of all people/times"; Swedish says "just idag, av alla dagar", as in the example (ausgerechnet heute)',
+    set: { swedish: "just (av alla dagar)" },
+  },
+  {
+    rank: 853,
+    reason: 'Swedish "antal" is the live cognate of die Anzahl (number of), apart from die Zahl→tal',
+    set: { swedish: "antal" },
+  },
+  {
+    rank: 919,
+    reason: 'Swedish "talrik" is the live cognate of zahlreich (numerous), built on Zahl→tal like the German',
+    set: { swedish: "talrik" },
+  },
+  {
+    rank: 2864,
+    reason: 'Swedish "en mängd" is the everyday match for eine Vielzahl (a multitude)',
+    set: { swedish: "mängd, mångfald" },
+  },
+  {
+    rank: 3314,
+    reason: 'Swedish "betalning" pairs die Zahlung (payment) with zahlen→betala',
+    set: { swedish: "betalning" },
+  },
+  {
+    rank: 28,
+    reason: 'Swedish "så" is the live cognate of so, covering the manner sense of the example (so wie er = så som han)',
+    set: { swedish: "så" },
+  },
+  {
+    rank: 71,
+    reason: 'German also is a false friend for English "also": it means "so, thus", exactly Swedish "alltså", its cognate',
+    set: { swedish: "alltså" },
+  },
+  {
+    rank: 2663,
+    reason: 'Swedish "så pass" matches derart as an intensifier before a dass-clause (derart nervös, dass = så pass nervös att)',
+    set: { swedish: "så pass" },
+  },
+  {
+    rank: 1512,
+    reason: 'Swedish "så att" is the exact match for sodass (result: so that), apart from damit→för att (purpose)',
+    set: { swedish: "så att" },
+  },
+  {
+    rank: 1272,
+    reason: 'Swedish "så att säga" is the exact match for sozusagen (so to speak)',
+    set: { swedish: "så att säga" },
+  },
+  {
+    rank: 4004,
+    reason: 'Swedish "på sätt och vis" matches gewissermaßen (as it were), keeping it apart from sozusagen→så att säga',
+    set: { swedish: "på sätt och vis" },
+  },
+  {
+    rank: 185,
+    reason: 'Swedish "sådan" is the live cognate of solch (such)',
+    set: { swedish: "sådan" },
+  },
+  {
+    rank: 549,
+    reason: 'Swedish "så kallad" is the exact match for sogenannt (so-called)',
+    set: { swedish: "så kallad" },
+  },
+  {
+    rank: 1833,
+    reason: 'Swedish "såvitt" is the exact match for soweit as in the example (soweit ich weiß = såvitt jag vet)',
+    set: { swedish: "såvitt" },
+  },
+  {
+    rank: 281,
+    reason: 'sowie is "as well as" (the example: Männer sowie Frauen = män liksom kvinnor) and "as soon as"; Swedish needs a word for each, and "samt" is left for German samt',
+    set: { swedish: "liksom; så snart som" },
+  },
+  {
+    rank: 535,
+    reason: 'Swedish "likaså" pins ebenso (just as, likewise); "lika" fits the comparison in the example (ebenso gerne wie = lika gärna som)',
+    set: { swedish: "likaså, lika" },
+  },
+  {
+    rank: 808,
+    reason: 'Swedish "precis lika" matches genauso (exactly as), apart from ebenso→likaså',
+    set: { swedish: "precis lika" },
+  },
+  {
+    rank: 226,
+    reason: 'Swedish "till och med" is the everyday match for sogar (even)',
+    set: { swedish: "till och med" },
+  },
+  {
+    rank: 446,
+    reason: 'Swedish "genast" is the everyday match for sofort (immediately)',
+    set: { swedish: "genast" },
+  },
+  {
+    rank: 336,
+    reason: 'Swedish "annars" is the exact match for sonst (otherwise)',
+    set: { swedish: "annars" },
+  },
+  {
+    rank: 607,
+    reason: 'Swedish "skilja på" is the everyday match for unterscheiden (the example: links und rechts nicht unterscheiden = inte skilja på höger och vänster), in the same family as unterschiedlich→skilda',
+    set: { swedish: "skilja (på)" },
+  },
+  {
+    rank: 632,
+    reason: 'Swedish "skillnad" is the exact match for der Unterschied (difference), apart from die Unterscheidung→åtskillnad',
+    set: { swedish: "skillnad" },
+  },
 ];
 
 /**

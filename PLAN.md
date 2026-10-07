@@ -268,38 +268,42 @@ When you open the app, "today" is a known, bounded list:
   (End-of-today, *not* `now` — so a card due later today is part of this sitting
   and the day can be finished in one go.)
 - **New cards:** up to `daily_new_limit` (default 10, per user) — **unless the
-  learning stack is full**, see below.
+  day is already heavy**, see below.
 
 `required = dueReviews + newCards`. The Today screen shows a progress bar
 (e.g. **23 / 31**) and one clear call to action. There is always a well-defined
 "done for today" — this is the backbone of motivation and streaks.
 
-### The learning-stack cap — new cards pause when you're behind
+### The daily-load cap — new cards pause on heavy days
 
-*(Added 2026-09-21.)* The daily intake is a **ceiling, not a duty**. If the pile of
-cards you've started but not yet consolidated keeps growing, adding 10 more every
-morning just compounds it — the due pile follows a few days later, and the day stops
-being finishable.
+*(Added 2026-09-21; gate redefined 2026-10-07.)* The daily intake is a **ceiling,
+not a duty**. If today already holds a big pile of due reviews, adding 10 more
+every morning compounds it and the day stops being finishable.
 
 So the intake pauses itself:
 
-- **The learning stack** = cards with review state whose FSRS `stability` is still
-  under `FAMILIAR_MIN_DAYS` (the **learning** mastery tier — the same one the Stats
-  bar shows). Familiar and mastered cards are excluded; they come round rarely.
-- **At `LEARNING_CAP` (80 words / `VERB_LEARNING_CAP` = 30 verb items), no fresh
-  cards are introduced.** Due reviews and anything already introduced today are
-  untouched — only the *fresh* pull stops.
-- **Cards introduced today don't count toward the stack.** They're today's own
-  intake, not the backlog being throttled, and excluding them keeps today's required
-  total stable from the first card to the last (the §5a invariant).
+- **The gate is today's due load** — the due-review bucket of the required set
+  (`dueTotal`: studied cards due by end of today, plus any you already touched
+  today). With **more than `DUE_CAP` = 80 words** or **`VERB_DUE_CAP` = 30 verb
+  items** due, no fresh cards are introduced. At exactly 80/30, they still are.
+- **Only the fresh pull stops.** Due reviews and anything already introduced today
+  are untouched.
+- **Stable by construction.** A due card reviewed today stays in the due set, so the
+  load the cap looks at — and the day's required total — is the same at 9am and 9pm
+  (the §5a invariant). No tier/stability lookups are involved.
 - **It never blocks you.** "Pick 5 new cards ✋" (EXTRA_WORK.md) ignores the cap
   entirely — the pause is only about what the app adds *for* you. The Done screen
   says so when it's in effect (`TodayResponse.newPaused`).
-- Verbs count **both tense streams as one pile** (present + past items together),
-  matching how mastery counts them, and both streams pause together.
+- Verbs count **both tense streams as one pile** (present + past items due today),
+  and both streams pause together.
 
-Pure and tested: `learningStackSize` + `planToday` (`server/srs/day.ts`),
-`planVerbsToday` (`server/verbs/plan.ts`).
+*Why not the "learning" mastery tier?* The first cut gated on how many cards sat in
+the learning tier (stability < 7d). In practice that paused the intake on light days
+(79 words / 20 verbs due, nothing new) because the tier count tracks how recently
+cards were started, not how heavy today is. The due load is what you actually feel.
+
+Pure and tested: `planToday` (`server/srs/day.ts`), `planVerbsToday`
+(`server/verbs/plan.ts`).
 
 ### The completion gate — type every card correctly once
 
@@ -377,7 +381,7 @@ the `reviews` log — **no new tables needed**.
 - **Code:** `fsrs({ enable_short_term: false })` *(done)*; first-attempt-of-day
   grades, re-drills are practice; due query uses end-of-today.
 - **Constants for now** (not per-user columns — there's no settings UI yet):
-  `NEW_PER_DAY = 10`, `LEARNING_CAP = 80` and a single day-boundary timezone
+  `NEW_PER_DAY = 10`, `DUE_CAP = 80` and a single day-boundary timezone
   (`'Europe/Berlin'`). These become `users.daily_new_limit` / `users.timezone`
   columns *if/when* we add a settings screen — not before.
 - **Schema (one change):** `reviews.graded` (boolean, default `true`). Re-drill

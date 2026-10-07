@@ -21,7 +21,6 @@ export async function pendingTodayFor(userId: string, now: Date): Promise<Pendin
     id: r.id,
     hasState: r.stateId !== null,
     due: r.due,
-    stability: r.stability, // sizes the learning stack (the new-card cap)
     reviewedToday: cardSets.reviewedToday.has(r.id),
     correctToday: cardSets.correctToday.has(r.id),
     reviewedBeforeToday: cardSets.reviewedBefore.has(r.id),

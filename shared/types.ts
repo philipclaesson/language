@@ -84,9 +84,9 @@ export type TodayResponse = {
   cards: SessionCard[];
   dueTotal: number; // due reviews required today
   newTotal: number; // new cards required today (<= NEW_PER_DAY)
-  // True when today's new cards were withheld because the learning stack is full
-  // (LEARNING_CAP cards still in the "learning" tier). The daily intake pauses until
-  // you work some of them up; "Pick 5 new cards" still adds more by hand.
+  // True when today's new cards were withheld because the day is already full
+  // (more than DUE_CAP reviews due). The intake pauses on heavy days; "Pick 5 new
+  // cards" still adds more by hand.
   newPaused: boolean;
   done: number; // required cards already typed correctly today
   pending: number; // required cards still needing a correct typing (= cards.length)
@@ -317,7 +317,7 @@ export type VerbTodayResponse = {
   verbs: SessionVerb[];
   dueTotal: number;
   newTotal: number;
-  newPaused: boolean; // new verbs withheld — the learning stack is full (VERB_LEARNING_CAP)
+  newPaused: boolean; // new verbs withheld — more than VERB_DUE_CAP items already due today
   done: number;
   pending: number;
   complete: boolean;

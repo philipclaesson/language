@@ -210,15 +210,16 @@ the route/tool glue isn't.
   optional Swedish gloss, override-set on a few corpus cards) is safe up front for the
   same reason as `example_en` — a translation, no article/answer — and rides in
   `SessionCard`, rendered under the prompt with a 🇸🇪.
-- **New cards/verbs stop when the learning stack is full** (PLAN.md §5a). The daily
-  intake (10 words / 5+5 verbs) is a ceiling, not a duty: at `LEARNING_CAP = 80`
-  words or `VERB_LEARNING_CAP = 30` verb items still in the **learning** tier
-  (FSRS stability < 7d), `planToday`/`planVerbsToday` introduce nothing fresh. Due
-  reviews and cards already introduced today are untouched, cards introduced today
-  don't count toward the stack (so today's required total stays stable), verbs count
+- **New cards/verbs pause on heavy days** (PLAN.md §5a "The daily-load cap"). The
+  daily intake (10 words / 5+5 verbs) is a ceiling, not a duty: with **more than**
+  `DUE_CAP = 80` words or `VERB_DUE_CAP = 30` verb items already due today
+  (`dueTotal`), `planToday`/`planVerbsToday` introduce nothing fresh. Only the fresh
+  pull stops (due reviews + cards already introduced today are untouched), the due
+  set is stable across the day so the decision can't flip mid-session, verbs count
   present + past as one pile, and the **extra-work pools ignore the cap** — "Pick 5
   new cards ✋" is the manual override. The response says `newPaused` so the Done
-  screen can explain the quiet day.
+  screen can explain the quiet day. (It is *not* the "learning" mastery tier — that
+  was the first cut and it paused light days; see PLAN.md for why.)
 - **Grading is three-valued: `pass` / `near` / `fail`** (PLAN.md §5), mapped to FSRS
   `Good`/`Hard`/`Again` in `srs/scheduler.ts` and logged as `reviews.rating` 3/2/1.
   A **near miss** = knew the word, one thing off: missing article, wrong article, or a

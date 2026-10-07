@@ -7,7 +7,7 @@ import {
   planVerbsToday,
   NEW_VERBS_PER_DAY,
   NEW_PAST_PER_DAY,
-  VERB_LEARNING_CAP,
+  VERB_DUE_CAP,
 } from "./plan";
 import type { VerbToday } from "./plan";
 import type { VerbRegularity } from "../../shared/types";
@@ -27,7 +27,6 @@ function v(
     frequencyRank,
     hasState: false,
     due: null,
-    stability: null,
     reviewedToday: false,
     correctToday: false,
     reviewedBeforeToday: false,
@@ -156,36 +155,30 @@ test("mergeVerbPlans sums totals and ANDs completeness", () => {
   assert.equal(merged.complete, present.complete && past.complete);
 });
 
-// --- the learning-stack cap (new-verb intake backpressure) ---
+// --- the due-load cap (new-verb intake backpressure) ---
 
-const FUTURE = new Date("2026-07-05T00:00:00Z"); // after end-of-today
+const dueItem = (id: string, rank: number): VerbToday =>
+  v(id, "irregular", rank, { hasState: true, due: PAST, reviewedBeforeToday: true });
 
-// A verb item in the learning tier, studied on an earlier day and not due today:
-// stack weight with no work attached today.
-const inStack = (id: string, rank: number): VerbToday =>
-  v(id, "irregular", rank, {
-    hasState: true,
-    stability: 1,
-    due: FUTURE,
-    reviewedBeforeToday: true,
-  });
-
-test("planVerbDay: a full learning stack pauses new verbs", () => {
+test("planVerbDay: more than `cap` due items pauses new verbs", () => {
   const verbs = [
-    ...Array.from({ length: 3 }, (_, i) => inStack(`s${i}`, i + 1)),
+    ...Array.from({ length: 4 }, (_, i) => dueItem(`d${i}`, i + 1)),
     v("f1", "irregular", 10),
     v("f2", "regular", 11),
   ];
   const p = planVerbDay(verbs, NOW, { cap: 3 });
+  assert.equal(p.dueTotal, 4);
   assert.equal(p.newTotal, 0);
   assert.equal(p.newPaused, true);
-  // One under the cap and the usual quota is back.
-  assert.equal(planVerbDay(verbs.slice(1), NOW, { cap: 3 }).newTotal, 2);
+  // Exactly at the cap is not "more than": the usual quota is back.
+  const q = planVerbDay(verbs.slice(1), NOW, { cap: 3 });
+  assert.equal(q.newTotal, 2);
+  assert.equal(q.newPaused, false);
 });
 
 test("planPastVerbDay: the cap applies to the past stream too", () => {
   const verbs = [
-    ...Array.from({ length: 3 }, (_, i) => inStack(`s${i}`, i + 1)),
+    ...Array.from({ length: 4 }, (_, i) => dueItem(`d${i}`, i + 1)),
     v("f1", "irregular", 10),
   ];
   const p = planPastVerbDay(verbs, NOW, { cap: 3 });
@@ -193,13 +186,14 @@ test("planPastVerbDay: the cap applies to the past stream too", () => {
   assert.equal(p.newPaused, true);
 });
 
-test("planVerbsToday: the stack is counted across both tense streams, not per stream", () => {
-  // Two in the present stack + two in the past stack = 4 items in flight. Neither
-  // stream alone reaches a cap of 3; together they do, so both stop introducing.
-  const present = [...Array.from({ length: 2 }, (_, i) => inStack(`p${i}`, i + 1)), v("pf", "irregular", 20)];
-  const past = [...Array.from({ length: 2 }, (_, i) => inStack(`q${i}`, i + 1)), v("qf", "irregular", 21)];
+test("planVerbsToday: the due load is counted across both tense streams, not per stream", () => {
+  // Two due in present + two due in past = 4 items today. Neither stream alone
+  // exceeds a cap of 3; together they do, so both stop introducing.
+  const present = [...Array.from({ length: 2 }, (_, i) => dueItem(`p${i}`, i + 1)), v("pf", "irregular", 20)];
+  const past = [...Array.from({ length: 2 }, (_, i) => dueItem(`q${i}`, i + 1)), v("qf", "irregular", 21)];
 
   const merged = planVerbsToday(present, past, NOW, { cap: 3 });
+  assert.equal(merged.dueTotal, 4);
   assert.equal(merged.newTotal, 0);
   assert.equal(merged.newPaused, true);
 
@@ -219,9 +213,9 @@ test("planVerbsToday: under the cap both streams introduce as before", () => {
   assert.equal(p.newPaused, false);
 });
 
-test("planVerbsToday: the cap defaults to VERB_LEARNING_CAP", () => {
+test("planVerbsToday: the cap defaults to VERB_DUE_CAP", () => {
   const present = [
-    ...Array.from({ length: VERB_LEARNING_CAP }, (_, i) => inStack(`s${i}`, i + 1)),
+    ...Array.from({ length: VERB_DUE_CAP + 1 }, (_, i) => dueItem(`d${i}`, i + 1)),
     v("f1", "irregular", 100),
   ];
   assert.equal(planVerbsToday(present, [], NOW).newTotal, 0);

@@ -175,7 +175,6 @@ function toToday(it: VerbItem, sets: ReviewSets): VerbToday {
     frequencyRank: it.frequencyRank,
     hasState: it.hasState,
     due: it.due,
-    stability: it.hasState ? it.stability : null, // sizes the learning stack (the cap)
     reviewedToday: sets.reviewedToday.has(it.itemId),
     correctToday: sets.correctToday.has(it.itemId),
     reviewedBeforeToday: sets.reviewedBefore.has(it.itemId),

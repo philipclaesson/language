@@ -413,8 +413,8 @@ export function Review({
 // "Fix misses" re-drills today's wrong answers and reads the live miss count.
 // `onPairs` (words only) adds the match-the-pairs game over the same misses pool;
 // it needs at least two pairs to be a game.
-// `newPaused` explains an empty daily intake: the learning stack is full, so no new
-// ones were added for you today — picking more by hand is still right there.
+// `newPaused` explains an empty daily intake: the day was already full of reviews,
+// so no new ones were added for you — picking more by hand is still right there.
 export function ExtraButtons({
   noun,
   newPaused,
@@ -441,8 +441,8 @@ export function ExtraButtons({
     <div class="space-y-2">
       {newPaused && (
         <p class="pb-1 text-sm text-slate-400">
-          No new {noun} added today — your learning stack is full. Pick some yourself
-          if you want more. 🧘
+          No new {noun} added today — you already had a full day of reviews. Pick some
+          yourself if you want more. 🧘
         </p>
       )}
       {newAvailable > 0 && (

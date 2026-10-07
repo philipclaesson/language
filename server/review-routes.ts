@@ -131,7 +131,6 @@ reviewRoutes.get("/session/today", async (c) => {
     id: r.id,
     hasState: r.stateId !== null,
     due: r.due,
-    stability: r.stability, // sizes the learning stack (the new-card cap)
     reviewedToday: sets.reviewedToday.has(r.id),
     correctToday: sets.correctToday.has(r.id),
     reviewedBeforeToday: sets.reviewedBefore.has(r.id),

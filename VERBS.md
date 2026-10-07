@@ -231,7 +231,7 @@ Constants (module-local, like `NEW_PER_DAY`):
 export const NEW_VERBS_PER_DAY = 5;
 export const IRREGULAR_PER_DAY = 3;
 export const REGULAR_PER_DAY = 2;
-export const VERB_LEARNING_CAP = 30; // stop introducing while this many are in flight
+export const VERB_DUE_CAP = 30; // stop introducing when more than this many are due today
 ```
 
 `planVerbDay(verbs, now, opts)` where each input verb carries the same daily facts
@@ -241,11 +241,11 @@ selection:
 
 - Fresh candidates are split into irregular / regular pools, each ordered by
   `frequencyRank`.
-- Slots to fill = `NEW_VERBS_PER_DAY − introducedToday`, or **zero while the
-  learning stack is full** (PLAN.md §5a "The learning-stack cap"): at
-  `VERB_LEARNING_CAP` verb items in the learning tier, no new verbs are introduced.
-  The stack is counted across **both tense streams together** by `planVerbsToday`,
-  which is what `verb-routes.ts` calls; "Pick 5 new verbs" still overrides it.
+- Slots to fill = `NEW_VERBS_PER_DAY − introducedToday`, or **zero on a heavy
+  day** (PLAN.md §5a "The daily-load cap"): with more than `VERB_DUE_CAP` verb
+  items already due today, no new verbs are introduced. The due load is counted
+  across **both tense streams together** by `planVerbsToday`, which is what
+  `verb-routes.ts` calls; "Pick 5 new verbs" still overrides it.
 - Fill preferring `IRREGULAR_PER_DAY` from the irregular pool and
   `REGULAR_PER_DAY` from the regular pool; if a bucket runs dry, spill the
   remaining slots into the other bucket (so we always reach 5/day while any
@@ -406,7 +406,7 @@ loop above is unchanged.
   catalog into items (`${verbId}:${tense}`) and plans two streams — `planVerbDay`
   (present, 3:2 mix) + `planPastVerbDay` (past, plain frequency order, own
   `NEW_PAST_PER_DAY` quota) — merged by `mergeVerbPlans` (both via `planVerbsToday`,
-  which also sizes the shared learning-stack cap). Streams are independent: a
+  which also counts the shared due load for the cap). Streams are independent: a
   verb's past card can appear before/after its present.
 - **Data model.** Past columns on `verbs`: `past_kind`, `perfekt`, and six
   `praet_*`. Never leaked in a session payload (same rule as the present forms).
